@@ -1,0 +1,3 @@
+# Sistem menggunakan SQLite (built-in Python) - tidak ada dependensi tambahan yang wajib
+# Jika perlu export Excel di backend (opsional):
+# openpyxl>=3.0.0

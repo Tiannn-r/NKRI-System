@@ -1,0 +1,27 @@
+__pycache__/
+*.py[cod]
+*.class
+
+# Temporary and log files
+database.db-shm
+database.db-wal
+*.log
+*.bak*
+*.orig_bak
+*.black_bak
+*.backup*
+database.sqlite
+fa_system.db
+
+# Dependencies and caches
+node_modules/
+.npm/
+
+# Scratch & temporary zips
+scratch/
+scratch.zip
+tests.zip
+
+# OS files
+.DS_Store
+Thumbs.db
