@@ -1083,8 +1083,7 @@
                     <div class="flex items-center space-x-2.5">
                       <i class="fa-solid fa-gear text-xs"
                         :class="currentTab === 'assembly' ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'"></i>
-                      <span>{{ userDepartment === 'gudang' && userRole !== 'admin' && userRole !== 'Super Admin' ? 'Area
-                        Perakitan (Monitoring)' : 'Area Perakitan' }}</span>
+                      <span>{{ userDepartment === 'gudang' && userRole !== 'admin' && userRole !== 'Super Admin' ? 'Area Perakitan (Monitoring)' : 'Area Perakitan' }}</span>
                     </div>
                     <i v-if="currentTab === 'assembly'" class="fa-solid fa-chevron-right text-[10px] text-white"></i>
                   </button>
@@ -1097,8 +1096,7 @@
                     <div class="flex items-center space-x-2.5">
                       <i class="fa-solid fa-vial-circle-check text-xs"
                         :class="currentTab === 'assy_testing' ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'"></i>
-                      <span>{{ userDepartment === 'gudang' && userRole !== 'admin' && userRole !== 'Super Admin' ? 'Test
-                        Functional 1 (Monitoring)' : 'Test Functional 1 (Assy)' }}</span>
+                      <span>{{ userDepartment === 'gudang' && userRole !== 'admin' && userRole !== 'Super Admin' ? 'Test Functional 1 (Monitoring)' : 'Test Functional 1 (Assy)' }}</span>
                     </div>
                     <i v-if="currentTab === 'assy_testing'"
                       class="fa-solid fa-chevron-right text-[10px] text-white"></i>
@@ -1284,6 +1282,20 @@
                         :class="currentTab === 'users' && adminSubTab === 'testing_points' ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'"></i>
                       <span>Master Testing Point</span>
                     </div>
+                  </button>
+
+                  <!-- Tambah Part Number -->
+                  <button v-if="hasMenuAccess('add_part')" type="button"
+                    @click="navigateTo('users', 'add_part')"
+                    :class="currentTab === 'users' && adminSubTab === 'add_part' ? 'bg-red-600 text-white font-bold shadow-md shadow-red-600/20' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-medium'"
+                    class="w-full text-left px-3 py-2 rounded-xl text-xs transition flex items-center justify-between group cursor-pointer">
+                    <div class="flex items-center space-x-2.5">
+                      <i class="fa-solid fa-plus-circle text-xs"
+                        :class="currentTab === 'users' && adminSubTab === 'add_part' ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'"></i>
+                      <span>Tambah Part Number</span>
+                    </div>
+                    <i v-if="currentTab === 'users' && adminSubTab === 'add_part'"
+                      class="fa-solid fa-chevron-right text-[10px] text-white"></i>
                   </button>
                 </div>
               </div>
@@ -1594,9 +1606,7 @@
                 <span class="text-xs font-black uppercase tracking-wider block text-slate-200">Mode Monitoring {{
                   userRole === 'qc' ? 'QC' : 'Gudang' }}
                   (Real-Time)</span>
-                <p class="text-[10.5px] text-slate-400">{{ userRole === 'qc' ? 'Seluruh proses perakitan hanya dapat
-                  dilihat untuk kesesuaian mutu.' : 'Seluruh status pengerjaan operator, jeda pengerjaan, dan slot card
-                  terhubung secara langsung.' }}</p>
+                <p class="text-[10.5px] text-slate-400">{{ userRole === 'qc' ? 'Seluruh proses perakitan hanya dapat dilihat untuk kesesuaian mutu.' : 'Seluruh status pengerjaan operator, jeda pengerjaan, dan slot card terhubung secara langsung.' }}</p>
               </div>
             </div>
             <div class="flex items-center gap-2">
@@ -1626,8 +1636,7 @@
               </div>
               <div>
                 <h4 class="font-black text-sm sm:text-base leading-tight">Pengerjaan Perakitan Sedang Dijeda</h4>
-                <p class="text-xs font-semibold text-slate-900">Alasan: <strong>{{ activePauseReason || 'Istirahat /
-                    Jeda' }}</strong> &bull; Waktu Berhenti: <strong class="font-mono">{{ pausedDurationDisplay
+                <p class="text-xs font-semibold text-slate-900">Alasan: <strong>{{ activePauseReason || 'Istirahat / Jeda' }}</strong> &bull; Waktu Berhenti: <strong class="font-mono">{{ pausedDurationDisplay
                     }}</strong></p>
               </div>
             </div>
@@ -2699,8 +2708,7 @@
                   </h4>
                   <p class="text-xs font-medium mt-0.5"
                     :class="assyTestCalculatedFailures.length === 0 ? 'text-emerald-700' : 'text-amber-800'">
-                    {{ assyTestCalculatedFailures.length === 0 ? 'Semua parameter uji lolos.' : 'Terdapat parameter uji
-                    tidak lolos.' }}
+                    {{ assyTestCalculatedFailures.length === 0 ? 'Semua parameter uji lolos.' : 'Terdapat parameter uji tidak lolos.' }}
                   </p>
                 </div>
               </div>
@@ -3643,10 +3651,10 @@
           <!-- Hint Text -->
           <p class="text-xs text-slate-600 bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-200">
             <span v-if="gudangColStage === 1"><i class="fa-solid fa-info-circle text-red-600 mr-1"></i> Isi kolom
-              <strong>P9 Part 1 &nbsp;&nbsp; ( 001 - 999 / 1000 - 6000 )</strong>. Cari nomor dari dropdown atau
+              <strong>P9 Part 1 &nbsp;&nbsp; ( Standar / Double Marking )</strong>. Cari nomor dari dropdown atau
               ketik. Tekan <strong>Enter</strong> untuk baris baru.</span>
             <span v-else-if="gudangColStage === 2"><i class="fa-solid fa-info-circle text-red-600 mr-1"></i> P9 Part 1
-              Selesai. Sekarang isi kolom <strong>P9 Part 12 &nbsp;&nbsp; ( 60001 - 63500 / 70001 - 71500 )</strong>.
+              Selesai. Sekarang isi kolom <strong>P9 Part 12 &nbsp;&nbsp; ( Standar / Double Marking )</strong>.
               Tekan <strong>Enter</strong> untuk baris baru.</span>
             <span v-else><i class="fa-solid fa-info-circle text-red-600 mr-1"></i> P9 Part 1 & 12 Selesai. Sekarang
               isi kolom <strong>P9 Part 15 &nbsp;&nbsp; ( Induk J11.. )</strong>.</span>
@@ -3660,10 +3668,10 @@
               <thead class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
                 <tr>
                   <th class="p-2.5 sm:p-3 w-14 text-center uppercase tracking-wider text-[11px]">Set</th>
-                  <th class="p-2.5 sm:p-3 font-bold text-slate-800 tracking-wide">P9 Part 1 &nbsp;&nbsp; ( 001 - 999 /
-                    1000 - 6000 )</th>
+                  <th class="p-2.5 sm:p-3 font-bold text-slate-800 tracking-wide">P9 Part 1 &nbsp;&nbsp; ( Standar /
+                    Double Marking )</th>
                   <th v-if="gudangColStage >= 2" class="p-2.5 sm:p-3 font-bold text-slate-800 tracking-wide">P9 Part 12
-                    &nbsp;&nbsp; ( 60001 - 63500 / 70001 - 71500 )</th>
+                    &nbsp;&nbsp; ( Standar / Double Marking )</th>
                   <th v-if="gudangColStage >= 3" class="p-2.5 sm:p-3 font-bold text-slate-800 tracking-wide">P9 Part 15
                     &nbsp;&nbsp; ( Induk J11.. )</th>
                   <th class="p-2.5 sm:p-3 w-16 text-center uppercase tracking-wider text-[11px]">Aksi</th>
@@ -3815,8 +3823,8 @@
               <!-- P9 Part 1 (Stage 1+) -->
               <div class="relative"
                 :class="inputDropdown.isOpen && inputDropdown.idx === idx && inputDropdown.field === 'p1' ? 'z-[9999]' : ''">
-                <label class="text-xs font-bold text-slate-700 mb-1 block">P9 Part 1 &nbsp;&nbsp; ( 001 - 999 / 1000
-                  - 6000 )</label>
+                <label class="text-xs font-bold text-slate-700 mb-1 block">P9 Part 1 &nbsp;&nbsp; ( Standar / Double
+                  Marking )</label>
                 <div v-if="getInputWarning(idx, 'p1')"
                   class="text-[10px] font-bold text-red-600 mb-1 flex items-center bg-red-50 px-2 py-0.5 rounded border border-red-200">
                   <i class="fa-solid fa-triangle-exclamation mr-1 flex-shrink-0"></i> {{ getInputWarning(idx, 'p1') }}
@@ -3854,8 +3862,8 @@
               <!-- P9 Part 12 (Stage 2+) -->
               <div v-if="gudangColStage >= 2" class="relative"
                 :class="inputDropdown.isOpen && inputDropdown.idx === idx && inputDropdown.field === 'p12' ? 'z-[9999]' : ''">
-                <label class="text-xs font-bold text-slate-700 mb-1 block">P9 Part 12 &nbsp;&nbsp; ( 60001 - 63500 /
-                  70001 - 71500 )</label>
+                <label class="text-xs font-bold text-slate-700 mb-1 block">P9 Part 12 &nbsp;&nbsp; ( Standar /
+                  Double Marking )</label>
                 <div v-if="getInputWarning(idx, 'p12')"
                   class="text-[10px] font-bold text-red-600 mb-1 flex items-center bg-red-50 px-2 py-0.5 rounded border border-red-200">
                   <i class="fa-solid fa-triangle-exclamation mr-1 flex-shrink-0"></i> {{ getInputWarning(idx, 'p12') }}
@@ -4568,8 +4576,7 @@
                   getOperatorFullName(t.assigned_operator) : 'Belum Ditugaskan' }} ({{ getPrintDocSetCount(t) }} Set)
                 </option>
                 <option v-if="filteredPrintTrays.length === 0" disabled value="">
-                  {{ activePrintDocType === 'assy_rework' ? '(Belum ada dokumen perakitan ulang)' : '(Tidak ada tray
-                  yang cocok dengan filter)' }}
+                  {{ activePrintDocType === 'assy_rework' ? '(Belum ada dokumen perakitan ulang)' : '(Tidak ada tray yang cocok dengan filter)' }}
                 </option>
               </select>
             </div>
@@ -4753,8 +4760,7 @@
                     </div>
                     <div class="text-right">
                       <div class="text-[9px] sm:text-[10px] font-bold text-slate-500">
-                        {{ activePrintDocType === 'assy_rework' ? 'No. Dokumen Perakitan Ulang (Assy PU)' : 'No. Dokumen
-                        Perakitan (Assy)' }}
+                        {{ activePrintDocType === 'assy_rework' ? 'No. Dokumen Perakitan Ulang (Assy PU)' : 'No. Dokumen Perakitan (Assy)' }}
                       </div>
                       <div class="text-lg sm:text-xl font-mono font-black text-red-800 tracking-wider">
                         {{ getFormattedDocCode(travelerTray ? travelerTray.tray_code : '', activePrintDocType) }}
@@ -9936,8 +9942,7 @@
                         <td class="p-2.5 text-center font-sans">
                           <span :class="getStatusBadgeClass(it.tf1_status || it.assy_test_status || 'Good')"
                             class="text-[10px] font-black uppercase px-2 py-0.5 rounded-lg border inline-block">
-                            {{ (it.tf1_status || it.assy_test_status || 'Good').toUpperCase() === 'GOOD' ? 'LOLOS
-                            (GOOD)' : (it.tf1_status || it.assy_test_status || 'Hold') }}
+                            {{ (it.tf1_status || it.assy_test_status || 'Good').toUpperCase() === 'GOOD' ? 'LOLOS (GOOD)' : (it.tf1_status || it.assy_test_status || 'Hold') }}
                           </span>
                         </td>
                         <td class="p-2.5 text-center font-sans">
@@ -10334,20 +10339,20 @@
             <!-- 1. DOKUMEN SURAT JALAN (A5 LANDSCAPE SESUAI CONTOH FOTO RESMI BARU) -->
             <!-- ================================================================= -->
             <div v-if="previewDocType === 'surat_jalan'">
-              <!-- LEMBAR FISIK A5 LANDSCAPE (210mm x 148mm) -->
+              <!-- LEMBAR FISIK 8.5 x 5.5 INCH LANDSCAPE (MARGIN WORD: TOP 1cm, RIGHT 2.33cm, BOTTOM 0.5cm, LEFT 1.66cm) -->
               <div
-                class="bg-white mx-auto shadow-2xl border border-slate-300 w-[210mm] h-[148mm] min-h-[148mm] max-h-[148mm] text-black overflow-hidden select-text"
-                style="padding: 5mm 6mm; box-sizing: border-box; font-family: 'Roboto', Arial, sans-serif; position: relative;">
+                class="bg-white mx-auto shadow-2xl border border-slate-300 text-black overflow-hidden select-text"
+                style="width: 8.5in; height: 5.5in; min-width: 8.5in; max-width: 8.5in; min-height: 5.5in; max-height: 5.5in; padding: 1.0cm 2.33cm 0.5cm 1.66cm; box-sizing: border-box; font-family: 'Roboto', Arial, sans-serif; position: relative;">
 
                 <!-- BINGKAI LUAR HITAM (KOTAK PERSEGI SESUAI CONTOH FOTO USER) -->
                 <div
                   style="border: 1.5px solid #000000; width: 100%; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; position: relative; background: #ffffff; overflow: hidden;">
 
-                  <!-- WATERMARK LOGO DI TENGAH DOKUMEN (HANYA EMBLEM / SIMBOL, TANPA TEKS, TRANSPARANSI LEMBUT) -->
+                  <!-- WATERMARK LOGO DI TENGAH DOKUMEN (TRANSPARANSI 65% = OPACITY 0.35) -->
                   <div class="pointer-events-none select-none absolute inset-0 flex items-center justify-center"
                     style="z-index: 0;">
                     <img :src="nkriEmblemBase64 || '/emblem.png'" alt="" class="do-watermark-img"
-                      style="width: 145px; opacity: 0.065 !important; filter: saturate(80%) !important; object-fit: contain;" />
+                      style="width: 195px; opacity: 0.35 !important; object-fit: contain;" />
                   </div>
 
                   <!-- KONTEN ATAS: HEADER, BANNER, PENERIMA, TABEL -->
@@ -10359,7 +10364,7 @@
                       <!-- Kiri -->
                       <div>
                         <div style="font-weight: 800; font-size: 13px; color: #000000; letter-spacing: -0.2px;">
-                          {{ doSettings.company_name || 'PT. Nanggala Kencana Rekatama Indonesia' }}
+                          {{ doSettings.company_name || 'PT Nanggala Kencana Rekatama Indonesia' }}
                         </div>
                         <div style="font-size: 10px; color: #111827; line-height: 1.35; margin-top: 2px;">
                           Jl. Mekar Raya Kav. 12, Komplek Industri Mekar Mulya,<br>Gedebage, Bandung
@@ -10447,7 +10452,7 @@
                               No</th>
                             <th
                               style="border-right: 1.5px solid #000000; width: 34%; text-align: center; font-weight: 700; padding: 2px 4px;">
-                              Nama Produk</th>
+                              Produk</th>
                             <th
                               style="border-right: 1.5px solid #000000; width: 18%; text-align: center; font-weight: 700; padding: 2px 4px;">
                               Jumlah</th>
@@ -11112,8 +11117,7 @@
                   <!-- Kolom Kanan 50%: NO. PETI / NO. DUS & Angka Disatukan Utuh Tanpa Garis Pemisah -->
                   <div class="w-1/2 px-3 py-1.5 flex flex-col items-center justify-center">
                     <div class="font-black uppercase tracking-wider text-[11px] mb-1">
-                      {{ (previewCurrentCrate.boxes && previewCurrentCrate.boxes.length > 1) ? 'NO. PETI :' : 'NO. DUS
-                      :' }}
+                      {{ (previewCurrentCrate.boxes && previewCurrentCrate.boxes.length > 1) ? 'NO. PETI :' : 'NO. DUS :' }}
                     </div>
                     <div class="text-xl font-black tracking-wider leading-none">
                       {{ previewCrateIndex + 1 }} DARI {{ previewDOData.crates?.length || 20 }}
@@ -11461,9 +11465,8 @@
               </div>
               <div class="flex items-center gap-2">
                 <button type="button" @click="autoFillAvailableSNsForLabel"
-                  class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow-xs flex items-center gap-1.5 transition cursor-pointer min-h-[38px]">
-                  <i class="fa-solid fa-bolt text-xs"></i>
-                  <span>Isi Otomatis dari SN Lulus QC ({{ availableFinishedSNs.length }})</span>
+                  class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow-xs flex items-center justify-center transition cursor-pointer min-h-[38px]">
+                  <span>Isi Cepat</span>
                 </button>
               </div>
             </div>
@@ -12176,11 +12179,7 @@
                         <i class="fa-solid fa-boxes-stacked text-[11px]"></i>
                         <span>Pilih ID Peti</span>
                       </button>
-                      <button type="button" @click="autofillSingleCrate(activeContainerIndex)"
-                        class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer shadow-2xs">
-                        <i class="fa-solid fa-bolt text-amber-500 text-[10px]"></i>
-                        <span>Isi Cepat</span>
-                      </button>
+
                     </div>
                   </div>
 
@@ -12305,11 +12304,7 @@
                         <i class="fa-solid fa-box-open text-[11px]"></i>
                         <span>Pilih ID Dus</span>
                       </button>
-                      <button type="button" @click="autofillSingleBox(activeContainerIndex)"
-                        class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer shadow-2xs">
-                        <i class="fa-solid fa-bolt text-amber-500 text-[10px]"></i>
-                        <span>Isi Cepat</span>
-                      </button>
+
                     </div>
                   </div>
 
@@ -12416,12 +12411,7 @@
                         <i class="fa-solid fa-plus text-[10px]"></i>
                         <span>Tambah Baris</span>
                       </button>
-                      <button type="button" @click="autofillAllUnits"
-                        class="bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer shadow-2xs"
-                        title="Isi otomatis semua unit kosong dari stok yang ada">
-                        <i class="fa-solid fa-bolt text-amber-500 text-[10px]"></i>
-                        <span>Isi Cepat Stok</span>
-                      </button>
+
                       <button type="button" @click="openBatchPasteModal(0, 1, true)"
                         class="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 border border-indigo-200 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer shadow-2xs"
                         title="Tempel daftar serial number satuan">
@@ -12545,8 +12535,7 @@
                     class="w-full sm:flex-1 font-black text-xs sm:text-sm py-3 px-6 rounded-xl flex items-center justify-center gap-2 transition min-h-[46px]">
                     <i v-if="!isSubmittingDO" class="fa-solid fa-paper-plane"></i>
                     <i v-else class="fa-solid fa-spinner fa-spin"></i>
-                    <span>{{ isSubmittingDO ? 'Memproses Penerbitan Dokumen...' : 'Simpan &amp; Terbitkan Delivery
-                      Order' }}</span>
+                    <span>{{ isSubmittingDO ? 'Memproses Penerbitan Dokumen...' : 'Simpan &amp; Terbitkan Delivery Order' }}</span>
                   </button>
                 </div>
                 <p class="text-center text-[11px] text-slate-400 font-medium">
@@ -12811,9 +12800,7 @@
               'Belum Ada Dokumen Surat Jalan / Delivery Order' }}
             </h4>
             <p class="text-xs text-slate-500 max-w-md mx-auto">
-              {{ (doSearchText || doDocFilter || doStartDate || doEndDate) ? 'Coba gunakan kata kunci pencarian yang
-              berbeda atau sesuaikan filter dokumen dan tanggal.' : 'Anda dapat membuat dan menerbitkan dokumen Surat
-              Jalan / Delivery Order lengkap dengan rincian kemasan peti dan data customer.' }}
+              {{ (doSearchText || doDocFilter || doStartDate || doEndDate) ? 'Coba gunakan kata kunci pencarian yang berbeda atau sesuaikan filter dokumen dan tanggal.' : 'Anda dapat membuat dan menerbitkan dokumen Surat Jalan / Delivery Order lengkap dengan rincian kemasan peti dan data customer.' }}
             </p>
             <div class="pt-1">
               <button v-if="!(doSearchText || doDocFilter || doStartDate || doEndDate)" type="button"
@@ -13034,13 +13021,10 @@
                 <i class="fa-solid fa-tags"></i>
               </span>
               <h4 class="font-bold text-sm text-slate-800">
-                {{ (labelSearchText || labelDocFilter || labelPackageFilter || labelStartDate || labelEndDate) ? 'Tidak
-                Ada Riwayat Label yang Sesuai Filter' : 'Belum Ada Riwayat Label Packing List' }}
+                {{ (labelSearchText || labelDocFilter || labelPackageFilter || labelStartDate || labelEndDate) ? 'Tidak Ada Riwayat Label yang Sesuai Filter' : 'Belum Ada Riwayat Label Packing List' }}
               </h4>
               <p class="text-xs text-slate-500 max-w-sm mx-auto">
-                {{ (labelSearchText || labelDocFilter || labelPackageFilter || labelStartDate || labelEndDate) ? 'Coba
-                gunakan kata kunci pencarian yang berbeda atau sesuaikan filter Anda.' : 'Anda dapat membuat dan
-                mencetak label kemasan secara cepat tanpa membuat surat jalan lengkap.' }}
+                {{ (labelSearchText || labelDocFilter || labelPackageFilter || labelStartDate || labelEndDate) ? 'Coba gunakan kata kunci pencarian yang berbeda atau sesuaikan filter Anda.' : 'Anda dapat membuat dan mencetak label kemasan secara cepat tanpa membuat surat jalan lengkap.' }}
               </p>
               <button
                 v-if="!(labelSearchText || labelDocFilter || labelPackageFilter || labelStartDate || labelEndDate)"
@@ -13606,9 +13590,7 @@
                     :class="cloudTestResult.ok ? (cloudTestResult.delivery_ok ? 'fa-circle-check text-emerald-400' : 'fa-triangle-exclamation text-amber-400') : 'fa-circle-xmark text-rose-400'"></i>
                   <div class="flex-1 space-y-1">
                     <div class="font-bold flex items-center justify-between">
-                      <span>{{ cloudTestResult.ok ? (cloudTestResult.delivery_ok ? 'Koneksi Cloudinary Berhasil &amp;
-                        Siap Pakai' : 'Upload Berhasil, Namun Delivery PDF Masih Dibatasi Akun Cloudinary!') : 'Koneksi
-                        Cloudinary Gagal' }}</span>
+                      <span>{{ cloudTestResult.ok ? (cloudTestResult.delivery_ok ? 'Koneksi Cloudinary Berhasil &amp; Siap Pakai' : 'Upload Berhasil, Namun Delivery PDF Masih Dibatasi Akun Cloudinary!') : 'Koneksi Cloudinary Gagal' }}</span>
                       <button type="button" @click="cloudTestResult = null"
                         class="text-slate-400 hover:text-white">&times;</button>
                     </div>
@@ -14159,6 +14141,7 @@
         </div>
 
       </section>
+
 
       <!-- ================= TAB 6: USER MANAGEMENT & VERIFICATION & AUDIT TRAIL ================= -->
       <section v-if="currentTab === 'users' && hasTabAccess('users')" class="space-y-4 sm:space-y-6">
@@ -16020,8 +16003,7 @@
                   <tr v-for="(dt, idx) in pagedDowntime" :key="dt.id" class="hover:bg-slate-50">
                     <td class="p-3 text-center font-bold text-slate-400">{{ idx + 1 }}</td>
                     <td class="p-3 font-mono text-slate-600">{{ formatDateTime(dt.paused_at) }}</td>
-                    <td class="p-3 font-mono text-slate-600">{{ dt.resumed_at ? formatDateTime(dt.resumed_at) : 'Masih
-                      Berlangsung' }}</td>
+                    <td class="p-3 font-mono text-slate-600">{{ dt.resumed_at ? formatDateTime(dt.resumed_at) : 'Masih Berlangsung' }}</td>
                     <td class="p-3 text-center font-mono font-bold">
                       <span v-if="!dt.resumed_at"
                         class="bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-lg text-xs animate-pulse">
@@ -16086,8 +16068,7 @@
               class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3 sm:pb-4">
               <div>
                 <h3 class="text-base sm:text-lg font-black text-slate-900 leading-tight">
-                  {{ editingTestingPointId ? 'Edit Master Testing Point #' + testingPointForm.test_num : 'Tambah Master
-                  Testing Point Baru' }}
+                  {{ editingTestingPointId ? 'Edit Master Testing Point #' + testingPointForm.test_num : 'Tambah Master Testing Point Baru' }}
                 </h3>
                 <p class="text-xs text-slate-500 font-medium">
                   Konfigurasi daftar point pengujian operator assembly, instruksi kerja, kriteria output lolos, dan
@@ -16317,7 +16298,479 @@
           </div>
         </div>
 
-      </section>
+      
+
+        <!-- VIEW 8: TAMBAH PART NUMBER (MASTER STOK) -->
+        <!-- ================= TAB: TAMBAH PART NUMBER (MASTER STOK) ================= -->
+      <div v-else-if="adminSubTab === 'add_part' && (hasMenuAccess('add_part') || hasMenuAccess('users') || isAdminUser)" class="space-y-4 sm:space-y-6">
+
+        <!-- Top Header Card -->
+        <div class="bg-gradient-to-r from-red-600 via-rose-600 to-red-700 rounded-2xl p-5 sm:p-6 text-white shadow-lg shadow-red-600/15 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="space-y-1.5">
+            <div class="flex items-center space-x-2.5">
+              <div class="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-md flex items-center justify-center text-white text-lg shadow-inner">
+                <i class="fa-solid fa-plus-circle"></i>
+              </div>
+              <div>
+                <h2 class="text-lg sm:text-xl font-black tracking-tight">Tambah Part Number (Master Stok)</h2>
+                <p class="text-xs text-red-100 font-medium">Registrasi Serial Number baru ke Master Stok dengan status awal <strong>Tersedia</strong> secara otomatis.</p>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 self-start sm:self-auto">
+            <button @click="navigateTo('master')"
+              class="px-3.5 py-2 rounded-xl bg-white/15 hover:bg-white/25 active:scale-95 text-xs font-bold text-white transition flex items-center space-x-1.5 border border-white/20">
+              <i class="fa-solid fa-database text-xs"></i>
+              <span>Katalog Master Stok</span>
+            </button>
+            <button @click="loadRecentlyAddedParts()" :disabled="recentAddedLoading"
+              class="px-3.5 py-2 rounded-xl bg-white text-red-600 hover:bg-red-50 active:scale-95 text-xs font-black transition flex items-center space-x-1.5 shadow-sm">
+              <i class="fa-solid fa-rotate-right text-xs" :class="{ 'fa-spin': recentAddedLoading }"></i>
+              <span>Refresh Riwayat</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Info Alert Banner: Khusus Double Marking & Format Part -->
+        <div class="bg-amber-50/90 border border-amber-200 rounded-2xl p-4 sm:p-5 flex items-start space-x-3.5 shadow-sm">
+          <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center text-base flex-shrink-0 mt-0.5">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <div class="space-y-1 text-xs">
+            <h4 class="font-bold text-amber-900 text-sm">Dukungan Khusus Penanggulangan Double Marking</h4>
+            <p class="text-amber-800 leading-relaxed">
+              Untuk <strong>Part 1</strong> dan <strong>Part 12</strong>, sistem mengizinkan input <strong>bebas numerik</strong> (termasuk panjang digit ekstra seperti 5 digit pada Part 1 atau 6 digit pada Part 12, misal: <code class="bg-amber-100/80 px-1 py-0.5 rounded font-mono font-bold text-amber-900">01271</code>, <code class="bg-amber-100/80 px-1 py-0.5 rounded font-mono font-bold text-amber-900">26371</code>, <code class="bg-amber-100/80 px-1 py-0.5 rounded font-mono font-bold text-amber-900">162607</code>). Digit nol di depan tetap tersimpan apa adanya tanpa pemotongan.
+            </p>
+          </div>
+        </div>
+
+        <!-- Main Form & History Grid -->
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-5 sm:gap-6">
+
+          <!-- Left Column: Input Form (Single or Bulk) -->
+          <div class="xl:col-span-5 space-y-4">
+            <div class="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
+
+              <!-- Form Mode Tabs (Single vs Bulk) -->
+              <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div class="flex items-center space-x-2">
+                  <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Mode Input:</span>
+                </div>
+                <div class="inline-flex p-1 bg-slate-100 rounded-xl space-x-1">
+                  <button type="button" @click="addPartTab = 'single'"
+                    :class="addPartTab === 'single' ? 'bg-white text-slate-900 font-bold shadow-sm' : 'text-slate-500 hover:text-slate-900 font-medium'"
+                    class="px-3 py-1.5 rounded-lg text-xs transition flex items-center space-x-1.5 cursor-pointer">
+                    <i class="fa-solid fa-keyboard text-xs"></i>
+                    <span>Tunggal (Single)</span>
+                  </button>
+                  <button type="button" @click="addPartTab = 'bulk'"
+                    :class="addPartTab === 'bulk' ? 'bg-white text-slate-900 font-bold shadow-sm' : 'text-slate-500 hover:text-slate-900 font-medium'"
+                    class="px-3 py-1.5 rounded-lg text-xs transition flex items-center space-x-1.5 cursor-pointer">
+                    <i class="fa-solid fa-layer-group text-xs"></i>
+                    <span>Masal (Bulk)</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- ================= MODE 1: SINGLE PART FORM ================= -->
+              <form v-if="addPartTab === 'single'" @submit.prevent="submitAddSinglePart" class="space-y-4">
+                
+                <!-- Part Type Selector -->
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1.5">Tipe Part <span class="text-red-500">*</span></label>
+                  <div class="grid grid-cols-3 gap-2">
+                    <button type="button" @click="addPartForm.part_type = '1'"
+                      :class="addPartForm.part_type === '1' ? 'border-blue-500 bg-blue-50/70 text-blue-900 font-black ring-2 ring-blue-500/20' : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium'"
+                      class="border rounded-xl p-2.5 text-center transition cursor-pointer flex flex-col items-center justify-center">
+                      <span class="text-xs font-bold">Part 1</span>
+                      <span class="text-[10px] text-slate-500">Cover / Housing</span>
+                    </button>
+                    <button type="button" @click="addPartForm.part_type = '12'"
+                      :class="addPartForm.part_type === '12' ? 'border-purple-500 bg-purple-50/70 text-purple-900 font-black ring-2 ring-purple-500/20' : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium'"
+                      class="border rounded-xl p-2.5 text-center transition cursor-pointer flex flex-col items-center justify-center">
+                      <span class="text-xs font-bold">Part 12</span>
+                      <span class="text-[10px] text-slate-500">Slide / Body</span>
+                    </button>
+                    <button type="button" @click="addPartForm.part_type = '15'"
+                      :class="addPartForm.part_type === '15' ? 'border-emerald-500 bg-emerald-50/70 text-emerald-900 font-black ring-2 ring-emerald-500/20' : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium'"
+                      class="border rounded-xl p-2.5 text-center transition cursor-pointer flex flex-col items-center justify-center">
+                      <span class="text-xs font-bold">Part 15</span>
+                      <span class="text-[10px] text-slate-500">Tube Assy (CS)</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- PN/SN Input -->
+                <div>
+                  <div class="flex items-center justify-between mb-1.5">
+                    <label class="block text-xs font-bold text-slate-700">
+                      <span v-if="addPartForm.part_type === '1' || addPartForm.part_type === '12'">Part Number (PN)</span>
+                      <span v-else>Serial Number (SN)</span>
+                      <span class="text-red-500"> *</span>
+                    </label>
+                    <span v-if="addPartForm.part_type === '1' || addPartForm.part_type === '12'" class="text-[10px] text-slate-500">Bebas numerik (standar / double)</span>
+                    <span v-else class="text-[10px] text-slate-500">Huruf + Angka</span>
+                  </div>
+                  <div class="relative">
+                    <input type="text" v-model="addPartForm.sn" required
+                      :placeholder="addPartForm.part_type === '1' ? 'Contoh: 01271, 26371, 55851' : (addPartForm.part_type === '12' ? 'Contoh: 162607, 70121' : 'Contoh: K1103581')"
+                      class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-mono text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 uppercase">
+                    <div v-if="addPartForm.sn" class="absolute right-2.5 top-1/2 -translate-y-1/2">
+                      <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-200 text-slate-700">
+                        {{ addPartForm.sn.trim().length }} digit
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- CS Input (Khusus Part 15) -->
+                <div v-if="addPartForm.part_type === '15'">
+                  <label class="block text-xs font-bold text-slate-700 mb-1.5">Kode CS (Customer Special) <span class="text-red-500">*</span></label>
+                  <input type="text" v-model="addPartForm.cs" required maxlength="10" placeholder="Contoh: K, N, V, X, Z, C"
+                    class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-mono text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 uppercase">
+                </div>
+
+                <!-- Alasan / Catatan (Opsional) -->
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1.5">Catatan / Keterangan <span class="text-slate-400 font-normal">(Opsional)</span></label>
+                  <input type="text" v-model="addPartForm.reason" placeholder="Contoh: Double marking part 1 / Tambahan vendor"
+                    class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500">
+                </div>
+
+                <!-- Preview Card -->
+                <div v-if="addPartForm.sn" class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                  <div class="flex items-center justify-between text-xs">
+                    <span class="text-slate-500 font-medium">Preview Master Stok:</span>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+                      <i class="fa-solid fa-circle-check mr-1 text-[9px]"></i> Tersedia
+                    </span>
+                  </div>
+                  <div class="flex items-center space-x-2 text-sm font-mono font-bold text-slate-900">
+                    <span class="px-2 py-0.5 rounded text-xs bg-slate-200 text-slate-800">Part {{ addPartForm.part_type }}</span>
+                    <span>{{ addPartForm.sn.trim() }}</span>
+                    <span v-if="addPartForm.part_type === '15' && addPartForm.cs" class="text-xs text-slate-600 font-sans font-medium">(CS: {{ addPartForm.cs.trim().toUpperCase() }})</span>
+                  </div>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="flex items-center space-x-2 pt-2">
+                  <button type="submit" :disabled="addPartLoading || !addPartForm.sn"
+                    class="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 px-4 rounded-xl text-xs shadow-md shadow-red-600/20 transition flex items-center justify-center space-x-1.5 cursor-pointer">
+                    <i v-if="addPartLoading" class="fa-solid fa-circle-notch fa-spin"></i>
+                    <i v-else class="fa-solid fa-plus"></i>
+                    <span>Tambah Part Number</span>
+                  </button>
+                  <button type="button" @click="resetAddPartForm"
+                    class="px-3.5 py-2.5 rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-100 text-xs font-bold transition cursor-pointer">
+                    Reset
+                  </button>
+                </div>
+              </form>
+
+              <!-- ================= MODE 2: BULK / BATCH FORM ================= -->
+              <form v-if="addPartTab === 'bulk'" @submit.prevent="submitAddBulkPart" class="space-y-4">
+                
+                <!-- Part Type Selector -->
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1.5">Tipe Part <span class="text-red-500">*</span></label>
+                  <div class="grid grid-cols-3 gap-2">
+                    <button type="button" @click="addPartBulkForm.part_type = '1'"
+                      :class="addPartBulkForm.part_type === '1' ? 'border-blue-500 bg-blue-50/70 text-blue-900 font-black ring-2 ring-blue-500/20' : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium'"
+                      class="border rounded-xl p-2.5 text-center transition cursor-pointer flex flex-col items-center justify-center">
+                      <span class="text-xs font-bold">Part 1</span>
+                      <span class="text-[10px] text-slate-500">Cover / Housing</span>
+                    </button>
+                    <button type="button" @click="addPartBulkForm.part_type = '12'"
+                      :class="addPartBulkForm.part_type === '12' ? 'border-purple-500 bg-purple-50/70 text-purple-900 font-black ring-2 ring-purple-500/20' : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium'"
+                      class="border rounded-xl p-2.5 text-center transition cursor-pointer flex flex-col items-center justify-center">
+                      <span class="text-xs font-bold">Part 12</span>
+                      <span class="text-[10px] text-slate-500">Slide / Body</span>
+                    </button>
+                    <button type="button" @click="addPartBulkForm.part_type = '15'; addPartBulkMode = 'list'"
+                      :class="addPartBulkForm.part_type === '15' ? 'border-emerald-500 bg-emerald-50/70 text-emerald-900 font-black ring-2 ring-emerald-500/20' : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium'"
+                      class="border rounded-xl p-2.5 text-center transition cursor-pointer flex flex-col items-center justify-center">
+                      <span class="text-xs font-bold">Part 15</span>
+                      <span class="text-[10px] text-slate-500">Tube Assy (CS)</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Submode Selector (List vs Range) -->
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1.5">Metode Batch</label>
+                  <div class="grid grid-cols-2 gap-2">
+                    <button type="button" @click="addPartBulkMode = 'list'"
+                      :class="addPartBulkMode === 'list' ? 'border-slate-800 bg-slate-900 text-white font-bold' : 'border-slate-200 bg-white text-slate-700 font-medium hover:bg-slate-50'"
+                      class="border rounded-xl p-2 text-center text-xs transition cursor-pointer flex items-center justify-center space-x-1.5">
+                      <i class="fa-solid fa-list-check text-xs"></i>
+                      <span>Paste Daftar SN</span>
+                    </button>
+                    <button type="button" @click="addPartBulkMode = 'range'" :disabled="addPartBulkForm.part_type === '15'"
+                      :class="addPartBulkMode === 'range' ? 'border-slate-800 bg-slate-900 text-white font-bold' : 'border-slate-200 bg-white text-slate-700 font-medium hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed'"
+                      class="border rounded-xl p-2 text-center text-xs transition cursor-pointer flex items-center justify-center space-x-1.5">
+                      <i class="fa-solid fa-arrow-down-1-9 text-xs"></i>
+                      <span>Rentang Angka</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Multi-line PN/SN Textarea (Mode List) -->
+                <div v-if="addPartBulkMode === 'list'">
+                  <div class="flex items-center justify-between mb-1.5">
+                    <label class="block text-xs font-bold text-slate-700">
+                      <span v-if="addPartBulkForm.part_type === '1' || addPartBulkForm.part_type === '12'">Daftar Part Number (PN)</span>
+                      <span v-else>Daftar Serial Number (SN)</span>
+                      <span class="text-red-500"> *</span>
+                    </label>
+                    <span class="text-[10px] text-slate-500">1 baris per nomor atau pisahkan koma</span>
+                  </div>
+                  <textarea v-model="addPartBulkForm.sns_text" rows="5" required
+                    placeholder="Contoh:&#10;01271&#10;26371&#10;38821&#10;55851"
+                    class="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs font-mono text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 uppercase"></textarea>
+                </div>
+
+                <!-- Range Input (Mode Range) -->
+                <div v-if="addPartBulkMode === 'range'" class="space-y-3">
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-xs font-bold text-slate-700 mb-1">
+                        <span v-if="addPartBulkForm.part_type === '1' || addPartBulkForm.part_type === '12'">PN Awal</span>
+                        <span v-else>SN Awal</span>
+                        <span class="text-red-500"> *</span>
+                      </label>
+                      <input type="text" v-model="addPartBulkForm.sn_start" required placeholder="Misal: 01271"
+                        class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500">
+                    </div>
+                    <div>
+                      <label class="block text-xs font-bold text-slate-700 mb-1">
+                        <span v-if="addPartBulkForm.part_type === '1' || addPartBulkForm.part_type === '12'">PN Akhir</span>
+                        <span v-else>SN Akhir</span>
+                        <span class="text-red-500"> *</span>
+                      </label>
+                      <input type="text" v-model="addPartBulkForm.sn_end" required placeholder="Misal: 01280"
+                        class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500">
+                    </div>
+                  </div>
+                  <p class="text-[10px] text-slate-500">
+                    Sistem akan membuat nomor berurutan secara otomatis dan mempertahankan panjang digit dengan angka nol di depan. Maksimal 500 unit sekali jalan.
+                  </p>
+                </div>
+
+                <!-- CS Input (Khusus Part 15 Bulk) -->
+                <div v-if="addPartBulkForm.part_type === '15'">
+                  <label class="block text-xs font-bold text-slate-700 mb-1.5">Kode CS Seluruh Part 15 <span class="text-red-500">*</span></label>
+                  <input type="text" v-model="addPartBulkForm.cs" required maxlength="10" placeholder="Contoh: K"
+                    class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-mono text-slate-900 uppercase">
+                </div>
+
+                <!-- Alasan / Catatan Bulk -->
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1.5">Catatan Batch <span class="text-slate-400 font-normal">(Opsional)</span></label>
+                  <input type="text" v-model="addPartBulkForm.reason" placeholder="Contoh: Batch double marking gelombang 2"
+                    class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-slate-900">
+                </div>
+
+                <!-- Submit Button -->
+                <div class="flex items-center space-x-2 pt-2">
+                  <button type="submit" :disabled="addPartLoading"
+                    class="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 px-4 rounded-xl text-xs shadow-md shadow-red-600/20 transition flex items-center justify-center space-x-1.5 cursor-pointer">
+                    <i v-if="addPartLoading" class="fa-solid fa-circle-notch fa-spin"></i>
+                    <i v-else class="fa-solid fa-layer-group"></i>
+                    <span>Proses Batch Part Number</span>
+                  </button>
+                  <button type="button" @click="resetAddPartBulkForm"
+                    class="px-3.5 py-2.5 rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-100 text-xs font-bold transition cursor-pointer">
+                    Reset
+                  </button>
+                </div>
+
+                <!-- Bulk Feedback Card -->
+                <div v-if="addPartBulkResult" class="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                  <div class="flex items-center justify-between">
+                    <h5 class="text-xs font-black text-slate-900">Hasil Penambahan Batch:</h5>
+                    <div class="flex items-center gap-1.5">
+                      <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                        {{ addPartBulkResult.added_count }} Berhasil Ditambahkan
+                      </span>
+                      <span v-if="addPartBulkResult.duplicate_count > 0" class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                        {{ addPartBulkResult.duplicate_count }} Duplikat Dilewati
+                      </span>
+                    </div>
+                  </div>
+                  <div v-if="addPartBulkResult.added && addPartBulkResult.added.length > 0" class="space-y-1">
+                    <span class="text-[10px] font-bold text-slate-500 uppercase">Part yang berhasil didaftarkan:</span>
+                    <div class="flex flex-wrap gap-1 max-h-28 overflow-y-auto p-2 bg-white rounded-lg border border-slate-200">
+                      <span v-for="sn in addPartBulkResult.added" :key="sn" class="px-1.5 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded text-[11px] font-mono font-bold">
+                        {{ sn }}
+                      </span>
+                    </div>
+                  </div>
+                  <div v-if="addPartBulkResult.duplicates && addPartBulkResult.duplicates.length > 0" class="space-y-1">
+                    <span class="text-[10px] font-bold text-slate-500 uppercase">Part yang sudah ada di Master Stok:</span>
+                    <div class="flex flex-wrap gap-1 max-h-24 overflow-y-auto p-2 bg-white rounded-lg border border-slate-200">
+                      <span v-for="dup in addPartBulkResult.duplicates" :key="dup.sn" class="px-1.5 py-0.5 bg-amber-50 text-amber-800 border border-amber-200 rounded text-[11px] font-mono">
+                        {{ dup.sn }} ({{ dup.status }})
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+              </form>
+
+            </div>
+          </div>
+
+          <!-- Right Column: Riwayat Part Terbaru di Master Stok -->
+          <div class="xl:col-span-7 space-y-4">
+            <div class="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
+              
+              <!-- History Header & Filter -->
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3 sm:pb-4">
+                <div class="flex items-center space-x-2.5">
+                  <div class="w-8 h-8 rounded-lg bg-red-100 text-red-600 flex items-center justify-center text-sm">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                  </div>
+                  <div>
+                    <h3 class="text-sm sm:text-base font-black text-slate-900 leading-tight">Riwayat Part Terbaru di Master Stok</h3>
+                    <p class="text-[11px] text-slate-500 font-medium">Part yang baru ditambahkan ke database (status awal Tersedia)</p>
+                  </div>
+                </div>
+
+                <!-- Filter Part Type Pills -->
+                <div class="inline-flex p-1 bg-slate-100 rounded-xl space-x-1 self-start sm:self-auto">
+                  <button type="button" @click="loadRecentlyAddedParts('')"
+                    :class="recentAddedFilter === '' ? 'bg-white text-slate-900 font-bold shadow-sm' : 'text-slate-500 hover:text-slate-900 font-medium'"
+                    class="px-2.5 py-1 rounded-lg text-xs transition cursor-pointer">
+                    Semua
+                  </button>
+                  <button type="button" @click="loadRecentlyAddedParts('1')"
+                    :class="recentAddedFilter === '1' ? 'bg-white text-blue-900 font-bold shadow-sm' : 'text-slate-500 hover:text-slate-900 font-medium'"
+                    class="px-2.5 py-1 rounded-lg text-xs transition cursor-pointer">
+                    Part 1
+                  </button>
+                  <button type="button" @click="loadRecentlyAddedParts('12')"
+                    :class="recentAddedFilter === '12' ? 'bg-white text-purple-900 font-bold shadow-sm' : 'text-slate-500 hover:text-slate-900 font-medium'"
+                    class="px-2.5 py-1 rounded-lg text-xs transition cursor-pointer">
+                    Part 12
+                  </button>
+                  <button type="button" @click="loadRecentlyAddedParts('15')"
+                    :class="recentAddedFilter === '15' ? 'bg-white text-emerald-900 font-bold shadow-sm' : 'text-slate-500 hover:text-slate-900 font-medium'"
+                    class="px-2.5 py-1 rounded-lg text-xs transition cursor-pointer">
+                    Part 15
+                  </button>
+                </div>
+              </div>
+
+              <!-- Loading State -->
+              <div v-if="recentAddedLoading" class="py-12 text-center text-slate-400 space-y-2">
+                <i class="fa-solid fa-circle-notch fa-spin text-2xl text-red-600"></i>
+                <p class="text-xs font-medium">Memuat riwayat part terbaru...</p>
+              </div>
+
+              <!-- Empty State -->
+              <div v-else-if="!recentAddedParts || recentAddedParts.length === 0" class="py-12 text-center text-slate-400 space-y-2">
+                <i class="fa-solid fa-boxes-packing text-3xl text-slate-300"></i>
+                <p class="text-xs font-medium">Belum ada part yang ditambahkan atau filter tidak menemukan hasil.</p>
+              </div>
+
+              <!-- History Table -->
+              <div v-else class="overflow-x-auto rounded-xl border border-slate-200">
+                <table class="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200 uppercase text-[10px] tracking-wider">
+                      <th class="py-2.5 px-3">Tipe</th>
+                      <th class="py-2.5 px-3">Serial Number</th>
+                      <th class="py-2.5 px-3">CS</th>
+                      <th class="py-2.5 px-3">Status</th>
+                      <th class="py-2.5 px-3">Ditambahkan Oleh</th>
+                      <th class="py-2.5 px-3">Keterangan</th>
+                      <th class="py-2.5 px-3 text-right">Waktu</th>
+                      <th class="py-2.5 px-3 text-center">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100">
+                    <tr v-for="part in recentAddedParts" :key="part.id" class="hover:bg-slate-50/80 transition">
+                      
+                      <!-- Tipe Badge -->
+                      <td class="py-2.5 px-3 whitespace-nowrap">
+                        <span v-if="part.part_type === '1'" class="px-2 py-0.5 rounded text-[10px] font-black bg-blue-100 text-blue-800 border border-blue-200">
+                          Part 1
+                        </span>
+                        <span v-else-if="part.part_type === '12'" class="px-2 py-0.5 rounded text-[10px] font-black bg-purple-100 text-purple-800 border border-purple-200">
+                          Part 12
+                        </span>
+                        <span v-else class="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-200">
+                          Part 15
+                        </span>
+                      </td>
+
+                      <!-- SN -->
+                      <td class="py-2.5 px-3 whitespace-nowrap">
+                        <span class="font-mono font-bold text-slate-900">{{ part.sn }}</span>
+                      </td>
+
+                      <!-- CS -->
+                      <td class="py-2.5 px-3 whitespace-nowrap">
+                        <span v-if="part.cs" class="font-mono font-bold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded text-[11px]">{{ part.cs }}</span>
+                        <span v-else class="text-slate-300">-</span>
+                      </td>
+
+                      <!-- Status -->
+                      <td class="py-2.5 px-3 whitespace-nowrap">
+                        <span v-if="part.status === 'Tersedia'" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+                          <i class="fa-solid fa-check text-[9px] mr-1"></i> Tersedia
+                        </span>
+                        <span v-else-if="part.status === 'Done' || part.status === 'Good'" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800">
+                          {{ part.status }}
+                        </span>
+                        <span v-else class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
+                          {{ part.status }}
+                        </span>
+                      </td>
+
+                      <!-- Ditambahkan Oleh -->
+                      <td class="py-2.5 px-3 whitespace-nowrap">
+                        <span v-if="part.actor_username" class="font-semibold text-slate-800 flex items-center space-x-1">
+                          <i class="fa-solid fa-user text-[10px] text-slate-400"></i>
+                          <span>{{ part.actor_username }}</span>
+                        </span>
+                        <span v-else class="text-slate-400 italic">Sistem / Seed</span>
+                      </td>
+
+                      <!-- Keterangan / Reason -->
+                      <td class="py-2.5 px-3 max-w-[180px] truncate text-slate-600" :title="part.reason || ''">
+                        {{ part.reason || '-' }}
+                      </td>
+
+                      <!-- Waktu -->
+                      <td class="py-2.5 px-3 whitespace-nowrap text-right font-mono text-[11px] text-slate-500">
+                        {{ part.created_at || '-' }}
+                      </td>
+
+                      <!-- Aksi: Icon Sampah -->
+                      <td class="py-2.5 px-3 whitespace-nowrap text-center">
+                        <button type="button" @click="deleteRecentlyAddedPart(part)"
+                          :disabled="part.status !== 'Tersedia'"
+                          :title="part.status === 'Tersedia' ? 'Hapus Part' : 'Part sudah digunakan/dialokasikan, tidak dapat dihapus'"
+                          :class="part.status === 'Tersedia' ? 'bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 border-red-200 active:scale-95 cursor-pointer shadow-xs' : 'bg-slate-100 text-slate-300 border-slate-200 cursor-not-allowed'"
+                          class="w-7 h-7 inline-flex items-center justify-center rounded-lg border transition-all">
+                          <i class="fa-solid fa-trash-can text-xs"></i>
+                        </button>
+                      </td>
+
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+</section>
 
     </main>
 
@@ -16428,8 +16881,7 @@
               disimpan.
             </template>
             <template v-else-if="adminUnsavedContext === 'testing_points'">
-              Terdapat perubahan data pada formulir {{ editingTestingPointId ? 'edit testing point' : 'testing point
-              baru' }} yang belum disimpan.
+              Terdapat perubahan data pada formulir {{ editingTestingPointId ? 'edit testing point' : 'testing point baru' }} yang belum disimpan.
             </template>
             <template v-else>
               Terdapat perubahan input data yang belum disimpan.
@@ -18003,8 +18455,7 @@
                 <span
                   v-if="activeAdminSet.process_stage === 'perakitan' || activeAdminSet.verified_status === 'PENDING_ADMIN_ASSY_REREG'">Stage:
                   <strong>Rakit Ulang (RU) — Pilih Operator</strong></span>
-                <span v-else>Alasan: <strong>{{ activeAdminSet.scrap_reason || activeAdminSet.declined_reason || 'Gagal
-                    dalam uji' }}</strong></span>
+                <span v-else>Alasan: <strong>{{ activeAdminSet.scrap_reason || activeAdminSet.declined_reason || 'Gagal dalam uji' }}</strong></span>
               </p>
             </div>
           </div>
@@ -18353,8 +18804,7 @@
             <span v-else class="px-2.5 py-1 rounded-xl text-xs font-black border shadow-2xs uppercase tracking-wide"
               :class="(selectedAdminSetDetail.process_stage === 'perakitan' || selectedAdminSetDetail.verified_status === 'PENDING_ADMIN_ASSY_REREG') ? 'bg-indigo-100 text-indigo-900 border-indigo-300' : (selectedAdminSetDetail.display_status && selectedAdminSetDetail.display_status.includes('Scrap') ? 'bg-rose-100 text-rose-800 border-rose-300' : (selectedAdminSetDetail.display_status && selectedAdminSetDetail.display_status.includes('Rework') ? 'bg-purple-100 text-purple-800 border-purple-300' : 'bg-amber-100 text-amber-900 border-amber-300'))">
               {{ (selectedAdminSetDetail.process_stage === 'perakitan' || selectedAdminSetDetail.verified_status ===
-              'PENDING_ADMIN_ASSY_REREG') ? 'Rakit Ulang (RU)' : (selectedAdminSetDetail.display_status || 'Hold
-              Rakitan') }}
+              'PENDING_ADMIN_ASSY_REREG') ? 'Rakit Ulang (RU)' : (selectedAdminSetDetail.display_status || 'Hold Rakitan') }}
             </span>
           </div>
 
@@ -18709,8 +19159,7 @@
           </div>
           <div class="bg-white border border-slate-200 rounded-xl p-3 text-slate-800 italic leading-relaxed">
             "{{ selectedAdminPartDetail.reason || selectedAdminPartDetail.stock_last_reason ||
-            selectedAdminPartDetail.audit_log_reason || selectedAdminPartDetail.previous_assembly_reason || 'Tidak ada
-            alasan khusus dicatat pada saat pelepasan part.' }}"
+            selectedAdminPartDetail.audit_log_reason || selectedAdminPartDetail.previous_assembly_reason || 'Tidak ada alasan khusus dicatat pada saat pelepasan part.' }}"
           </div>
           <div v-if="selectedAdminPartDetail.previous_failure_reasons"
             class="text-[11px] text-rose-800 bg-rose-50 border border-rose-200 rounded-xl p-2.5">
@@ -19054,8 +19503,7 @@
               <span class="text-[10px] font-bold text-amber-700 uppercase tracking-wider block">Alasan Terakhir</span>
               <p class="text-xs font-semibold text-amber-950 truncate"
                 :title="masterPartTrackingData?.stock?.last_reason || masterPartTrackingData?.assembly?.reason || '-'">
-                {{ masterPartTrackingData?.stock?.last_reason || masterPartTrackingData?.assembly?.reason || 'Tidak ada
-                catatan khusus' }}
+                {{ masterPartTrackingData?.stock?.last_reason || masterPartTrackingData?.assembly?.reason || 'Tidak ada catatan khusus' }}
               </p>
               <span class="text-[9.5px] text-amber-700 block truncate">
                 Oleh: {{ masterPartTrackingData?.stock?.last_operator ||
@@ -19072,8 +19520,7 @@
               </p>
               <span class="text-[9.5px] text-indigo-700 block truncate">
                 {{ masterPartTrackingData?.assembly ? 'Terpasang di Set #' + masterPartTrackingData.assembly.set_number
-                : (masterPartTrackingData?.tray ? 'Di dalam Tray ' + masterPartTrackingData.tray.tray_code : 'Belum
-                dialokasikan ke Tray') }}
+                : (masterPartTrackingData?.tray ? 'Di dalam Tray ' + masterPartTrackingData.tray.tray_code : 'Belum dialokasikan ke Tray') }}
               </span>
             </div>
           </div>
@@ -20499,8 +20946,7 @@
         <!-- Catatan / Alasan -->
         <div class="space-y-1.5">
           <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">
-            <span>{{ warehouseQCForm.action === 'ACCEPT' ? 'Catatan Penerimaan (Opsional):' : 'Alasan Penolakan /
-              Decline Fisik:' }}</span>
+            <span>{{ warehouseQCForm.action === 'ACCEPT' ? 'Catatan Penerimaan (Opsional):' : 'Alasan Penolakan / Decline Fisik:' }}</span>
             <span v-if="warehouseQCForm.action === 'DECLINE'" class="text-red-600">*</span>
           </label>
           <textarea v-model="warehouseQCForm.notes" rows="2"
@@ -20858,8 +21304,7 @@ K1101621
           <div v-if="filteredAvailablePLBoxesList.length === 0"
             class="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 text-slate-500 text-xs">
             <i class="fa-solid fa-boxes-packing text-2xl text-slate-400 mb-2 block"></i>
-            {{ getAvailablePLBoxesList().length === 0 ? 'Belum ada Packing List kemasan Dus atau Peti yang dibuat di
-            sistem.' : 'Tidak ada Dus yang cocok dengan pencarian.' }}
+            {{ getAvailablePLBoxesList().length === 0 ? 'Belum ada Packing List kemasan Dus atau Peti yang dibuat di sistem.' : 'Tidak ada Dus yang cocok dengan pencarian.' }}
           </div>
 
           <div v-for="b in filteredAvailablePLBoxesList" :key="b.pl_id + '_' + b.box_id"
@@ -21090,20 +21535,20 @@ K1101621
     <div id="do-printable-area" class="font-sans text-slate-900 bg-white"
       style="font-family: 'Roboto', Arial, sans-serif;">
 
-      <!-- ================= 1. PRINT: SURAT JALAN (A5 LANDSCAPE SESUAI CONTOH FOTO RESMI BARU) ================= -->
+      <!-- ================= 1. PRINT: SURAT JALAN (8.5 x 5.5 INCH LANDSCAPE, MARGIN WORD: TOP 1cm, RIGHT 2.33cm, BOTTOM 0.5cm, LEFT 1.66cm) ================= -->
       <div v-if="(activePrintType === 'surat_jalan' || activePrintType === 'all') && activePrintDO"
-        class="w-[210mm] h-[148mm] min-h-[148mm] max-h-[148mm] mx-auto text-black font-sans bg-white do-page-break flex flex-col justify-between overflow-hidden select-text"
-        style="padding: 5mm 6mm; box-sizing: border-box; font-family: 'Roboto', Arial, sans-serif; position: relative;">
+        class="mx-auto text-black font-sans bg-white do-page-break flex flex-col justify-between overflow-hidden select-text"
+        style="width: 8.5in; height: 5.5in; min-width: 8.5in; max-width: 8.5in; min-height: 5.5in; max-height: 5.5in; padding: 1.0cm 2.33cm 0.5cm 1.66cm; box-sizing: border-box; font-family: 'Roboto', Arial, sans-serif; position: relative;">
 
         <!-- BINGKAI LUAR HITAM (KOTAK PERSEGI SESUAI CONTOH FOTO USER) -->
         <div
           style="border: 1.5px solid #000000; width: 100%; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; position: relative; background: #ffffff; overflow: hidden;">
 
-          <!-- WATERMARK LOGO DI TENGAH DOKUMEN (HANYA EMBLEM / SIMBOL, TANPA TEKS, TRANSPARANSI LEMBUT) -->
+          <!-- WATERMARK LOGO DI TENGAH DOKUMEN (TRANSPARANSI 65% = OPACITY 0.35) -->
           <div class="pointer-events-none select-none absolute inset-0 flex items-center justify-center"
             style="z-index: 0;">
             <img :src="nkriEmblemBase64 || '/emblem.png'" alt="" class="do-watermark-img"
-              style="width: 145px; opacity: 0.065 !important; filter: saturate(80%) !important; object-fit: contain;" />
+              style="width: 195px; opacity: 0.35 !important; object-fit: contain;" />
           </div>
 
           <!-- KONTEN ATAS: HEADER, BANNER, PENERIMA, TABEL -->
@@ -21115,7 +21560,7 @@ K1101621
               <!-- Kiri -->
               <div>
                 <div style="font-weight: 800; font-size: 13px; color: #000000; letter-spacing: -0.2px;">
-                  {{ doSettings.company_name || 'PT. Nanggala Kencana Rekatama Indonesia' }}
+                  {{ doSettings.company_name || 'PT Nanggala Kencana Rekatama Indonesia' }}
                 </div>
                 <div style="font-size: 10px; color: #111827; line-height: 1.35; margin-top: 2px;">
                   Jl. Mekar Raya Kav. 12, Komplek Industri Mekar Mulya,<br>Gedebage, Bandung
@@ -21202,7 +21647,7 @@ K1101621
                       No</th>
                     <th
                       style="border-right: 1.5px solid #000000; width: 34%; text-align: center; font-weight: 700; padding: 2px 4px;">
-                      Nama Produk</th>
+                      Produk</th>
                     <th
                       style="border-right: 1.5px solid #000000; width: 18%; text-align: center; font-weight: 700; padding: 2px 4px;">
                       Jumlah</th>
@@ -22039,7 +22484,7 @@ K1101621
             const r = String(userRole.value || '').toLowerCase().trim();
             const u = String(userName.value || '').toLowerCase().trim();
             if (r === 'admin' || r === 'super admin') {
-              const adminKeys = ['users', 'verify_set', 'verify_part', 'verify_replacement', 'verify_items', 'audit', 'downtime', 'testing_points'];
+              const adminKeys = ['users', 'verify_set', 'verify_part', 'verify_replacement', 'verify_items', 'audit', 'downtime', 'testing_points', 'add_part'];
               let changed = false;
               if (!userPermissions.value || typeof userPermissions.value !== 'object') {
                 userPermissions.value = {};
@@ -22108,7 +22553,8 @@ K1101621
               { key: 'verify_replacement', title: 'Verifikasi Pergantian Part', icon: 'fa-solid fa-wrench', desc: 'Approval permohonan pergantian part dari Hasil Perakitan' },
               { key: 'audit', title: 'Riwayat Audit Gudang', icon: 'fa-solid fa-clock-rotate-left', desc: 'Log rekonsiliasi & selisih audit stok' },
               { key: 'downtime', title: 'Audit Downtime Perakitan', icon: 'fa-solid fa-business-time', desc: 'Rekap jeda & downtime lini perakitan' },
-              { key: 'testing_points', title: 'Master Testing Point', icon: 'fa-solid fa-list-check', desc: 'Parameter checklist uji TF1 & TF2 sistem' }
+              { key: 'testing_points', title: 'Master Testing Point', icon: 'fa-solid fa-list-check', desc: 'Parameter checklist uji TF1 & TF2 sistem' },
+              { key: 'add_part', title: 'Tambah Part Number', icon: 'fa-solid fa-plus-circle', desc: 'Input Part Number baru / double marking ke Master Stok' }
             ]
           }
         ];
@@ -22158,7 +22604,8 @@ K1101621
             verify_items: isAdmin ? 2 : 0,
             audit: isAdmin ? 2 : 0,
             downtime: isAdmin ? 2 : 0,
-            testing_points: isAdmin ? 2 : 0
+            testing_points: isAdmin ? 2 : 0,
+            add_part: isAdmin ? 2 : 0
           };
         };
 
@@ -22211,12 +22658,14 @@ K1101621
               val = userPermissions.value['report'];
             } else if (menuKey === 'functional_hold') {
               val = userPermissions.value['production_hold'];
+            } else if (menuKey === 'add_part') {
+              val = userPermissions.value['add_part'] ?? userPermissions.value['users'];
             }
           }
           const parsed = parsePermValue(val);
           // If user is Admin, verification and administrator menus must be FULL access (2) by default
           if (isAdminUser.value) {
-            if (['verify_set', 'verify_part', 'verify_replacement', 'verify_items', 'users', 'audit', 'downtime', 'testing_points'].includes(menuKey)) {
+            if (['verify_set', 'verify_part', 'verify_replacement', 'verify_items', 'users', 'audit', 'downtime', 'testing_points', 'add_part'].includes(menuKey)) {
               if (parsed === undefined || parsed === 0) return 2;
             }
             if (parsed === undefined) return 2;
@@ -22227,7 +22676,7 @@ K1101621
         const hasMenuAccess = (menuKey) => {
           // 1. If admin user, administrator & verification menus are always granted
           if (isAdminUser.value) {
-            if (['users', 'verify_set', 'verify_part', 'verify_replacement', 'verify_items', 'audit', 'downtime', 'testing_points'].includes(menuKey)) {
+            if (['users', 'verify_set', 'verify_part', 'verify_replacement', 'verify_items', 'audit', 'downtime', 'testing_points', 'add_part'].includes(menuKey)) {
               return true;
             }
           }
@@ -22243,7 +22692,7 @@ K1101621
             return true;
           }
 
-          if (['users', 'verify_set', 'verify_part', 'verify_replacement', 'verify_items', 'audit', 'downtime', 'testing_points'].includes(menuKey)) {
+          if (['users', 'verify_set', 'verify_part', 'verify_replacement', 'verify_items', 'audit', 'downtime', 'testing_points', 'add_part'].includes(menuKey)) {
             return false;
           }
 
@@ -22269,7 +22718,8 @@ K1101621
             if (sub === 'audit') return hasMenuAccess('audit');
             if (sub === 'downtime') return hasMenuAccess('downtime');
             if (sub === 'testing_points') return hasMenuAccess('testing_points');
-            return hasMenuAccess('users') || hasMenuAccess('verify_set') || hasMenuAccess('verify_part') || hasMenuAccess('verify_replacement') || hasMenuAccess('audit') || hasMenuAccess('downtime') || hasMenuAccess('testing_points');
+            if (sub === 'add_part') return hasMenuAccess('add_part') || hasMenuAccess('users') || isAdminUser.value;
+            return hasMenuAccess('users') || hasMenuAccess('verify_set') || hasMenuAccess('verify_part') || hasMenuAccess('verify_replacement') || hasMenuAccess('audit') || hasMenuAccess('downtime') || hasMenuAccess('testing_points') || hasMenuAccess('add_part');
           }
           if (tab === 'functional_hold') return hasMenuAccess('functional_hold') || hasMenuAccess('production_hold');
           return hasMenuAccess(tab);
@@ -22453,6 +22903,7 @@ K1101621
           if (s.includes('audit')) return 'audit';
           if (s.includes('downtime') || s.includes('jeda')) return 'downtime';
           if (s.includes('testing') || s.includes('point') || s.includes('master_test')) return 'testing_points';
+          if (s.includes('add_part') || s.includes('tambah_part') || s === 'add_part') return 'add_part';
           if (s.includes('user') || s.includes('pengguna') || s.includes('kelola')) return 'users';
           return s;
         };
@@ -22512,7 +22963,7 @@ K1101621
             } else {
               subTab = rawSub;
             }
-          } else if (['verify_set', 'verify_part', 'verify_replacement', 'verify_items', 'verify', 'verifikasi', 'audit', 'downtime', 'testing_points'].includes(hash.toLowerCase())) {
+          } else if (['verify_set', 'verify_part', 'verify_replacement', 'verify_items', 'verify', 'verifikasi', 'audit', 'downtime', 'testing_points', 'add_part', 'tambah_part'].includes(hash.toLowerCase())) {
             tab = 'users';
             subTab = normalizeAdminSubTab(hash);
           } else {
@@ -22554,7 +23005,7 @@ K1101621
           }
 
           if (tab === 'users') {
-            const validSubTabs = ['users', 'verify_set', 'verify_part', 'verify_replacement', 'verify_items', 'audit', 'downtime', 'testing_points'];
+            const validSubTabs = ['users', 'verify_set', 'verify_part', 'verify_replacement', 'verify_items', 'audit', 'downtime', 'testing_points', 'add_part'];
             subTab = normalizeAdminSubTab(subTab);
             if (!validSubTabs.includes(subTab) || !hasMenuAccess(subTab)) {
               if (savedSubTab && validSubTabs.includes(savedSubTab) && hasMenuAccess(savedSubTab)) {
@@ -22700,6 +23151,10 @@ K1101621
 
         const navigateTo = (tab, subTab = null, isFromPopState = false) => {
           isMobileMenuOpen.value = false;
+          if (tab === 'add_part') {
+            navigateTo('users', 'add_part', isFromPopState);
+            return;
+          }
 
           // Check for unsaved changes in Master Testing or Kelola Pengguna before navigating away
           const targetSub = (tab === 'users') ? (normalizeAdminSubTab(subTab) || 'users') : null;
@@ -22742,6 +23197,8 @@ K1101621
               loadDowntimeLogs();
             } else if (targetSub === 'testing_points') {
               loadTestingPoints();
+            } else if (targetSub === 'add_part') {
+              loadRecentlyAddedParts();
             } else {
               loadUsersList();
             }
@@ -22792,6 +23249,8 @@ K1101621
               loadAvailableFinishedSNs();
             } else if (tab === 'master') {
               loadMasterData();
+            } else if (tab === 'add_part') {
+              loadRecentlyAddedParts();
             } else if (tab === 'warehouse') {
               loadTrays(); loadTestingPoints();
               loadOperatorsList();
@@ -27065,6 +27524,210 @@ K1101621
           ]);
         };
 
+        // ==========================================
+        // FITUR TAMBAH PART NUMBER (MASTER STOK)
+        // ==========================================
+        const addPartTab = ref('single'); // 'single' | 'bulk'
+        const addPartBulkMode = ref('list'); // 'list' | 'range'
+        const addPartForm = ref({
+          part_type: '1',
+          sn: '',
+          cs: '',
+          reason: ''
+        });
+        const addPartBulkForm = ref({
+          part_type: '1',
+          sns_text: '',
+          sn_start: '',
+          sn_end: '',
+          cs: '',
+          reason: ''
+        });
+        const addPartLoading = ref(false);
+        const addPartBulkResult = ref(null);
+        const recentAddedParts = ref([]);
+        const recentAddedLoading = ref(false);
+        const recentAddedFilter = ref('');
+
+        const resetAddPartForm = () => {
+          addPartForm.value = {
+            part_type: addPartForm.value.part_type || '1',
+            sn: '',
+            cs: '',
+            reason: ''
+          };
+        };
+
+        const resetAddPartBulkForm = () => {
+          addPartBulkForm.value = {
+            part_type: addPartBulkForm.value.part_type || '1',
+            sns_text: '',
+            sn_start: '',
+            sn_end: '',
+            cs: '',
+            reason: ''
+          };
+          addPartBulkResult.value = null;
+        };
+
+        const loadRecentlyAddedParts = async (type = null) => {
+          if (type !== null) {
+            recentAddedFilter.value = type;
+          }
+          recentAddedLoading.value = true;
+          try {
+            let url = '/master/recent-added?limit=30';
+            if (recentAddedFilter.value) {
+              url += '&part_type=' + encodeURIComponent(recentAddedFilter.value);
+            }
+            const res = await fetchAPI(url);
+            if (res && res.ok) {
+              recentAddedParts.value = res.data || [];
+            } else {
+              recentAddedParts.value = [];
+            }
+          } catch (err) {
+            console.error('Error loading recently added parts:', err);
+          } finally {
+            recentAddedLoading.value = false;
+          }
+        };
+
+        const submitAddSinglePart = async () => {
+          const form = addPartForm.value;
+          if (!form.sn || !form.sn.trim()) {
+            triggerToast('Validasi Gagal', 'Serial Number (SN) wajib diisi!', 'warn');
+            return;
+          }
+          if (form.part_type === '15' && (!form.cs || !form.cs.trim())) {
+            triggerToast('Validasi Gagal', 'CS wajib diisi untuk Part 15!', 'warn');
+            return;
+          }
+
+          addPartLoading.value = true;
+          try {
+            const res = await fetchAPI('/master/add-part', {
+              method: 'POST',
+              body: JSON.stringify({
+                part_type: form.part_type,
+                sn: form.sn.trim(),
+                cs: form.part_type === '15' ? form.cs.trim().toUpperCase() : undefined,
+                reason: form.reason ? form.reason.trim() : undefined
+              })
+            });
+
+            if (res && res.ok) {
+              triggerToast('Berhasil', res.message || 'Part number berhasil ditambahkan ke Master Stok!', 'success');
+              resetAddPartForm();
+              await loadRecentlyAddedParts();
+              if (typeof loadMasterData === 'function') {
+                loadMasterData();
+              }
+            } else {
+              triggerToast('Gagal Menambahkan', (res && res.error) || 'Gagal menambahkan part number', 'error');
+            }
+          } catch (err) {
+            console.error('Submit single part error:', err);
+            triggerToast('Error Sistem', err.message || 'Terjadi kesalahan sistem saat menambahkan part', 'error');
+          } finally {
+            addPartLoading.value = false;
+          }
+        };
+
+        const submitAddBulkPart = async () => {
+          const form = addPartBulkForm.value;
+          const payload = {
+            part_type: form.part_type,
+            cs: form.part_type === '15' ? (form.cs || '').trim().toUpperCase() : undefined,
+            reason: form.reason ? form.reason.trim() : undefined
+          };
+
+          if (form.part_type === '15' && (!payload.cs)) {
+            triggerToast('Validasi Gagal', 'CS wajib diisi untuk Part 15!', 'warn');
+            return;
+          }
+
+          if (addPartBulkMode.value === 'range') {
+            if (!form.sn_start || !form.sn_end) {
+              triggerToast('Validasi Gagal', 'SN Awal dan SN Akhir wajib diisi!', 'warn');
+              return;
+            }
+            payload.sn_start = form.sn_start.trim();
+            payload.sn_end = form.sn_end.trim();
+          } else {
+            if (!form.sns_text || !form.sns_text.trim()) {
+              triggerToast('Validasi Gagal', 'Daftar SN tidak boleh kosong!', 'warn');
+              return;
+            }
+            payload.sns = form.sns_text;
+          }
+
+          addPartLoading.value = true;
+          try {
+            const res = await fetchAPI('/master/add-part-bulk', {
+              method: 'POST',
+              body: JSON.stringify(payload)
+            });
+
+            if (res && res.ok) {
+              addPartBulkResult.value = res.data || null;
+              triggerToast('Bulk Selesai', res.message || 'Batch part number berhasil diproses!', 'success');
+              if (res.data && res.data.added_count > 0) {
+                await loadRecentlyAddedParts();
+                if (typeof loadMasterData === 'function') {
+                  loadMasterData();
+                }
+              }
+            } else {
+              triggerToast('Gagal Bulk', (res && res.error) || 'Gagal menambahkan batch part number', 'error');
+            }
+          } catch (err) {
+            console.error('Submit bulk part error:', err);
+            triggerToast('Error Sistem', err.message || 'Terjadi kesalahan sistem saat proses bulk', 'error');
+          } finally {
+            addPartLoading.value = false;
+          }
+        };
+        const deleteRecentlyAddedPart = async (part) => {
+          if (!part || !part.id) return;
+          const ok = await showConfirmCard({
+            title: 'Hapus Part',
+            message: 'Apakah anda ingin menghapus part ini?',
+            icon: 'fa-solid fa-trash-can',
+            iconBg: 'bg-red-100 text-red-600',
+            confirmText: 'Ya',
+            cancelText: 'Tidak',
+            confirmBtnClass: 'bg-red-600 hover:bg-red-700 text-white'
+          });
+          if (!ok) return;
+
+          try {
+            const res = await fetchAPI('/master/delete-part', {
+              method: 'POST',
+              body: JSON.stringify({
+                id: part.id,
+                sn: part.sn,
+                part_type: part.part_type
+              })
+            });
+
+            if (res && res.ok) {
+              triggerToast('Berhasil Dihapus', res.message || 'Part berhasil dihapus dari Master Stok!', 'success');
+              await loadRecentlyAddedParts();
+              if (typeof loadMasterData === 'function') {
+                loadMasterData();
+              }
+            } else {
+              triggerToast('Gagal Menghapus', (res && res.error) || 'Gagal menghapus part', 'error');
+            }
+          } catch (err) {
+            console.error('Delete part error:', err);
+            triggerToast('Error Sistem', err.message || 'Terjadi kesalahan sistem saat menghapus part', 'error');
+          }
+        };
+
+
+
         // ================= MASTER DB STATUS DRILLDOWN POPUP =================
         const showStatusDrillModal = ref(false);
         const drillData = ref({
@@ -27100,7 +27763,7 @@ K1101621
           showStatusDrillModal.value = true;
 
           try {
-            let url = `/master/stocks_list?page=1&limit=1500`;
+            let url = `/master/stocks_list?page=1&limit=10000`;
             if (partType) url += `&type=${encodeURIComponent(partType)}`;
             if (status === 'Part Diganti') {
               url += `&replaced=1`;
@@ -27128,7 +27791,7 @@ K1101621
             const q = (drillSearchQuery.value || '').trim();
             try {
               drillData.value.loading = true;
-              let url = `/master/stocks_list?page=1&limit=1500`;
+              let url = `/master/stocks_list?page=1&limit=10000`;
               if (drillData.value.part_type) url += `&type=${encodeURIComponent(drillData.value.part_type)}`;
               if (drillData.value.status === 'Part Diganti') {
                 url += `&replaced=1`;
@@ -28531,7 +29194,13 @@ K1101621
             const row = gudangRows.value[idx];
             if (!row) return;
             const pType = field === 'p1' ? '1' : (field === 'p12' ? '12' : '15');
-            const queryVal = (row[field] || '').trim();
+            let queryVal = (row[field] || '').trim();
+            if (field === 'p12') {
+              const clean12 = queryVal.replace(/\D/g, '');
+              if (clean12.length === 7 && clean12.startsWith('12')) {
+                queryVal = clean12.slice(2);
+              }
+            }
 
             // Used in other rows
             const usedInForm = new Set();
@@ -28543,13 +29212,14 @@ K1101621
             });
 
             try {
-              const json = await fetchAPI(`/master/available?type=${pType}&q=${encodeURIComponent(queryVal)}&limit=60`);
+              // Sesuai instruksi user: tidak memakai batasan (limit) saat menampilkan data rekomendasi stok
+              const json = await fetchAPI(`/master/available?type=${pType}&q=${encodeURIComponent(queryVal)}`);
               if (json.ok && Array.isArray(json.data)) {
                 const filtered = json.data.filter(item => {
                   const snClean = item.sn.toUpperCase();
                   const snNoDot = item.sn.replace(/[.,\s]/g, '');
                   return !usedInForm.has(snClean) && !usedInForm.has(snNoDot);
-                }).slice(0, 40);
+                });
 
                 inputDropdown.value = {
                   isOpen: filtered.length > 0,
@@ -28577,14 +29247,18 @@ K1101621
         const onInputP1 = (idx) => {
           const row = gudangRows.value[idx];
           if (!row) return;
-          row.p1 = (row.p1 || '').replace(/\D/g, '').slice(0, 4);
+          row.p1 = (row.p1 || '').replace(/\D/g, '').slice(0, 10);
           fetchInputSuggestions(idx, 'p1', 200);
         };
 
         const onInputP12 = (idx) => {
           const row = gudangRows.value[idx];
           if (!row) return;
-          row.p12 = (row.p12 || '').replace(/\D/g, '').slice(0, 5);
+          let val = (row.p12 || '').replace(/\D/g, '');
+          if (val.length === 7 && val.startsWith('12')) {
+            val = val.slice(2);
+          }
+          row.p12 = val.slice(0, 10);
           fetchInputSuggestions(idx, 'p12', 200);
         };
 
@@ -28690,22 +29364,28 @@ K1101621
           const row = gudangRows.value[idx];
           if (!row) return;
           if (field === 'p1') {
-            const val = row.p1.trim();
-            if (/^\d{1,4}$/.test(val)) {
-              const num = parseInt(val, 10);
-              if (num >= 1 && num <= 999) {
-                row.p1 = String(num).padStart(3, '0');
-              } else if (num >= 1000 && num <= 6000) {
-                row.p1 = String(num).padStart(4, '0');
+            const val = (row.p1 || '').trim();
+            if (!val) return;
+            if (/^\d+$/.test(val)) {
+              // Hanya auto-pad jika input pendek 1-2 digit (misal: '1' -> '001', '25' -> '025')
+              if (val.length <= 2) {
+                const num = parseInt(val, 10);
+                if (num >= 1 && num <= 99) {
+                  row.p1 = String(num).padStart(3, '0');
+                }
               }
+              // Jika sudah 3 digit atau lebih (misal: '001', '0712', '09856', '26371'), biarkan apa adanya dan jangan hilangkan angka 0 di depan!
             }
           } else if (field === 'p12') {
-            const clean = row.p12.trim().replace(/\D/g, '');
-            if (clean.length >= 4) {
+            let clean = (row.p12 || '').trim().replace(/\D/g, '');
+            if (clean.length === 7 && clean.startsWith('12')) {
+              clean = clean.slice(2);
+            }
+            if (clean) {
               row.p12 = clean;
             }
           } else if (field === 'p15') {
-            row.p15 = row.p15.trim().toUpperCase();
+            row.p15 = (row.p15 || '').trim().toUpperCase();
           }
         };
 
@@ -28759,7 +29439,7 @@ K1101621
           }
         };
 
-        const handleGudangKeyDown = (e, idx, col) => {
+        const handleGudangKeyDown = async (e, idx, col) => {
           if (e.key === 'Enter') {
             e.preventDefault();
             const row = gudangRows.value[idx];
@@ -28780,14 +29460,43 @@ K1101621
             let matchedItem = null;
 
             if (suggestions.length > 0) {
-              const cleanVal = val.toUpperCase().replace(/[.,\s]/g, '');
-              matchedItem = suggestions.find(it =>
-                it.sn.toUpperCase().replace(/[.,\s]/g, '') === cleanVal ||
-                it.sn.toUpperCase() === val.toUpperCase()
-              );
+              let cleanVal = val.toUpperCase().replace(/[.,\s]/g, '');
+              if (col === 'p12' && cleanVal.length === 7 && cleanVal.startsWith('12')) {
+                cleanVal = cleanVal.slice(2);
+              }
+              matchedItem = suggestions.find(it => {
+                const itClean = it.sn.toUpperCase().replace(/[.,\s]/g, '');
+                return itClean === cleanVal ||
+                  it.sn.toUpperCase() === val.toUpperCase() ||
+                  (col === 'p12' && (itClean === '12' + cleanVal || '12' + itClean === cleanVal));
+              });
               if (!matchedItem && suggestions.length === 1) {
                 matchedItem = suggestions[0];
               }
+            }
+
+            // Fallback: check API directly without limit if suggestion not populated yet
+            if (!matchedItem) {
+              try {
+                const pType = col === 'p1' ? '1' : (col === 'p12' ? '12' : '15');
+                let searchVal = val;
+                if (col === 'p12') {
+                  const cleanP12 = val.replace(/\D/g, '');
+                  if (cleanP12.length === 7 && cleanP12.startsWith('12')) {
+                    searchVal = cleanP12.slice(2);
+                  }
+                }
+                const json = await fetchAPI(`/master/available?type=${pType}&q=${encodeURIComponent(searchVal)}`);
+                if (json && json.ok && Array.isArray(json.data) && json.data.length > 0) {
+                  const cleanVal = searchVal.toUpperCase().replace(/[.,\s]/g, '');
+                  matchedItem = json.data.find(it => {
+                    const itClean = it.sn.toUpperCase().replace(/[.,\s]/g, '');
+                    return itClean === cleanVal ||
+                      it.sn.toUpperCase() === searchVal.toUpperCase() ||
+                      (col === 'p12' && (itClean === '12' + cleanVal || '12' + itClean === cleanVal));
+                  }) || json.data[0];
+                }
+              } catch (_) { }
             }
 
             if (matchedItem) {
@@ -28796,8 +29505,8 @@ K1101621
               // Not in available list / invalid number
               const pType = col === 'p1' ? '1' : (col === 'p12' ? '12' : '15');
               let rangeHint = '';
-              if (pType === '1') rangeHint = ' (Rentang 001 - 999 / 1000 - 6000)';
-              else if (pType === '12') rangeHint = ' (Rentang 60001 - 63500 / 70001 - 71500)';
+              if (pType === '1') rangeHint = ' (Rentang 001 - 999 / 1000 - 6000 / Double Part)';
+              else if (pType === '12') rangeHint = ' (Rentang 60001 - 63500 / 70001 - 71500 / Double Part)';
               else if (pType === '15') rangeHint = ' (Induk J11..)';
 
               triggerToast('SN Tidak Tersedia', `Nomor Part ${pType} '${rawVal}' tidak tersedia di Master Stock${rangeHint}! Silakan pilih nomor dari dropdown.`, 'error');
@@ -28824,16 +29533,15 @@ K1101621
 
           for (let i = 0; i < gudangRows.value.length; i++) {
             formatGudangInput(i, 'p1');
-            const val = gudangRows.value[i].p1.trim();
+            const val = (gudangRows.value[i].p1 || '').trim();
             if (!val) {
               triggerToast('Validasi Part 1 Gagal', `Baris #${i + 1} kolom Part 1 belum diisi!`, 'error');
               const el = document.getElementById(`g-p1-${i}`) || document.getElementById(`g-p1-m-${i}`);
               if (el) el.focus();
               return;
             }
-            const num = parseInt(val, 10);
-            if (isNaN(num) || num < 1 || num > 6000) {
-              triggerToast('Validasi Part 1 Gagal', `Baris #${i + 1}: Nomor Part 1 '${val}' tidak valid! Rentang harus 001 - 999 (3 digit) atau 1000 - 6000 (4 digit).`, 'error');
+            if (!/^\d+$/.test(val) || val.length < 3) {
+              triggerToast('Validasi Part 1 Gagal', `Baris #${i + 1}: Nomor Part 1 '${val}' tidak valid! Nomor harus berupa digit angka (minimal 3 digit).`, 'error');
               const el = document.getElementById(`g-p1-${i}`) || document.getElementById(`g-p1-m-${i}`);
               if (el) el.focus();
               return;
@@ -28857,16 +29565,15 @@ K1101621
         const verifyGudangStage2 = () => {
           for (let i = 0; i < gudangRows.value.length; i++) {
             formatGudangInput(i, 'p12');
-            const val = gudangRows.value[i].p12.trim();
+            const val = (gudangRows.value[i].p12 || '').trim();
             if (!val) {
               triggerToast('Validasi Part 12 Gagal', `Baris #${i + 1} kolom Part 12 belum diisi!`, 'error');
               const el = document.getElementById(`g-p12-sm-${i}`) || document.getElementById(`g-p12-m-${i}`) || document.getElementById(`g-p12-${i}`);
               if (el) el.focus();
               return;
             }
-            const num = parseInt(val, 10);
-            if (isNaN(num) || !((num >= 60001 && num <= 63500) || (num >= 70001 && num <= 71500))) {
-              triggerToast('Validasi Part 12 Gagal', `Baris #${i + 1}: Nomor Part 12 '${val}' tidak valid! Rentang harus 60001 - 63500 atau 70001 - 71500.`, 'error');
+            if (!/^\d+$/.test(val) || val.length < 4) {
+              triggerToast('Validasi Part 12 Gagal', `Baris #${i + 1}: Nomor Part 12 '${val}' tidak valid! Nomor harus berupa digit angka (minimal 4 digit).`, 'error');
               const el = document.getElementById(`g-p12-sm-${i}`) || document.getElementById(`g-p12-m-${i}`) || document.getElementById(`g-p12-${i}`);
               if (el) el.focus();
               return;
@@ -36816,109 +37523,7 @@ K1101621
           return !prev || !prev.serial_number || !prev.serial_number.trim();
         };
 
-        const autofillSingleBox = (boxIdx) => {
-          const boxes = getAllBoxesInForm();
-          const box = boxes[boxIdx];
-          if (!box) return;
 
-          const usedSNs = new Set();
-          doForm.value.crates.forEach(c => {
-            if (c.boxes) {
-              c.boxes.forEach(b => {
-                if (b.items) {
-                  b.items.forEach(it => {
-                    if (it.serial_number && it.serial_number.trim()) {
-                      usedSNs.add(it.serial_number.trim().toUpperCase());
-                    }
-                  });
-                }
-              });
-            }
-          });
-
-          const freeSNs = availableFinishedSNs.value.filter(s => !usedSNs.has(s.trim().toUpperCase()));
-          let snIdx = 0;
-          if (box.items) {
-            box.items.forEach(it => {
-              if (!it.serial_number || !it.serial_number.trim()) {
-                if (snIdx < freeSNs.length) {
-                  it.serial_number = freeSNs[snIdx++];
-                }
-              }
-            });
-          }
-
-          triggerToast('Auto Fill Selesai', `Dus #${boxIdx + 1} telah diisi (${snIdx} SN dialokasikan).`, 'info');
-        };
-
-        const autofillSingleCrate = (crateIdx) => {
-          const crate = doForm.value.crates && doForm.value.crates[crateIdx];
-          if (!crate || !crate.boxes) return;
-
-          const usedSNs = new Set();
-          doForm.value.crates.forEach(c => {
-            if (c.boxes) {
-              c.boxes.forEach(b => {
-                if (b.items) {
-                  b.items.forEach(it => {
-                    if (it.serial_number && it.serial_number.trim()) {
-                      usedSNs.add(it.serial_number.trim().toUpperCase());
-                    }
-                  });
-                }
-              });
-            }
-          });
-
-          const freeSNs = availableFinishedSNs.value.filter(s => !usedSNs.has(s.trim().toUpperCase()));
-          let snIdx = 0;
-          crate.boxes.forEach(b => {
-            if (b.items) {
-              b.items.forEach(it => {
-                if (!it.serial_number || !it.serial_number.trim()) {
-                  if (snIdx < freeSNs.length) {
-                    it.serial_number = freeSNs[snIdx++];
-                  }
-                }
-              });
-            }
-          });
-
-          triggerToast('Auto Fill Selesai', `Peti #${crateIdx + 1} telah diisi (${snIdx} SN dialokasikan).`, 'info');
-        };
-
-        const autofillSingleUnitBatch = (batchIdx) => {
-          const batches = getUnitBatches();
-          const batch = batches[batchIdx];
-          if (!batch) return;
-
-          const usedSNs = new Set();
-          doForm.value.crates.forEach(c => {
-            if (c.boxes) {
-              c.boxes.forEach(b => {
-                if (b.items) {
-                  b.items.forEach(it => {
-                    if (it.serial_number && it.serial_number.trim()) {
-                      usedSNs.add(it.serial_number.trim().toUpperCase());
-                    }
-                  });
-                }
-              });
-            }
-          });
-
-          const freeSNs = availableFinishedSNs.value.filter(s => !usedSNs.has(s.trim().toUpperCase()));
-          let snIdx = 0;
-          batch.forEach(it => {
-            if (!it.serial_number || !it.serial_number.trim()) {
-              if (snIdx < freeSNs.length) {
-                it.serial_number = freeSNs[snIdx++];
-              }
-            }
-          });
-
-          triggerToast('Auto Fill Selesai', `Bagian #${batchIdx + 1} telah diisi (${snIdx} SN dialokasikan).`, 'info');
-        };
 
         const filteredCustomersList = computed(() => {
           const q = (customerSearchQuery.value || '').trim().toLowerCase();
@@ -37545,25 +38150,7 @@ K1101621
           removeUnitFromDOForm(uIdx);
         };
 
-        const autofillAllUnits = () => {
-          const allUnits = getAllUnitsInForm();
-          const usedSNs = new Set();
-          allUnits.forEach(u => {
-            if (u.serial_number && u.serial_number.trim()) {
-              usedSNs.add(u.serial_number.trim().toUpperCase());
-            }
-          });
-          const freeSNs = (availableFinishedSNs.value || []).filter(s => !usedSNs.has(s.trim().toUpperCase()));
-          let filledCount = 0;
-          allUnits.forEach(u => {
-            if (!u.serial_number || !u.serial_number.trim()) {
-              if (filledCount < freeSNs.length) {
-                u.serial_number = freeSNs[filledCount++];
-              }
-            }
-          });
-          triggerToast('Auto Fill Satuan Selesai', `${filledCount} SN berhasil diisi otomatis.`, 'info');
-        };
+
 
         const openDODetailView = async (doId) => {
           isLoadingDODetail.value = true;
@@ -37694,7 +38281,7 @@ K1101621
               : isBoxOrPetiLabel
                 ? '@page { size: 100mm 150mm; margin: 0 !important; } @media print { @page { size: 100mm 150mm; margin: 0 !important; } html, body { width: 100mm !important; margin: 0 !important; padding: 0 !important; } .do-page-break { page-break-after: always; break-after: page; } }'
                 : isSuratJalan
-                  ? '@page { size: A5 landscape; margin: 0 !important; } @media print { @page { size: A5 landscape; margin: 0 !important; } html, body { width: 210mm !important; height: 148mm !important; margin: 0 !important; padding: 0 !important; } .do-page-break { page-break-after: always; break-after: page; } .do-watermark-img { opacity: 0.065 !important; filter: saturate(80%) !important; } }'
+                  ? '@page { size: 8.5in 5.5in landscape; margin: 0 !important; } @media print { @page { size: 8.5in 5.5in landscape; margin: 0 !important; } html, body { width: 8.5in !important; height: 5.5in !important; margin: 0 !important; padding: 0 !important; } .do-page-break { page-break-after: always; break-after: page; } .do-watermark-img { opacity: 0.35 !important; } }'
                   : '@page { size: A4 portrait; margin: 0 !important; } @media print { @page { size: A4 portrait; margin: 0 !important; } html, body { width: 210mm !important; margin: 0 !important; padding: 0 !important; } }';
 
             styleEl.innerHTML = pageRule;
@@ -38157,6 +38744,9 @@ K1101621
           onDropdownTouchStart, onDropdownTouchMove, onDropdownTouchEnd,
           laporanList, searchQuery, filteredLaporan, laporanFilter, resetLaporanFilter, distinctLaporanTrays, distinctLaporanOperators,
           masterParts, stockSummary, masterStockList, masterFilter, replacedPartsTotalCount, loadMasterData, fetchMasterStockList, formatGudangInput,
+          addPartTab, addPartBulkMode, addPartForm, addPartBulkForm, addPartLoading, addPartBulkResult,
+          recentAddedParts, recentAddedLoading, recentAddedFilter, resetAddPartForm, resetAddPartBulkForm,
+          loadRecentlyAddedParts, submitAddSinglePart, submitAddBulkPart, deleteRecentlyAddedPart,
           usersList, editingUserId, showUserPw, userForm, resetUserForm, editUser, saveUser, deleteUser, resetUserSession,
           isTrayDropdownOpen, traySearchText, filteredTraysList, trayDropdownRef,
           isTrayFullyFinished, hasHoldItem, isTrayLocked, firstUnfinishedIndex,
@@ -38245,7 +38835,7 @@ K1101621
           replaceSelections, replaceDropdownOpen, replaceSearchQueries, availableReplacePartsByType, isLoadingPartsByType,
           getFilteredPartsForType, selectReplaceSNForPart, clearReplaceSNForPart, toggleReplaceDropdown, closeAllReplaceDropdowns, totalPartsToReplace,
           openReplacePartSubModal, closeReplacePartModal, onSelectReplacePartType, submitReplacePartAction,
-          isAllProblematicPartsReplaced, getItemPendingLabel, getHoldProceedButtonLabel, getHoldProceedButtonTitle,
+            isAllProblematicPartsReplaced, getItemPendingLabel, getHoldProceedButtonLabel, getHoldProceedButtonTitle,
           adminApproveAssyRereg, adminReregApprovedOperator, adminReregNotes,
           openReregisterForPart, openReplaceForPart,
           filteredAssemblyReport,
@@ -38285,7 +38875,7 @@ K1101621
           activePrintDO, activePrintType, activeContainerIndex, getBoxFilledCount, isBoxComplete,
           isBoxIndexLocked, isCrateComplete, isCrateIndexLocked, getUnitBatches, getUnitBatchFilledCount,
           isUnitBatchComplete, isUnitBatchLocked, nextContainer, prevContainer, selectContainer,
-          isDOSlotLocked, autofillSingleBox, autofillSingleCrate, autofillSingleUnitBatch,
+          isDOSlotLocked,
           selectCustomer, openNewCustomerModal, saveNewCustomer, loadCustomers, loadDeliveryOrders,
           loadAvailableFinishedSNs, loadNextDONumber, loadNextBatchNumber, loadNextDOMeta, loadDOList, setPackageType,
           buildPackagingStructure, syncPackagingStructure, buildCratesForQuantity, getAllBoxesInForm, getAllUnitsInForm,
@@ -38293,7 +38883,7 @@ K1101621
           openBatchPasteModal, applyBatchPaste, addUnitToDOForm, removeUnitFromDOForm, updateUnitCountDirectly, openDODetailAndPrint, deleteDeliveryOrder,
           submitDeliveryOrder, getCratesForPrint, getBoxesForPrint, getUnitsForPrint,
           formatIndoDate, formatNumericDate, currentRealtimePrintDate, updateRealtimePrintDate, getDOSerialNumbers, getDOCrateCount, getDOBoxCount,
-          unitDropdown, onUnitInputFocus, onUnitInputBlur, onUnitInputChange, getFilteredUnitSuggestions, selectUnitSN, addUnitRowAutomatically, handleUnitInputKeyDown, removeUnitRowDirectly, autofillAllUnits,
+          unitDropdown, onUnitInputFocus, onUnitInputBlur, onUnitInputChange, getFilteredUnitSuggestions, selectUnitSN, addUnitRowAutomatically, handleUnitInputKeyDown, removeUnitRowDirectly,
           showMasterPartTrackingModal, selectedMasterPartRow, masterPartTrackingData, isLoadingMasterPartDetail, openMasterPartTrackingModal,
           pendingReassemblyList, selectedReassemblyIds, selectedReassemblyOperator, isLoadingPendingReassembly, isSubmittingReassemblyDispatch, loadPendingReassembly, toggleSelectReassembly, isReassemblySelected, selectAllReassembly, clearSelectedReassembly, submitReassemblyDispatch, openReplaceForHoldItem,
           syncCurrentUserPermissions,

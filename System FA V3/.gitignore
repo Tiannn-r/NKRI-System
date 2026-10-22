@@ -1,27 +1,33 @@
-__pycache__/
-*.py[cod]
-*.class
+# Databases
+*.db
+*.sqlite
+*.sqlite3
 
-# Temporary and log files
-database.db-shm
-database.db-wal
-*.log
+# Backups and archives
+*.zip
+*.tar.gz
+*.bak
 *.bak*
-*.orig_bak
-*.black_bak
+*_bak
 *.backup*
-database.sqlite
-fa_system.db
-
-# Dependencies and caches
+*-shm
+*-wal
 node_modules/
-.npm/
 
-# Scratch & temporary zips
+# Laravel vendor and node_modules
+HASIL REFACTOR/vendor/
+HASIL REFACTOR/node_modules/
+HASIL REFACTOR/.env
+HASIL REFACTOR/storage/logs/*.log
+HASIL REFACTOR/storage/framework/cache/*
+HASIL REFACTOR/storage/framework/sessions/*
+HASIL REFACTOR/storage/framework/views/*
+HASIL REFACTOR/bootstrap/cache/*.php
+!HASIL REFACTOR/bootstrap/cache/.gitignore
+
+# Scratch and temp files
 scratch/
-scratch.zip
-tests.zip
-
-# OS files
+__pycache__/
+*.pyc
 .DS_Store
 Thumbs.db

@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Login - Sistem Assembly & Traceability P9 - NKRI</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <!-- FontAwesome 6.5.1 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -ms-overflow-style: none !important;
+      scrollbar-width: none !important;
+      font-variant-numeric: tabular-nums lining-nums;
+    }
+
+    *::-webkit-scrollbar,
+    html::-webkit-scrollbar,
+    body::-webkit-scrollbar {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+    }
+    
+    body {
+      min-height: 100vh;
+      width: 100%;
+      background-color: #f1f5f9;
+      font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 420px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 20px;
+      padding: 32px 28px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .brand-header {
+      text-align: center;
+    }
+
+    .brand-header img {
+      height: 56px;
+      width: auto;
+      max-width: 100%;
+      object-contain: contain;
+      margin: 0 auto 12px auto;
+      display: block;
+    }
+
+    .brand-title {
+      font-size: 20px;
+      font-weight: 900;
+      color: #0f172a;
+      letter-spacing: 0.5px;
+    }
+
+    .brand-subtitle {
+      font-size: 11px;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 4px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-icon {
+      position: absolute;
+      left: 14px;
+      color: #94a3b8;
+      font-size: 14px;
+      pointer-events: none;
+    }
+
+    .form-input {
+      width: 100%;
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 12px 14px 12px 38px;
+      font-size: 14px;
+      color: #0f172a;
+      outline: none;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .form-input:focus {
+      background: #ffffff;
+      border-color: #dc2626;
+      box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+    }
+
+    .pw-toggle {
+      position: absolute;
+      right: 12px;
+      background: none;
+      border: none;
+      color: #94a3b8;
+      cursor: pointer;
+      padding: 4px;
+      font-size: 14px;
+    }
+
+    .pw-toggle:hover {
+      color: #334155;
+    }
+
+    .btn-submit {
+      width: 100%;
+      background: #dc2626;
+      color: #ffffff;
+      border: none;
+      border-radius: 12px;
+      padding: 13px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      box-shadow: 0 10px 15px -3px rgba(220, 38, 38, 0.25);
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-family: inherit;
+    }
+
+    .btn-submit:hover {
+      background: #b91c1c;
+    }
+
+    .btn-submit:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .error-box {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #b91c1c;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 10px;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-card">
+    
+    <!-- Brand Header -->
+    <div class="brand-header">
+      <img src="emblem.png" alt="Logo" onerror="this.style.display='none'">
+      <h1 class="brand-title">FINAL ASSEMBLY</h1>
+      <p class="brand-subtitle">Traceability & Serial Locking</p>
+    </div>
+
+    <!-- Login Form -->
+    <form id="login-form" style="display: flex; flex-direction: column; gap: 16px;">
+      <div class="form-group">
+        <label for="login-username" class="form-label">Nama Pengguna (Username)</label>
+        <div class="input-wrapper">
+          <i class="fa-solid fa-user input-icon"></i>
+          <input type="text" id="login-username" autocomplete="username" placeholder="Masukkan nama pengguna..." required class="form-input">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="login-password" class="form-label">Kata Sandi (Password)</label>
+        <div class="input-wrapper">
+          <i class="fa-solid fa-lock input-icon"></i>
+          <input type="password" id="login-password" autocomplete="current-password" placeholder="Masukkan kata sandi..." required class="form-input" style="padding-right: 38px;">
+          <button type="button" id="btn-toggle-pw" class="pw-toggle" title="Lihat/Sembunyikan Kata Sandi">
+            <i class="fa-solid fa-eye" id="pw-icon"></i>
+          </button>
+        </div>
+      </div>
+
+      <button type="submit" id="btn-login" class="btn-submit">
+        <i class="fa-solid fa-right-to-bracket"></i>
+        <span>MASUK</span>
+      </button>
+    </form>
+
+    <div id="login-error" class="error-box hidden"></div>
+
+  </div>
+
+  <script>
+    // Clean any stale/invalid session tokens when visiting login page
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    localStorage.removeItem("username");
+    localStorage.removeItem("full_name");
+    localStorage.removeItem("nik");
+    localStorage.removeItem("department");
+    localStorage.removeItem("permissions");
+
+    const qs = (s) => document.querySelector(s);
+
+    async function handleLogin(forceTakeover = false) {
+      const u = qs("#login-username").value.trim();
+      const p = qs("#login-password").value.trim();
+      const errEl = qs("#login-error");
+      const btn = qs("#btn-login");
+      
+      errEl.classList.add("hidden");
+      errEl.textContent = "";
+
+      if (!u || !p) {
+        errEl.textContent = "Silakan masukkan username dan password.";
+        errEl.classList.remove("hidden");
+        return;
+      }
+
+      // Disable button and show spinner to prevent freeze / double clicks
+      btn.disabled = true;
+      const originalHTML = btn.innerHTML;
+      btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i><span>Memproses...</span>';
+
+      try {
+        const res = await fetch("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: u, password: p, force_takeover: !!forceTakeover })
+        });
+        const json = await res.json();
+        if (json.ok) {
+          localStorage.setItem("token", json.token);
+          localStorage.setItem("role", json.role);
+          localStorage.setItem("username", json.username);
+          localStorage.setItem("full_name", json.full_name || json.username);
+          localStorage.setItem("nik", json.nik || "");
+          localStorage.setItem("department", json.department || "assembly");
+          localStorage.setItem("permissions", typeof json.permissions === 'string' ? json.permissions : JSON.stringify(json.permissions || {}));
+          localStorage.removeItem("activeTab");
+          localStorage.removeItem("activeAdminSubTab");
+          localStorage.removeItem("activeReportSubTab");
+          localStorage.removeItem("selectedTrayCode");
+          window.location.replace("index.html");
+        } else {
+          if (json.is_active_elsewhere || res.status === 409) {
+            errEl.innerHTML = `
+              <div style="display:flex;flex-direction:column;gap:10px;text-align:left;">
+                <div style="display:flex;align-items:flex-start;gap:8px;">
+                  <i class="fa-solid fa-triangle-exclamation" style="font-size:16px;color:#d97706;margin-top:2px;flex-shrink:0;"></i>
+                  <div>
+                    <strong style="color:#92400e;">Akun Sedang Aktif di Perangkat Lain!</strong>
+                    <div style="font-size:11px;color:#78350f;margin-top:3px;line-height:1.4;">
+                      Sesi akun ini masih tercatat aktif di perangkat lain. Klik tombol di bawah untuk memutuskan sesi lama dan langsung login ke perangkat ini:
+                    </div>
+                  </div>
+                </div>
+                <button type="button" onclick="handleLogin(true)" style="background:#d97706;hover:background:#b45309;color:#ffffff;border:none;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;width:100%;transition:background 0.2s;">
+                  <i class="fa-solid fa-right-to-bracket"></i>
+                  <span>Paksa Masuk & Putuskan Sesi Lain</span>
+                </button>
+              </div>
+            `;
+            errEl.style.backgroundColor = '#fffbeb';
+            errEl.style.borderColor = '#fde68a';
+            errEl.style.color = '#92400e';
+          } else {
+            errEl.innerHTML = '<i class="fa-solid fa-circle-exclamation" style="margin-right:4px;"></i> ' + (json.error || "Username atau Password salah.");
+            errEl.style.backgroundColor = '#fef2f2';
+            errEl.style.borderColor = '#fecaca';
+            errEl.style.color = '#b91c1c';
+          }
+          errEl.classList.remove("hidden");
+          btn.disabled = false;
+          btn.innerHTML = originalHTML;
+        }
+      } catch (e) {
+        errEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Gagal terhubung ke server. Periksa koneksi Anda.';
+        errEl.style.backgroundColor = '#fef2f2';
+        errEl.style.borderColor = '#fecaca';
+        errEl.style.color = '#b91c1c';
+        errEl.classList.remove("hidden");
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+      }
+    }
+
+    const toggleBtn = qs("#btn-toggle-pw");
+    const pwInput = qs("#login-password");
+    const pwIcon = qs("#pw-icon");
+
+    if (toggleBtn && pwInput && pwIcon) {
+      toggleBtn.addEventListener("click", () => {
+        if (pwInput.type === "password") {
+          pwInput.type = "text";
+          pwIcon.classList.remove("fa-eye");
+          pwIcon.classList.add("fa-eye-slash");
+        } else {
+          pwInput.type = "password";
+          pwIcon.classList.remove("fa-eye-slash");
+          pwIcon.classList.add("fa-eye");
+        }
+      });
+    }
+
+    const form = qs("#login-form");
+    if (form) {
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        handleLogin();
+      });
+    }
+
+    // Auto focus
+    window.addEventListener("DOMContentLoaded", () => {
+      const uInput = qs("#login-username");
+      if (uInput) uInput.focus();
+    });
+
+    // Strictly lock screen dragging/swiping on mobile and tablet
+    document.addEventListener("touchmove", (e) => {
+      if (!e.target.closest("input, button, textarea, select")) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+  </script>
+</body>
+</html>

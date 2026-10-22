@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flowchart Sistem Final Assembly & Traceability — Nanggala P9</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1a237e;
+            --primary-light: #3949ab;
+            --accent: #ff6f00;
+            --bg: #ffffff;
+            --text: #1a1a2e;
+            --text-light: #546e7a;
+            --border: #e0e0e0;
+            --section-bg: #fafbfc;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--text);
+            background: var(--bg);
+            line-height: 1.6;
+        }
+
+        /* ===== COVER PAGE ===== */
+        .cover-page {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #1a237e 0%, #283593 30%, #3949ab 60%, #5c6bc0 100%);
+            color: white;
+            text-align: center;
+            padding: 40px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cover-page::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(ellipse at center, rgba(255,255,255,0.05) 0%, transparent 70%);
+            animation: rotate 30s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .cover-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .cover-logo {
+            width: 100px;
+            height: 100px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 32px;
+            font-size: 48px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .cover-title {
+            font-size: 42px;
+            font-weight: 800;
+            letter-spacing: -1px;
+            margin-bottom: 16px;
+            line-height: 1.2;
+        }
+
+        .cover-subtitle {
+            font-size: 22px;
+            font-weight: 400;
+            opacity: 0.9;
+            margin-bottom: 40px;
+        }
+
+        .cover-divider {
+            width: 80px;
+            height: 4px;
+            background: var(--accent);
+            border-radius: 2px;
+            margin: 0 auto 40px;
+        }
+
+        .cover-meta {
+            display: flex;
+            gap: 40px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .cover-meta-item {
+            text-align: center;
+        }
+
+        .cover-meta-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            opacity: 0.6;
+            margin-bottom: 4px;
+        }
+
+        .cover-meta-value {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        /* ===== TABLE OF CONTENTS ===== */
+        .toc-page {
+            padding: 60px 80px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .toc-title {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .toc-subtitle {
+            font-size: 14px;
+            color: var(--text-light);
+            margin-bottom: 32px;
+        }
+
+        .toc-list {
+            list-style: none;
+            counter-reset: toc-counter;
+        }
+
+        .toc-list li {
+            counter-increment: toc-counter;
+            display: flex;
+            align-items: center;
+            padding: 14px 0;
+            border-bottom: 1px solid #f0f0f0;
+            gap: 16px;
+        }
+
+        .toc-list li::before {
+            content: counter(toc-counter, decimal-leading-zero);
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--primary-light);
+            min-width: 28px;
+        }
+
+        .toc-list li .toc-icon {
+            font-size: 20px;
+            min-width: 28px;
+            text-align: center;
+        }
+
+        .toc-list li .toc-text {
+            font-size: 15px;
+            font-weight: 500;
+            flex: 1;
+        }
+
+        .toc-list li .toc-page-num {
+            font-size: 13px;
+            color: var(--text-light);
+            font-weight: 600;
+        }
+
+        /* ===== SECTIONS ===== */
+        .section {
+            padding: 48px 60px;
+            page-break-before: always;
+        }
+
+        .section:first-of-type {
+            page-break-before: auto;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 8px;
+        }
+
+        .section-number {
+            font-size: 13px;
+            font-weight: 700;
+            color: white;
+            background: var(--primary);
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .section-title {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--primary);
+            letter-spacing: -0.5px;
+        }
+
+        .section-desc {
+            font-size: 14px;
+            color: var(--text-light);
+            margin-bottom: 28px;
+            padding-left: 48px;
+        }
+
+        /* ===== DIAGRAM CONTAINER ===== */
+        .diagram-container {
+            background: var(--section-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 32px;
+            margin: 16px 0;
+            overflow-x: auto;
+        }
+
+        .diagram-container .mermaid {
+            display: flex;
+            justify-content: center;
+        }
+
+        .diagram-container svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* ===== TABLE STYLES ===== */
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            margin: 16px 0;
+        }
+
+        .info-table thead th {
+            background: var(--primary);
+            color: white;
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .info-table thead th:first-child {
+            border-radius: 8px 0 0 0;
+        }
+
+        .info-table thead th:last-child {
+            border-radius: 0 8px 0 0;
+        }
+
+        .info-table tbody td {
+            padding: 10px 16px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .info-table tbody tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        .info-table tbody tr:last-child td:first-child {
+            border-radius: 0 0 0 8px;
+        }
+
+        .info-table tbody tr:last-child td:last-child {
+            border-radius: 0 0 8px 0;
+        }
+
+        .check { color: #2e7d32; font-weight: 700; }
+        .cross { color: #c62828; font-weight: 700; }
+        .eye { color: #1565c0; font-weight: 700; }
+
+        /* ===== INFO BOX ===== */
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #1565c0;
+            padding: 16px 20px;
+            border-radius: 0 8px 8px 0;
+            margin: 16px 0;
+            font-size: 13px;
+            color: #0d47a1;
+        }
+
+        .info-box.warning {
+            background: #fff3e0;
+            border-left-color: #e65100;
+            color: #bf360c;
+        }
+
+        .info-box.success {
+            background: #e8f5e9;
+            border-left-color: #2e7d32;
+            color: #1b5e20;
+        }
+
+        /* ===== FOOTER ===== */
+        .page-footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 11px;
+            color: var(--text-light);
+            border-top: 1px solid var(--border);
+            margin-top: 40px;
+        }
+
+        /* ===== PRINT STYLES ===== */
+        @media print {
+            body { background: white; }
+            
+            .cover-page {
+                min-height: auto;
+                height: 100vh;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .cover-page::before { display: none; }
+
+            .section {
+                page-break-before: always;
+                padding: 32px 40px;
+            }
+
+            .toc-page {
+                page-break-before: always;
+                padding: 40px;
+                min-height: auto;
+            }
+
+            .diagram-container {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                page-break-inside: avoid;
+                border: 1px solid #ddd;
+            }
+
+            .no-print { display: none !important; }
+
+            .info-table thead th {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .section-number {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            @page {
+                size: A4;
+                margin: 15mm;
+            }
+        }
+
+        /* ===== PRINT BUTTON ===== */
+        .print-btn {
+            position: fixed;
+            bottom: 32px;
+            right: 32px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 8px 32px rgba(26,35,126,0.3);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 999;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .print-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(26,35,126,0.4);
+            background: var(--primary-light);
+        }
+
+        /* ===== LOADING ===== */
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(255,255,255,0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.5s;
+        }
+
+        .loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #e0e0e0;
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 15px;
+            color: var(--text-light);
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Merender diagram flowchart...</div>
+</div>
+
+<!-- Print Button -->
+<button class="print-btn no-print" onclick="window.print()">
+    🖨️ Cetak / Simpan PDF
+</button>
+
+<!-- ==================== COVER PAGE ==================== -->
+<div class="cover-page">
+    <div class="cover-content">
+        <div class="cover-logo">🏭</div>
+        <div class="cover-title">Flowchart Sistem<br>Final Assembly & Traceability</div>
+        <div class="cover-subtitle">Nanggala P9 — System FA V3</div>
+        <div class="cover-divider"></div>
+        <div class="cover-meta">
+            <div class="cover-meta-item">
+                <div class="cover-meta-label">Produk</div>
+                <div class="cover-meta-value">Nanggala P9</div>
+            </div>
+            <div class="cover-meta-item">
+                <div class="cover-meta-label">Versi Sistem</div>
+                <div class="cover-meta-value">V3.0</div>
+            </div>
+            <div class="cover-meta-item">
+                <div class="cover-meta-label">Tanggal</div>
+                <div class="cover-meta-value" id="coverDate"></div>
+            </div>
+            <div class="cover-meta-item">
+                <div class="cover-meta-label">Total Diagram</div>
+                <div class="cover-meta-value">13 Flowchart</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== TABLE OF CONTENTS ==================== -->
+<div class="toc-page">
+    <div class="toc-title">Daftar Isi</div>
+    <div class="toc-subtitle">Klik judul untuk navigasi langsung ke bagian terkait</div>
+    <ol class="toc-list">
+        <li><span class="toc-icon">🏗️</span> <a class="toc-text" href="#s1" style="text-decoration:none;color:inherit;">Arsitektur Sistem (Overview)</a></li>
+        <li><span class="toc-icon">🔐</span> <a class="toc-text" href="#s2" style="text-decoration:none;color:inherit;">Alur Autentikasi & Hak Akses (RBAC)</a></li>
+        <li><span class="toc-icon">🔄</span> <a class="toc-text" href="#s3" style="text-decoration:none;color:inherit;">Alur Utama End-to-End (Proses Inti)</a></li>
+        <li><span class="toc-icon">📦</span> <a class="toc-text" href="#s4" style="text-decoration:none;color:inherit;">Detail Alur Gudang (Warehouse Flow)</a></li>
+        <li><span class="toc-icon">🔧</span> <a class="toc-text" href="#s5" style="text-decoration:none;color:inherit;">Detail Alur Perakitan (Assembly Flow)</a></li>
+        <li><span class="toc-icon">🔍</span> <a class="toc-text" href="#s6" style="text-decoration:none;color:inherit;">Detail Alur Verifikasi & Approval</a></li>
+        <li><span class="toc-icon">📋</span> <a class="toc-text" href="#s7" style="text-decoration:none;color:inherit;">State Machine Status Part</a></li>
+        <li><span class="toc-icon">🖨️</span> <a class="toc-text" href="#s8" style="text-decoration:none;color:inherit;">Alur Cetak Dokumen</a></li>
+        <li><span class="toc-icon">📊</span> <a class="toc-text" href="#s9" style="text-decoration:none;color:inherit;">Alur Laporan & Traceability</a></li>
+        <li><span class="toc-icon">📦</span> <a class="toc-text" href="#s10" style="text-decoration:none;color:inherit;">Alur Delivery Order & Packing List</a></li>
+        <li><span class="toc-icon">🔁</span> <a class="toc-text" href="#s11" style="text-decoration:none;color:inherit;">Alur Penanganan Hold / Scrap / Rework</a></li>
+        <li><span class="toc-icon">🗄️</span> <a class="toc-text" href="#s12" style="text-decoration:none;color:inherit;">Entity Relationship Diagram (ERD)</a></li>
+        <li><span class="toc-icon">🧭</span> <a class="toc-text" href="#s13" style="text-decoration:none;color:inherit;">Ringkasan Tab & Navigasi per Role</a></li>
+    </ol>
+</div>
+
+<!-- ==================== SECTION 1: ARSITEKTUR ==================== -->
+<div class="section" id="s1">
+    <div class="section-header">
+        <div class="section-number">1</div>
+        <div class="section-title">Arsitektur Sistem (Overview)</div>
+    </div>
+    <p class="section-desc">Gambaran umum arsitektur tiga lapis: Frontend (Browser), Backend (Python HTTP Server), dan Database (SQLite WAL).</p>
+    <div class="diagram-container">
+        <pre class="mermaid">
+graph TB
+    subgraph CLIENT["🖥️ Frontend — Browser"]
+        LOGIN["Halaman Login<br/>(login.html)"]
+        DASHBOARD["Dashboard Utama<br/>(Vue 3 + Tailwind CSS)"]
+    end
+
+    subgraph SERVER["⚙️ Backend — Python HTTP Server"]
+        API["REST API Handler<br/>(Port 8000)"]
+        AUTH["Autentikasi &<br/>Session Manager"]
+        RBAC["Role-Based<br/>Access Control"]
+    end
+
+    subgraph DB["🗄️ Database — SQLite WAL Mode"]
+        USERS[("users")]
+        MASTER[("master_stocks")]
+        TRAYS[("trays")]
+        PARTS[("parts")]
+        ASSY[("assemblies")]
+        AUDIT[("part_audit_logs")]
+        REREG[("re_register_requests")]
+        DOWNTIME[("assembly_downtimes")]
+        WO_HIST[("assembly_wo_history")]
+    end
+
+    CLIENT -->|HTTP Request| SERVER
+    SERVER -->|Query / Insert| DB
+    DB -->|Result Set| SERVER
+    SERVER -->|JSON Response| CLIENT
+        </pre>
+    </div>
+</div>
+
+<!-- ==================== SECTION 2: AUTENTIKASI ==================== -->
+<div class="section" id="s2">
+    <div class="section-header">
+        <div class="section-number">2</div>
+        <div class="section-title">Alur Autentikasi & Hak Akses</div>
+    </div>
+    <p class="section-desc">Proses login, validasi kredensial, pembuatan session token, dan routing berdasarkan role pengguna (RBAC).</p>
+    <div class="diagram-container">
+        <pre class="mermaid">
+flowchart TD
+    A(["🔵 User Membuka Aplikasi"]) --> B{"Sudah Login?"}
+    B -->|Tidak| C["Tampilkan Halaman Login"]
+    B -->|Ya - Token Valid| D["Redirect ke Dashboard"]
+
+    C --> E["Input Username & Password"]
+    E --> F{"/api/login: Validasi Kredensial"}
+    F -->|Gagal| G["Tampilkan Pesan Error"]
+    G --> E
+    F -->|Berhasil| H["Generate Session Token"]
+    H --> I["Simpan Token ke user_sessions & browser"]
+    I --> J{"Identifikasi Role User"}
+
+    J -->|Admin / Miranti| K["🔴 ADMIN: Akses Penuh Seluruh Tab"]
+    J -->|Gudang| L["🟡 GUDANG: Supply, Cetak WO, Stok"]
+    J -->|Assembly| M["🟢 ASSEMBLY: Meja Kerja, Rakit, QC"]
+    J -->|Custom| N["🔵 CUSTOM: Sesuai permissions JSON"]
+
+    K --> D
+    L --> D
+    M --> D
+    N --> D
+
+    style K fill:#ff6b6b,color:#fff
+    style L fill:#ffd93d,color:#333
+    style M fill:#6bcb77,color:#fff
+    style N fill:#4d96ff,color:#fff
+        </pre>
+    </div>
+</div>
+
+<!-- ==================== SECTION 3: END-TO-END ==================== -->
+<div class="section" id="s3">
+    <div class="section-header">
+        <div class="section-number">3</div>
+        <div class="section-title">Alur Utama End-to-End (Proses Inti)</div>
+    </div>
+    <p class="section-desc">Alur lengkap 5 fase utama: Gudang → Perakitan → Quality Control → Verifikasi → Dokumen & Laporan.</p>
+    <div class="diagram-container">
+        <pre class="mermaid">
+flowchart TD
+    START(["🔵 MULAI"]) --> WH1
+
+    subgraph WH["📦 FASE 1 — GUDANG"]
+        WH1["PIC Gudang Login"] --> WH2["Pilih Part dari Master Stocks"]
+        WH2 --> WH3["Alokasi 22 Set ke Tray Baru"]
+        WH3 --> WH4["Generate Kode Tray: WH/WO/xxxxxx"]
+        WH4 --> WH5["Update Status Part: Supplied"]
+        WH5 --> WH6["Cetak Dokumen Supply WH/WO"]
+        WH6 --> WH7["Kirim Fisik Tray ke Assembly"]
+    end
+
+    WH7 --> ASSY1
+
+    subgraph ASSY["🔧 FASE 2 — PERAKITAN"]
+        ASSY1["Operator Login"] --> ASSY2["Pilih Tray & Set Nomor"]
+        ASSY2 --> ASSY3["Klik Mulai - Timer Aktif"]
+        ASSY3 --> ASSY4["Rakit 3 Komponen: P15 + P1 + P12"]
+        ASSY4 --> ASSY5["Klik Selesai - Timer Stop"]
+        ASSY5 --> ASSY6{"Tentukan Status QC"}
+    end
+
+    ASSY6 --> QC1
+
+    subgraph QC["✅ FASE 3 — QUALITY CONTROL"]
+        QC1{"Kondisi Hasil Rakit?"}
+        QC1 -->|Baik| QC_G["✅ GOOD"]
+        QC1 -->|Tertahan| QC_H["⏸️ HOLD + Alasan"]
+        QC1 -->|Rusak| QC_S["❌ SCRAP + Alasan"]
+        QC1 -->|Ulang| QC_R["🔄 REWORK + Alasan"]
+    end
+
+    QC_G --> V1
+    QC_H --> V1
+    QC_S --> V1
+    QC_R --> V1
+
+    subgraph VER["🔍 FASE 4 — VERIFIKASI"]
+        V1["Admin/Gudang Review"] --> V2{"Setuju?"}
+        V2 -->|ACC| V3["✅ Verified - Part Done"]
+        V2 -->|DECLINED| V4["❌ Ditolak + Alasan"]
+    end
+
+    V3 --> DOC1
+
+    subgraph DOC["🖨️ FASE 5 — DOKUMEN"]
+        DOC1["Cetak Form Perakitan"] --> DOC2["Cetak Uji Fungsional"]
+        DOC2 --> DOC3["Cetak Dokumen Mutu"]
+        DOC3 --> DOC4["Laporan Traceability"]
+        DOC4 --> DOC5["Ekspor ke Excel"]
+    end
+
+    DOC5 --> FINISH(["🔴 SELESAI"])
+
+    style START fill:#4d96ff,color:#fff
+    style FINISH fill:#ff6b6b,color:#fff
+    style WH fill:#fff3e0,stroke:#ff9800
+    style ASSY fill:#e3f2fd,stroke:#2196f3
+    style QC fill:#e8f5e9,stroke:#4caf50
+    style VER fill:#f3e5f5,stroke:#9c27b0
+    style DOC fill:#fce4ec,stroke:#e91e63
+        </pre>
+    </div>
+</div>
+
+<!-- ==================== SECTION 4: GUDANG ==================== -->
+<div class="section" id="s4">
+    <div class="section-header">
+        <div class="section-number">4</div>
+        <div class="section-title">Detail Alur Gudang (Warehouse Flow)</div>
+    </div>
+    <p class="section-desc">Proses lengkap dari cek stok master, validasi SN, pembuatan tray, hingga pengiriman ke area assembly.</p>
+    <div class="diagram-container">
+        <pre class="mermaid">
+flowchart TD
+    G_START(["🟡 Gudang Login"]) --> G1
+
+    G1["Buka Tab Gudang"] --> G2["Cek Stok Master: Part 1 / Part 12 / Part 15"]
+    G2 --> G3{"Stok Mencukupi?"}
+    G3 -->|Tidak| G3a["⚠️ Notifikasi Stok Habis"]
+    G3 -->|Ya| G4["Input PIC Gudang & Operator Assembly"]
+
+    G4 --> G5["Pilih 22 Set Part: masing-masing 1 SN"]
+    G5 --> G6["Sistem Validasi SN Tidak Duplikat"]
+    G6 --> G7{"Validasi Berhasil?"}
+    G7 -->|Tidak| G7a["❌ SN Sudah Digunakan"]
+    G7a --> G5
+    G7 -->|Ya| G8["Buat Tray Baru di tabel trays"]
+
+    G8 --> G9["Insert 66 Part ke tabel parts"]
+    G9 --> G10["Update 66 Record master_stocks: Supplied"]
+    G10 --> G11["Generate Nomor Dokumen WH/WO/xxxxxx"]
+    G11 --> G12["📄 Cetak Form Supply"]
+    G12 --> G13["Kirim Fisik ke Area Assembly"]
+    G13 --> G_END(["✅ Tray Terkirim"])
+
+    style G_START fill:#ffd93d,color:#333
+    style G_END fill:#6bcb77,color:#fff
+        </pre>
+    </div>
+</div>
+
+<!-- ==================== SECTION 5: ASSEMBLY ==================== -->
+<div class="section" id="s5">
+    <div class="section-header">
+        <div class="section-number">5</div>
+        <div class="section-title">Detail Alur Perakitan (Assembly Flow)</div>
+    </div>
+    <p class="section-desc">Alur kerja operator perakitan: pilih tray, mulai timer, rakit komponen, pause/resume, submit hasil QC.</p>
+    <div class="diagram-container">
+        <pre class="mermaid">
+flowchart TD
+    A_START(["🟢 Operator Login"]) --> A1
+
+    A1["Buka Tab Perakitan"] --> A2["Lihat Daftar Tray Tersedia"]
+    A2 --> A3["Pilih Tray & Set Nomor"]
+    A3 --> A4["Klik Mulai Rakit"]
+    A4 --> A5["⏱️ Timer Mulai: started_at"]
+
+    A5 --> A6{"Perlu Jeda?"}
+    A6 -->|Ya| A7["⏸️ PAUSE + Input Alasan"]
+    A7 --> A8["Catat ke assembly_downtimes"]
+    A8 --> A9["▶️ RESUME: Lanjut Kerja"]
+    A9 --> A6
+
+    A6 -->|Tidak| A10["Rakit: P15 + P1 + P12"]
+    A10 --> A11["Klik Selesai"]
+    A11 --> A12["⏱️ Timer Stop: finished_at"]
+
+    A12 --> A13{"Pilih Status Hasil Rakit"}
+    A13 -->|Good| A14["✅ GOOD"]
+    A13 -->|Hold| A15["⏸️ HOLD + Alasan"]
+    A13 -->|Scrap| A16["❌ SCRAP + Alasan"]
+    A13 -->|Rework| A17["🔄 REWORK + Alasan"]
+
+    A14 --> A18["Insert ke assemblies"]
+    A15 --> A18
+    A16 --> A18
+    A17 --> A18
+
+    A18 --> A19["Insert ke assembly_wo_history"]
+    A19 --> A20{"22 Set Selesai?"}
+    A20 -->|Belum| A3
+    A20 -->|Ya| A21["📄 Batch Selesai"]
+    A21 --> A_END(["✅ Assembly Complete"])
+
+    style A_START fill:#6bcb77,color:#fff
+    style A_END fill:#4d96ff,color:#fff
+        </pre>
+    </div>
+</div>
+
+<!-- ==================== SECTION 6: VERIFIKASI ==================== -->
+<div class="section" id="s6">
+    <div class="section-header">
+        <div class="section-number">6</div>
+        <div class="section-title">Detail Alur Verifikasi & Approval</div>
+    </div>
+    <p class="section-desc">Lima jenis verifikasi: Set Assembly, Replacement Part, Re-Register Part, Hold Item, dan Verifikasi Tray Gudang.</p>
+    <div class="diagram-container">
+        <pre class="mermaid">
+flowchart TD
+    V_START(["🟣 Mulai Verifikasi"]) --> V1
+
+    V1["Admin/Gudang Buka Tab Verifikasi"] --> V2["Lihat Daftar Pending"]
+
+    V2 --> V3{"Jenis Verifikasi?"}
+
+    V3 -->|Set Assembly| V4["Review Hasil Rakit Per Set"]
+    V4 --> V5{"Keputusan?"}
+    V5 -->|ACC| V6["✅ verified_status = ACC"]
+    V5 -->|DECLINED| V7["❌ DECLINED + Alasan"]
+    V7 --> V7a["Assembly Re-register Set"]
+
+    V3 -->|Replacement Part| V8["Review Penggantian Part"]
+    V8 --> V9{"Approve?"}
+    V9 -->|Ya| V10["✅ Part Lama: Tersedia, Baru: Supplied"]
+    V9 -->|Tidak| V11["❌ Reject + Alasan"]
+
+    V3 -->|Re-Register Part| V12["Review Permohonan Re-register"]
+    V12 --> V13{"Approve?"}
+    V13 -->|Ya| V14["✅ Status: Tersedia Kembali"]
+    V14 --> V15["Catat di part_audit_logs"]
+    V13 -->|Tidak| V16["❌ Reject + Admin Notes"]
+
+    V3 -->|Hold Item| V17["Review Item Hold/Rework"]
+    V17 --> V18{"Keputusan?"}
+    V18 -->|Release| V19["✅ Status: Good"]
+    V18 -->|Tetap| V20["⏸️ Status Tetap"]
+
+    V3 -->|Verifikasi Tray| V21["Gudang Verifikasi Fisik"]
+    V21 --> V22["verified_by_gudang = TRUE"]
+
+    V6 --> V_END(["✅ Verified"])
+    V10 --> V_END
+    V14 --> V_END
+    V19 --> V_END
+    V22 --> V_END
+
+    style V_START fill:#9c27b0,color:#fff
+    style V_END fill:#6bcb77,color:#fff
+        </pre>
+    </div>
+</div>
+
+<!-- ==================== SECTION 7: STATE MACHINE ==================== -->
+<div class="section" id="s7">
+    <div class="section-header">
+        <div class="section-number">7</div>
+        <div class="section-title">State Machine Status Part</div>
+    </div>
+    <p class="section-desc">Diagram transisi status part di master_stocks: dari Tersedia hingga Done, termasuk jalur Hold, Scrap, dan Rework.</p>
+    <div class="diagram-container">
+        <pre class="mermaid">
+stateDiagram-v2
+    [*] --> Tersedia: Part dibuat / diimport
+
+    Tersedia --> Supplied: Dialokasi ke Tray oleh Gudang
+
+    Supplied --> Used: Dirakit oleh Operator
+
+    Used --> Good: QC Status OK
+    Used --> Hold: QC Tertahan
+    Used --> Scrap: QC Rusak
+    Used --> Rework: Perlu Ulang
+
+    Good --> Done: Admin/Gudang ACC
+
+    Hold --> Good: Admin Approve Release
+    Hold --> Rework: Admin Ubah Status
+    Hold --> Tersedia: Re-register Approved
+
+    Scrap --> Tersedia: Re-register Approved
+
+    Rework --> Good: Dikerjakan Ulang lalu OK
+    Rework --> Tersedia: Re-register Approved
+
+    Done --> [*]
+        </pre>
+    </div>
+</div>
+
+<!-- ==================== SECTION 8: CETAK DOKUMEN ==================== -->
+<div class="section" id="s8">
+    <div class="section-header">
+        <div class="section-number">8</div>
+        <div class="section-title">Alur Cetak Dokumen</div>
+    </div>
+    <p class="section-desc">Empat dokumen resmi: Supply Material (WH/WO), Traveler Perakitan (WH/ASSY), Uji Fungsional (assy_qc), dan Dokumen Mutu (wh_qc).</p>
+    <div class="diagram-container">
+        <pre class="mermaid">
+flowchart LR
+    subgraph D1["📄 Dok 1 — Supply Material"]
+        DS1["Gudang Klik Cetak WO"] --> DS2["Generate WH/WO/xxxxxx"]
+        DS2 --> DS3["Tabel 22 Baris: SN P15, PN P1, PN P12"]
+        DS3 --> DS4["TTD: PIC Gudang + Operator"]
+    end
+
+    subgraph D2["📄 Dok 2 — Traveler Perakitan"]
+        DA1["Assembly Selesai Batch"] --> DA2["Generate WH/ASSY/xxxxxx"]
+        DA2 --> DA3["Tabel + Waktu + Status QC"]
+        DA3 --> DA4["TTD: Gudang + Operator + QC"]
+    end
+
+    subgraph D3["📄 Dok 3 & 4 — Quality Control"]
+        DQ1["QC Tab"] --> DQ2["Uji Fungsional assy_qc"]
+        DQ2 --> DQ3["Dokumen Mutu wh_qc"]
+        DQ3 --> DQ4["Hasil Test & Criteria"]
+    end
+
+    DS4 --> PRINT["🖨️ Print / PDF"]
+    DA4 --> PRINT
+    DQ4 --> PRINT
+    PRINT --> EXCEL["📊 Export Excel"]
+        </pre>
+    </div>
+</div>
+
+<!-- ==================== SECTION 9: LAPORAN ==================== -->
+<div class="section" id="s9">
+    <div class="section-header">
+        <div class="section-number">9</div>
+        <div class="section-title">Alur Laporan & Traceability</div>
+    </div>
+    <p class="section-desc">Empat sub-tab laporan dengan filter tanggal/status/keyword, detail modal, dan ekspor ke Excel.</p>
+    <div class="diagram-container">
+        <pre class="mermaid">
+flowchart TD
+    R_START(["📊 Buka Tab Laporan"]) --> R1
+
+    R1{"Pilih Sub-Tab Laporan"}
+
+    R1 -->|Sub-tab 1| R2["WO Traveler Report"]
+    R1 -->|Sub-tab 2| R3["Assy Test Report"]
+    R1 -->|Sub-tab 3| R4["QC Test Report"]
+    R1 -->|Sub-tab 4| R5["Warehouse Receipt"]
+
+    R2 --> R6["Filter: Tanggal, Status, Keyword"]
+    R3 --> R6
+    R4 --> R6
+    R5 --> R6
+
+    R6 --> R7["Tampilkan Tabel Data"]
+    R7 --> R8{"Aksi?"}
+
+    R8 -->|Detail| R9["Modal Detail per Tray/Set"]
+    R8 -->|Export| R10["📊 Export Excel - SheetJS"]
+    R8 -->|Cetak| R11["🖨️ Print Dokumen"]
+
+    style R_START fill:#e91e63,color:#fff
+        </pre>
+    </div>
+</div>
+
+<!-- ==================== SECTION 10: DELIVERY ORDER ==================== -->
+<div class="section" id="s10">
+    <div class="section-header">
+        <div class="section-number">10</div>
+        <div class="section-title">Alur Delivery Order & Packing List</div>
+    </div>
+    <p class="section-desc">Pembuatan Delivery Order, Packing List, cetak PDF, upload Cloudinary, dan tracking publik.</p>
+    <div class="diagram-container">
+        <pre class="mermaid">
+flowchart TD
+    DO_START(["📦 Buat Delivery Order"]) --> DO1
+
+    DO1["Input Data Customer & Tanggal"] --> DO2["Generate Nomor DO Otomatis"]
+    DO2 --> DO3["Pilih SN dari Part Done"]
+    DO3 --> DO4["Buat Packing List & Crate"]
+    DO4 --> DO5["Buat Box & Assign SN ke Slot"]
+    DO5 --> DO6{"Simpan?"}
+    DO6 -->|Ya| DO7["Insert: delivery_orders, packing_lists, boxes, items"]
+    DO7 --> DO8["Generate PDF Packing List"]
+    DO8 --> DO9{"Upload ke Cloud?"}
+    DO9 -->|Ya| DO10["Upload Cloudinary + QR Code"]
+    DO9 -->|Tidak| DO11["Simpan Lokal"]
+    DO10 --> DO12["📄 Tracking Publik"]
+    DO11 --> DO12
+
+    style DO_START fill:#ff9800,color:#fff
+        </pre>
+    </div>
+</div>
+
+<!-- ==================== SECTION 11: HOLD/SCRAP/REWORK ==================== -->
+<div class="section" id="s11">
+    <div class="section-header">
+        <div class="section-number">11</div>
+        <div class="section-title">Alur Penanganan Hold / Scrap / Rework</div>
+    </div>
+    <p class="section-desc">Proses penanganan part non-good: review admin, re-register, replacement, dan pengerjaan ulang.</p>
+    <div class="diagram-container">
+        <pre class="mermaid">
+flowchart TD
+    HS_START(["⚠️ Part Non-Good"]) --> HS1
+
+    HS1{"Status Part?"}
+
+    HS1 -->|HOLD| HS2["Masuk Production Hold Items"]
+    HS2 --> HS3{"Admin Review"}
+    HS3 -->|Release| HS4["✅ Status: Good"]
+    HS3 -->|Tetap Hold| HS5["⏸️ Menunggu Keputusan"]
+    HS3 -->|Re-register| HS6["♻️ Ajukan Re-register"]
+
+    HS1 -->|SCRAP| HS7["Part Rusak Permanen"]
+    HS7 --> HS8{"Bisa Diperbaiki?"}
+    HS8 -->|Ya| HS6
+    HS8 -->|Tidak| HS9["❌ Perlu Replacement"]
+    HS9 --> HS10["Operator Ajukan Replace"]
+    HS10 --> HS11["Pilih Part Baru"]
+    HS11 --> HS12["Admin Approve Replacement"]
+    HS12 --> HS13["Part Lama: Tersedia, Baru: Supplied"]
+
+    HS1 -->|REWORK| HS14["Operator Kerjakan Ulang"]
+    HS14 --> HS15["Submit Ulang Hasil"]
+    HS15 --> HS16{"Status Baru?"}
+    HS16 -->|Good| HS4
+    HS16 -->|Bermasalah| HS1
+
+    HS6 --> HS17["Buat Permohonan re_register_requests"]
+    HS17 --> HS18{"Admin Approve?"}
+    HS18 -->|Ya| HS19["✅ Status: Tersedia + Audit Log"]
+    HS18 -->|Tidak| HS20["❌ Ditolak + Notes"]
+
+    style HS_START fill:#ff6b6b,color:#fff
+        </pre>
+    </div>
+</div>
+
+<!-- ==================== SECTION 12: ERD ==================== -->
+<div class="section" id="s12">
+    <div class="section-header">
+        <div class="section-number">12</div>
+        <div class="section-title">Entity Relationship Diagram (ERD)</div>
+    </div>
+    <p class="section-desc">Relasi antar 9 tabel utama dalam database SQLite sistem Final Assembly.</p>
+    <div class="diagram-container">
+        <pre class="mermaid">
+erDiagram
+    users {
+        int id PK
+        varchar nik UK
+        varchar full_name
+        varchar username UK
+        varchar password
+        varchar role
+        varchar department
+        json permissions
+    }
+
+    master_stocks {
+        int id PK
+        varchar sn
+        varchar cs
+        varchar part_type
+        varchar status
+        int allocated_tray_id FK
+        timestamp allocated_at
+    }
+
+    trays {
+        int id PK
+        varchar tray_code UK
+        varchar pic_warehouse
+        varchar assigned_operator
+        varchar status
+        boolean verified_by_gudang
+    }
+
+    parts {
+        int id PK
+        int tray_id FK
+        varchar part_type
+        varchar sn
+        varchar status
+    }
+
+    assemblies {
+        int id PK
+        int tray_id FK
+        int set_number
+        varchar pic_assembly
+        varchar part15_sn
+        varchar part12_sn
+        varchar part1_sn
+        varchar status
+        text reason
+        varchar verified_status
+    }
+
+    part_audit_logs {
+        int id PK
+        varchar part_type
+        varchar sn
+        varchar old_status
+        varchar new_status
+        varchar action_type
+        varchar actor_username
+    }
+
+    re_register_requests {
+        int id PK
+        varchar part_type
+        varchar sn
+        varchar status
+        varchar requestor_username
+    }
+
+    assembly_downtimes {
+        int id PK
+        int tray_id FK
+        int set_number
+        varchar operator
+        text reason
+    }
+
+    assembly_wo_history {
+        int id PK
+        int tray_id FK
+        int set_number
+        varchar status
+        varchar source
+    }
+
+    users ||--o{ trays : "manages"
+    trays ||--|{ parts : "contains"
+    trays ||--|{ assemblies : "produces"
+    trays ||--o{ assembly_downtimes : "logs"
+    trays ||--o{ assembly_wo_history : "records"
+    master_stocks }o--|| trays : "allocated_to"
+    assemblies ||--o{ re_register_requests : "triggers"
+    assemblies ||--o{ part_audit_logs : "audits"
+        </pre>
+    </div>
+</div>
+
+<!-- ==================== SECTION 13: TABLE ==================== -->
+<div class="section" id="s13">
+    <div class="section-header">
+        <div class="section-number">13</div>
+        <div class="section-title">Ringkasan Tab & Navigasi per Role</div>
+    </div>
+    <p class="section-desc">Matriks akses modul/tab berdasarkan role pengguna dalam sistem.</p>
+
+    <table class="info-table">
+        <thead>
+            <tr>
+                <th style="width:40px;text-align:center">No</th>
+                <th>Tab / Modul</th>
+                <th style="text-align:center;width:80px">Admin</th>
+                <th style="text-align:center;width:80px">Gudang</th>
+                <th style="text-align:center;width:80px">Assembly</th>
+                <th>Keterangan</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td style="text-align:center">1</td>
+                <td><strong>Perakitan</strong> (Meja Kerja)</td>
+                <td style="text-align:center" class="check">✅</td>
+                <td style="text-align:center" class="cross">❌</td>
+                <td style="text-align:center" class="check">✅</td>
+                <td>Card workflow, timer, input hasil rakit</td>
+            </tr>
+            <tr>
+                <td style="text-align:center">2</td>
+                <td><strong>Gudang</strong> (Supply & Verifikasi)</td>
+                <td style="text-align:center" class="check">✅</td>
+                <td style="text-align:center" class="check">✅</td>
+                <td style="text-align:center" class="cross">❌</td>
+                <td>Buat tray, verifikasi, return</td>
+            </tr>
+            <tr>
+                <td style="text-align:center">3</td>
+                <td><strong>Print Document</strong></td>
+                <td style="text-align:center" class="check">✅</td>
+                <td style="text-align:center" class="check">✅</td>
+                <td style="text-align:center" class="cross">❌</td>
+                <td>Cetak WO, Traveler, QC</td>
+            </tr>
+            <tr>
+                <td style="text-align:center">4</td>
+                <td><strong>Laporan</strong></td>
+                <td style="text-align:center" class="check">✅</td>
+                <td style="text-align:center" class="check">✅</td>
+                <td style="text-align:center" class="cross">❌</td>
+                <td>4 sub-tab report + export Excel</td>
+            </tr>
+            <tr>
+                <td style="text-align:center">5</td>
+                <td><strong>Master DB</strong></td>
+                <td style="text-align:center" class="check">✅</td>
+                <td style="text-align:center" class="eye">👁️</td>
+                <td style="text-align:center" class="cross">❌</td>
+                <td>CRUD master stocks (Gudang: read-only)</td>
+            </tr>
+            <tr>
+                <td style="text-align:center">6</td>
+                <td><strong>Kelola User</strong></td>
+                <td style="text-align:center" class="check">✅</td>
+                <td style="text-align:center" class="cross">❌</td>
+                <td style="text-align:center" class="cross">❌</td>
+                <td>Manajemen user & permissions</td>
+            </tr>
+            <tr>
+                <td style="text-align:center">7</td>
+                <td><strong>Verifikasi Admin</strong></td>
+                <td style="text-align:center" class="check">✅</td>
+                <td style="text-align:center" class="cross">❌</td>
+                <td style="text-align:center" class="cross">❌</td>
+                <td>ACC/Decline set, replacement, re-register</td>
+            </tr>
+            <tr>
+                <td style="text-align:center">8</td>
+                <td><strong>Production Hold</strong></td>
+                <td style="text-align:center" class="check">✅</td>
+                <td style="text-align:center" class="cross">❌</td>
+                <td style="text-align:center" class="cross">❌</td>
+                <td>Review hold/rework items</td>
+            </tr>
+            <tr>
+                <td style="text-align:center">9</td>
+                <td><strong>Delivery Order</strong></td>
+                <td style="text-align:center" class="check">✅</td>
+                <td style="text-align:center" class="check">✅</td>
+                <td style="text-align:center" class="cross">❌</td>
+                <td>Buat DO, PL, cetak PDF</td>
+            </tr>
+            <tr>
+                <td style="text-align:center">10</td>
+                <td><strong>Testing Points</strong></td>
+                <td style="text-align:center" class="check">✅</td>
+                <td style="text-align:center" class="cross">❌</td>
+                <td style="text-align:center" class="cross">❌</td>
+                <td>Kelola poin uji fungsional</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="info-box">
+        <strong>📌 Catatan:</strong> 👁️ = Read-only (hanya bisa melihat, tidak bisa mengubah data). 
+        Akun dengan Custom Permissions dapat dikonfigurasi secara granular melalui menu Kelola User oleh Admin.
+    </div>
+
+    <div class="info-box success" style="margin-top:24px;">
+        <strong>✅ Traceability Penuh:</strong> Seluruh alur dari Gudang → Assembly → QC → Verifikasi → Dokumen tercatat di database dengan audit trail lengkap, termasuk timestamp, operator, dan riwayat perubahan status.
+    </div>
+
+    <div class="page-footer">
+        Dokumen ini dihasilkan otomatis dari Sistem Final Assembly V3 — PT NKRI<br>
+        <span id="footerDate"></span>
+    </div>
+</div>
+
+<script>
+    // Set dates
+    const now = new Date();
+    const options = { day: 'numeric', month: 'long', year: 'numeric' };
+    const dateStr = now.toLocaleDateString('id-ID', options);
+    document.getElementById('coverDate').textContent = dateStr;
+    document.getElementById('footerDate').textContent = 'Dicetak pada: ' + dateStr;
+
+    // Initialize Mermaid
+    mermaid.initialize({
+        startOnLoad: true,
+        theme: 'default',
+        themeVariables: {
+            primaryColor: '#e3f2fd',
+            primaryTextColor: '#1a237e',
+            primaryBorderColor: '#1565c0',
+            lineColor: '#546e7a',
+            secondaryColor: '#f3e5f5',
+            tertiaryColor: '#fff3e0',
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '13px'
+        },
+        flowchart: {
+            htmlLabels: true,
+            curve: 'basis',
+            padding: 15,
+            nodeSpacing: 50,
+            rankSpacing: 50
+        },
+        er: {
+            fontSize: 12,
+            useMaxWidth: true
+        },
+        securityLevel: 'loose'
+    });
+
+    // Hide loading overlay after diagrams render
+    mermaid.run().then(() => {
+        setTimeout(() => {
+            document.getElementById('loadingOverlay').classList.add('hidden');
+        }, 500);
+    }).catch(() => {
+        document.getElementById('loadingOverlay').classList.add('hidden');
+    });
+</script>
+
+</body>
+</html>

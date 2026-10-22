@@ -245,6 +245,8 @@ def user_has_perm(user, perm_name, require_write=False):
                 val = raw_perms.get('qc')
             elif perm_name == 'functional_hold':
                 val = raw_perms.get('production_hold')
+            elif perm_name == 'add_part':
+                val = raw_perms.get('add_part') or raw_perms.get('users') or raw_perms.get('master')
 
         if require_write:
             # Hanya level 2 (full) yang bisa melakukan aksi tulis (create/update/delete/approve)
@@ -259,19 +261,26 @@ def normalize_sn(part_type, sn_raw):
     if part_type == '1':
         # Accepts '1'..'999' -> '001'..'999' (3 digits)
         # Accepts '1000'..'6000' -> '1000'..'6000' (4 digits)
+        # SN yang diawali nol (misal '001', '0712', '01271', '09856') atau > 4 digit TIDAK dipotong
         if s.isdigit():
             val = int(s)
-            if 1 <= val <= 999:
-                return f"{val:03d}"
-            elif 1000 <= val <= 6000:
+            if len(s) <= 2:
+                if 1 <= val <= 99:
+                    return f"{val:03d}"
+            elif len(s) == 3:
+                return s
+            elif len(s) == 4 and not s.startswith('0') and 1000 <= val <= 6000:
                 return f"{val:04d}"
         return s
     elif part_type == '12':
         # Accepts '60001'..'63500' and '70001'..'71500' (5 digits)
-        clean = s.replace(".", "").replace(",", "").replace(" ", "")
+        # Juga menangani jika user/barcode menginput dengan prefix '12' (7 digit, misal: 1262026 atau 12-62026 -> 62026)
+        clean = s.replace(".", "").replace(",", "").replace(" ", "").replace("-", "")
         if clean.isdigit():
+            if len(clean) == 7 and clean.startswith('12'):
+                clean = clean[2:]
             val = int(clean)
-            if (60001 <= val <= 63500) or (70001 <= val <= 71500):
+            if len(clean) == 5 and not clean.startswith('0') and ((60001 <= val <= 63500) or (70001 <= val <= 71500)):
                 return str(val)
         return clean
     elif part_type == '15':
@@ -3805,8 +3814,7 @@ class Handler(SimpleHTTPRequestHandler):
                         p_type = raw_type
 
                     q = query.get("q", [""])[0].strip()
-                    limit_param = query.get("limit", [""])[0].strip()
-                    limit = int(limit_param) if limit_param and limit_param.isdigit() and int(limit_param) > 0 else None
+                    # Sesuai instruksi user: JANGAN ada batasan untuk menampilkan data stok
                     with get_conn() as conn:
                         with conn.cursor() as cur:
                             sql = """
@@ -3814,24 +3822,38 @@ class Handler(SimpleHTTPRequestHandler):
                                 FROM master_stocks 
                                 WHERE part_type = ? AND status = 'Tersedia' 
                                   AND allocated_tray_id IS NULL
-                                  AND sn NOT IN (
-                                      SELECT p.sn 
-                                      FROM parts p 
-                                      JOIN trays t ON p.tray_id = t.id 
-                                      WHERE p.part_type = ? 
-                                        AND UPPER(COALESCE(p.status, '')) NOT IN ('RETURNED', 'TERSEDIA', 'DECLINED')
-                                        AND (COALESCE(t.session_status, 'active') != 'RETURNED_TO_WAREHOUSE' OR COALESCE(t.return_verified, 0) = 0)
-                                  )
                             """
-                            params = [p_type, p_type]
+                            params = [p_type]
                             if q:
-                                sql += " AND (sn LIKE ? OR REPLACE(sn, '.', '') LIKE ?)"
-                                params.extend([f"%{q}%", f"%{q}%"])
+                                q_vars = set()
+                                q_vars.add(q)
+                                q_clean = re.sub(r'[\s.,\-_]', '', q)
+                                if q_clean:
+                                    q_vars.add(q_clean)
+                                m_pref = re.match(r'^(?:PART\s*|P)?(15|12|1)[\s\-_]*(.+)$', q, re.IGNORECASE)
+                                if m_pref:
+                                    sn_part = m_pref.group(2).strip()
+                                    q_vars.add(sn_part)
+                                    q_vars.add(re.sub(r'[\s.,\-_]', '', sn_part))
+                                if p_type == '12':
+                                    if len(q_clean) == 7 and q_clean.startswith('12'):
+                                        q_vars.add(q_clean[2:])
+                                    elif len(q_clean) == 6 and q_clean[0] in ('1', '2'):
+                                        q_vars.add(q_clean[1:])
+                                elif p_type == '1':
+                                    if len(q_clean) == 4 and q_clean.startswith('1') and int(q_clean) > 6000:
+                                        q_vars.add(q_clean[1:])
 
-                            sql += " ORDER BY sn ASC"
-                            if limit is not None:
-                                sql += " LIMIT ?"
-                                params.append(limit)
+                                q_clauses = []
+                                for qv in q_vars:
+                                    if qv:
+                                        q_clauses.append("(sn LIKE ? OR REPLACE(sn, '.', '') LIKE ?)")
+                                        params.extend([f"%{qv}%", f"%{qv}%"])
+                                if q_clauses:
+                                    sql += " AND (" + " OR ".join(q_clauses) + ")"
+
+                            # Prioritaskan part yang baru saja diverifikasi kembali oleh gudang
+                            sql += " ORDER BY (CASE WHEN last_reason IS NOT NULL OR last_tray_id IS NOT NULL THEN 0 ELSE 1 END), sn ASC"
 
                             cur.execute(sql, tuple(params))
                             rows = [dict(r) for r in cur.fetchall()]
@@ -3871,7 +3893,7 @@ class Handler(SimpleHTTPRequestHandler):
                     q = query.get("q", [""])[0].strip()
                     page = max(1, int(query.get("page", ["1"])[0]))
                     limit_param = query.get("limit", ["100"])[0]
-                    limit = max(1, min(5000, int(limit_param))) if limit_param.isdigit() else 100
+                    limit = max(1, min(10000, int(limit_param))) if limit_param.isdigit() else 100
                     offset = (page - 1) * limit
 
                     with get_conn() as conn:
@@ -3895,9 +3917,31 @@ class Handler(SimpleHTTPRequestHandler):
                                     conds.append("((COALESCE(a.is_declined, 0) != 1 AND COALESCE(a.verified_status, '') != 'DECLINED' AND m.status NOT IN ('Declined', 'Decline', 'Pending Verif Admin')) AND COALESCE(a.status, m.status, 'Tersedia') = ?)")
                                     params.append(p_status)
                             if q:
-                                q_alt = q[1:] if len(q) in [5, 6, 7] and q[0] in ['1', '2'] else q
-                                conds.append("(m.sn LIKE ? OR REPLACE(m.sn, '.', '') LIKE ? OR m.sn LIKE ? OR t.tray_code LIKE ? OR t.source_document_mo LIKE ? OR a.pic_assembly LIKE ? OR u_assy.full_name LIKE ? OR t.assigned_operator LIKE ? OR u_op.full_name LIKE ? OR m.last_reason LIKE ? OR m.last_operator LIKE ? OR a.part15_sn LIKE ? OR a.part1_sn LIKE ? OR a.part12_sn LIKE ?)")
-                                params.extend([f"%{q}%", f"%{q}%", f"%{q_alt}%", f"%{q}%", f"%{q}%", f"%{q}%", f"%{q}%", f"%{q}%", f"%{q}%", f"%{q}%", f"%{q}%", f"%{q}%", f"%{q}%", f"%{q}%"])
+                                q_vars = set()
+                                q_vars.add(q)
+                                q_clean = re.sub(r'[\s.,\-_]', '', q)
+                                if q_clean:
+                                    q_vars.add(q_clean)
+                                m_pref = re.match(r'^(?:PART\s*|P)?(15|12|1)[\s\-_]*(.+)$', q, re.IGNORECASE)
+                                if m_pref:
+                                    sn_part = m_pref.group(2).strip()
+                                    q_vars.add(sn_part)
+                                    q_vars.add(re.sub(r'[\s.,\-_]', '', sn_part))
+                                if len(q_clean) == 7 and q_clean.startswith('12'):
+                                    q_vars.add(q_clean[2:])
+                                elif len(q_clean) in [5, 6, 7] and q_clean[0] in ['1', '2']:
+                                    q_vars.add(q_clean[1:])
+
+                                sn_conds = []
+                                for qv in q_vars:
+                                    if qv:
+                                        sn_conds.append("m.sn LIKE ? OR REPLACE(m.sn, '.', '') LIKE ?")
+                                        params.extend([f"%{qv}%", f"%{qv}%"])
+
+                                extra_fields = "t.tray_code LIKE ? OR t.source_document_mo LIKE ? OR a.pic_assembly LIKE ? OR u_assy.full_name LIKE ? OR t.assigned_operator LIKE ? OR u_op.full_name LIKE ? OR m.last_reason LIKE ? OR m.last_operator LIKE ? OR a.part15_sn LIKE ? OR a.part1_sn LIKE ? OR a.part12_sn LIKE ?"
+                                params.extend([f"%{q}%"] * 11)
+
+                                conds.append(f"({' OR '.join(sn_conds)} OR {extra_fields})")
 
                             where_clause = " AND ".join(conds)
                             cur.execute(f"""
@@ -4094,6 +4138,38 @@ class Handler(SimpleHTTPRequestHandler):
                                     "re_register_requests": rereg_requests
                                 }
                             })
+
+                elif path in ("/api/master/recent-added", "/api/master/recent-added/", "/api/admin/recent-added", "/api/admin/recent-added/"):
+                    user = check_auth(self)
+                    if not user:
+                        return send_json(self, {"ok": False, "error": "Unauthorized / Sesi habis"}, 401)
+                    limit_param = query.get("limit", ["20"])[0].strip()
+                    limit = min(100, max(1, int(limit_param))) if limit_param.isdigit() else 20
+                    p_type = query.get("part_type", [""])[0].strip() or query.get("type", [""])[0].strip()
+
+                    with get_conn() as conn:
+                        with conn.cursor() as cur:
+                            conds = ["1=1"]
+                            params = []
+                            if p_type:
+                                conds.append("m.part_type = ?")
+                                params.append(p_type)
+                            where_sql = " AND ".join(conds)
+                            params.append(limit)
+                            cur.execute(f"""
+                                SELECT m.id, m.sn, m.cs, m.part_type, m.status, m.created_at,
+                                       pal.actor_username, pal.actor_role, pal.reason
+                                FROM master_stocks m
+                                LEFT JOIN part_audit_logs pal ON pal.id = (
+                                    SELECT MAX(p2.id) FROM part_audit_logs p2
+                                    WHERE p2.action_type = 'ADD_PART_NUMBER' AND p2.part_type = m.part_type AND (p2.sn = m.sn OR REPLACE(p2.sn, '.', '') = REPLACE(m.sn, '.', ''))
+                                )
+                                WHERE {where_sql}
+                                ORDER BY m.id DESC
+                                LIMIT ?
+                            """, tuple(params))
+                            rows = [dict(r) for r in cur.fetchall()]
+                    return send_json(self, {"ok": True, "data": rows})
 
                 elif path == "/api/customers":
                     q = query.get("q", [""])[0].strip()
@@ -4855,13 +4931,9 @@ class Handler(SimpleHTTPRequestHandler):
                         cur.execute("""
                             DELETE FROM master_stocks 
                             WHERE (
-                                part_type = '12' AND (
-                                    NOT (sn REGEXP '^[0-9]+$') OR NOT ((CAST(sn AS INTEGER) BETWEEN 60001 AND 63500) OR (CAST(sn AS INTEGER) BETWEEN 70001 AND 71500))
-                                )
+                                part_type = '12' AND NOT (sn REGEXP '^[0-9]+$')
                             ) OR (
-                                part_type = '1' AND (
-                                    NOT (sn REGEXP '^[0-9]+$') OR NOT ((LENGTH(sn) = 3 AND CAST(sn AS INTEGER) BETWEEN 1 AND 999) OR (LENGTH(sn) = 4 AND CAST(sn AS INTEGER) BETWEEN 1000 AND 6000))
-                                )
+                                part_type = '1' AND NOT (sn REGEXP '^[0-9]+$')
                             ) OR (
                                 part_type = '15' AND (
                                     NOT (sn REGEXP '^[A-Z]110[0-9]{4}$') OR cs IS NULL OR cs = ''
@@ -4917,15 +4989,26 @@ class Handler(SimpleHTTPRequestHandler):
                                 SELECT id, sn, status, allocated_tray_id 
                                 FROM master_stocks 
                                 WHERE part_type = ? 
-                                  AND (sn = ? OR REPLACE(sn, '.', '') = REPLACE(?, '.', ''))
-                            """, (p_type, norm_sn, norm_sn))
+                                  AND (
+                                      sn = ? 
+                                      OR REPLACE(sn, '.', '') = REPLACE(?, '.', '')
+                                      OR (LENGTH(?) >= 3 AND LTRIM(sn, '0') = LTRIM(?, '0'))
+                                  )
+                                ORDER BY 
+                                  CASE 
+                                    WHEN sn = ? THEN 0
+                                    WHEN REPLACE(sn, '.', '') = REPLACE(?, '.', '') THEN 1
+                                    ELSE 2 
+                                  END ASC
+                                LIMIT 1
+                            """, (p_type, norm_sn, norm_sn, norm_sn, norm_sn, norm_sn, norm_sn))
                             stock_row = cur.fetchone()
 
                             if not stock_row:
                                 if p_type == '1':
-                                    hint = "Nomor Part 1 harus dalam rentang 001 - 999 (3 digit) atau 1000 - 6000 (4 digit)."
+                                    hint = "Nomor Part 1 harus dalam rentang 001 - 999 (3 digit), 1000 - 6000 (4 digit), atau nomor double marking yang terdaftar."
                                 elif p_type == '12':
-                                    hint = "Nomor Part 12 harus dalam rentang 60001 - 63500 atau 70001 - 71500."
+                                    hint = "Nomor Part 12 harus dalam rentang 60001 - 63500, 70001 - 71500, atau nomor double marking yang terdaftar."
                                 elif p_type == '15':
                                     hint = "Nomor Part 15 harus terdaftar dalam dokumen resmi PDF (J1100001 - Z1102000)."
                                 else:
@@ -4935,53 +5018,12 @@ class Handler(SimpleHTTPRequestHandler):
                             if stock_row['status'] != 'Tersedia' or stock_row.get('allocated_tray_id') is not None:
                                 raise Exception(f"Part {p_type} '{stock_row['sn']}' sudah pernah digunakan / dialokasikan (Status: {stock_row['status']}) dan tidak dapat disupply kembali!")
 
-                            # Validasi ekstra: pastikan part belum terpasang di tray atau assembly aktif lain
-                            cur.execute("""
-                                SELECT t.tray_code 
-                                FROM parts p 
-                                JOIN trays t ON p.tray_id = t.id 
-                                WHERE p.part_type = ? AND (p.sn = ? OR REPLACE(p.sn, '.', '') = REPLACE(?, '.', ''))
-                                  AND UPPER(COALESCE(p.status, '')) NOT IN ('RETURNED', 'TERSEDIA', 'DECLINED')
-                                  AND (COALESCE(t.session_status, 'active') != 'RETURNED_TO_WAREHOUSE' OR COALESCE(t.return_verified, 0) = 0)
-                                LIMIT 1
-                            """, (p_type, stock_row['sn'], stock_row['sn']))
-                            existing_part = cur.fetchone()
-                            if existing_part:
-                                raise Exception(f"Part {p_type} '{stock_row['sn']}' sudah pernah disupply pada Tray {existing_part['tray_code']} dan tidak dapat digunakan lagi!")
-
-                            if p_type == '15':
-                                cur.execute("""
-                                    SELECT t.tray_code FROM assemblies a 
-                                    JOIN trays t ON a.tray_id = t.id 
-                                    WHERE (a.part15_sn = ? OR REPLACE(a.part15_sn, '.', '') = REPLACE(?, '.', ''))
-                                      AND (a.is_declined IS FALSE OR a.is_declined IS NULL OR a.is_declined = 0)
-                                      AND (a.verified_status NOT IN ('DECLINED', 'HOLD_GUDANG', 'REWORK_GUDANG', 'SCRAP') OR a.verified_status IS NULL)
-                                      AND (COALESCE(t.session_status, 'active') != 'RETURNED_TO_WAREHOUSE' OR COALESCE(t.return_verified, 0) = 0)
-                                    LIMIT 1
-                                """, (stock_row['sn'], stock_row['sn']))
-                            elif p_type == '12':
-                                cur.execute("""
-                                    SELECT t.tray_code FROM assemblies a 
-                                    JOIN trays t ON a.tray_id = t.id 
-                                    WHERE (a.part12_sn = ? OR REPLACE(a.part12_sn, '.', '') = REPLACE(?, '.', ''))
-                                      AND (a.is_declined IS FALSE OR a.is_declined IS NULL OR a.is_declined = 0)
-                                      AND (a.verified_status NOT IN ('DECLINED', 'HOLD_GUDANG', 'REWORK_GUDANG', 'SCRAP') OR a.verified_status IS NULL)
-                                      AND (COALESCE(t.session_status, 'active') != 'RETURNED_TO_WAREHOUSE' OR COALESCE(t.return_verified, 0) = 0)
-                                    LIMIT 1
-                                """, (stock_row['sn'], stock_row['sn']))
-                            else:
-                                cur.execute("""
-                                    SELECT t.tray_code FROM assemblies a 
-                                    JOIN trays t ON a.tray_id = t.id 
-                                    WHERE (a.part1_sn = ? OR REPLACE(a.part1_sn, '.', '') = REPLACE(?, '.', ''))
-                                      AND (a.is_declined IS FALSE OR a.is_declined IS NULL OR a.is_declined = 0)
-                                      AND (a.verified_status NOT IN ('DECLINED', 'HOLD_GUDANG', 'REWORK_GUDANG', 'SCRAP') OR a.verified_status IS NULL)
-                                      AND (COALESCE(t.session_status, 'active') != 'RETURNED_TO_WAREHOUSE' OR COALESCE(t.return_verified, 0) = 0)
-                                    LIMIT 1
-                                """, (stock_row['sn'], stock_row['sn']))
-                            existing_assy = cur.fetchone()
-                            if existing_assy:
-                                raise Exception(f"Part {p_type} '{stock_row['sn']}' sudah terpasang pada rakitan Tray {existing_assy['tray_code']} dan tidak dapat digunakan lagi!")
+                            # Jika part masih terikat ke allocated_tray_id aktif
+                            if stock_row.get('allocated_tray_id'):
+                                cur.execute("SELECT tray_code FROM trays WHERE id = ?", (stock_row['allocated_tray_id'],))
+                                t_row = cur.fetchone()
+                                t_code = t_row['tray_code'] if t_row else str(stock_row['allocated_tray_id'])
+                                raise Exception(f"Part {p_type} '{stock_row['sn']}' sedang dialokasikan pada Tray {t_code} dan tidak dapat disupply kembali!")
 
                             stock_ids_to_allocate.append(stock_row['id'])
                             normalized_parts.append({"part_type": p_type, "sn": stock_row['sn']})
@@ -5015,6 +5057,10 @@ class Handler(SimpleHTTPRequestHandler):
                         
                         # 3. Insert into parts table with status 'Supplied'
                         for p in normalized_parts:
+                            cur.execute("""
+                                UPDATE parts SET status = 'RETURNED' 
+                                WHERE part_type = ? AND (sn = ? OR REPLACE(sn, '.', '') = REPLACE(?, '.', '')) AND tray_id != ?
+                            """, (p['part_type'], p['sn'], p['sn'], tray_id))
                             cur.execute("""
                                 INSERT INTO parts (tray_id, part_type, sn, status)
                                 VALUES (?, ?, ?, 'Supplied')
@@ -5136,6 +5182,217 @@ class Handler(SimpleHTTPRequestHandler):
                             "message": f"Permohonan override Part {p_type} SN {sn} ('{old_status}' -> '{new_status}') telah diajukan dan menunggu verifikasi Admin."
                         })
 
+                    elif path in ("/api/master/add-part", "/api/master/add-part/", "/api/admin/add-part", "/api/admin/add-part/"):
+                        if not (is_super_admin(user) or user.get('role') in ('admin', 'Super Admin') or user_has_perm(user, 'users', require_write=True) or user_has_perm(user, 'add_part', require_write=True) or user_has_perm(user, 'master', require_write=True) or user_has_perm(user, 'warehouse', require_write=True)):
+                            return send_json(self, {"ok": False, "error": "Akses khusus Administrator / Master Stok (Write)"}, 403)
+
+                        p_type = str(body.get("part_type") or "").strip()
+                        raw_sn = str(body.get("sn") or "").strip()
+                        reason = (str(body.get("reason") or "").strip()) or "Tambah manual part number"
+
+                        if p_type not in ('1', '12', '15'):
+                            return send_json(self, {"ok": False, "error": "Part Type harus '1', '12', atau '15'"}, 400)
+
+                        if not raw_sn:
+                            return send_json(self, {"ok": False, "error": "Serial Number wajib diisi!"}, 400)
+
+                        if p_type in ('1', '12'):
+                            clean_sn = raw_sn.replace('.', '').replace(',', '').replace(' ', '')
+                            if not clean_sn.isdigit():
+                                return send_json(self, {"ok": False, "error": f"SN Part {p_type} harus berupa angka"}, 400)
+                            cs_val = None
+                        else:  # '15'
+                            clean_sn = raw_sn.replace(' ', '').upper()
+                            cs_val = str(body.get("cs") or "").strip().upper()
+                            if not clean_sn or not clean_sn[0].isalpha():
+                                return send_json(self, {"ok": False, "error": "SN Part 15 harus diawali huruf (contoh: K1103581)"}, 400)
+                            if not cs_val:
+                                return send_json(self, {"ok": False, "error": "CS wajib diisi untuk Part 15"}, 400)
+
+                        # Cek duplikasi di master_stocks
+                        cur.execute("""
+                            SELECT id, status, sn FROM master_stocks 
+                            WHERE part_type = ? AND (sn = ? OR REPLACE(sn, '.', '') = REPLACE(?, '.', ''))
+                        """, (p_type, clean_sn, clean_sn))
+                        existing = cur.fetchone()
+                        if existing:
+                            return send_json(self, {
+                                "ok": False,
+                                "error": f"Part {p_type} SN {clean_sn} sudah terdaftar di Master Stok (Status saat ini: {existing['status']})"
+                            }, 409)
+
+                        # Insert ke master_stocks dengan status 'Tersedia'
+                        cur.execute("""
+                            INSERT INTO master_stocks (sn, cs, part_type, status, created_at)
+                            VALUES (?, ?, ?, 'Tersedia', datetime('now', 'localtime'))
+                        """, (clean_sn, cs_val, p_type))
+
+                        # Log ke part_audit_logs
+                        actor_role = user.get('role') or 'admin'
+                        cur.execute("""
+                            INSERT INTO part_audit_logs (part_type, sn, old_status, new_status, action_type, actor_username, actor_role, reason, created_at)
+                            VALUES (?, ?, '-', 'Tersedia', 'ADD_PART_NUMBER', ?, ?, ?, datetime('now', 'localtime'))
+                        """, (p_type, clean_sn, user['username'], actor_role, reason))
+
+                        conn.commit()
+                        return send_json(self, {
+                            "ok": True,
+                            "message": f"Part {p_type} SN {clean_sn} berhasil ditambahkan dengan status 'Tersedia'.",
+                            "data": {
+                                "sn": clean_sn,
+                                "cs": cs_val,
+                                "part_type": p_type,
+                                "status": "Tersedia"
+                            }
+                        })
+
+                    elif path in ("/api/master/add-part-bulk", "/api/master/add-part-bulk/", "/api/admin/add-part-bulk", "/api/admin/add-part-bulk/"):
+                        if not (is_super_admin(user) or user.get('role') in ('admin', 'Super Admin') or user_has_perm(user, 'users', require_write=True) or user_has_perm(user, 'add_part', require_write=True) or user_has_perm(user, 'master', require_write=True) or user_has_perm(user, 'warehouse', require_write=True)):
+                            return send_json(self, {"ok": False, "error": "Akses khusus Administrator / Master Stok (Write)"}, 403)
+
+                        p_type = str(body.get("part_type") or "").strip()
+                        if p_type not in ('1', '12', '15'):
+                            return send_json(self, {"ok": False, "error": "Part Type harus '1', '12', atau '15'"}, 400)
+
+                        reason = (str(body.get("reason") or "").strip()) or "Tambah bulk part number"
+                        cs_val = str(body.get("cs") or "").strip().upper() if p_type == '15' else None
+                        if p_type == '15' and not cs_val:
+                            return send_json(self, {"ok": False, "error": "CS wajib diisi untuk Part 15"}, 400)
+
+                        sn_start = str(body.get("sn_start") or "").strip()
+                        sn_end = str(body.get("sn_end") or "").strip()
+                        sns_raw = body.get("sns")
+
+                        target_sns = []
+
+                        # Mode 1: Rentang (hanya numerik Part 1 & 12)
+                        if sn_start and sn_end:
+                            if p_type == '15':
+                                return send_json(self, {"ok": False, "error": "Mode rentang tidak mendukung Part 15"}, 400)
+                            c_start = sn_start.replace('.', '').replace(',', '').replace(' ', '')
+                            c_end = sn_end.replace('.', '').replace(',', '').replace(' ', '')
+                            if not c_start.isdigit() or not c_end.isdigit():
+                                return send_json(self, {"ok": False, "error": "SN awal dan SN akhir harus berupa angka"}, 400)
+                            v_start = int(c_start)
+                            v_end = int(c_end)
+                            if v_start > v_end:
+                                return send_json(self, {"ok": False, "error": "SN awal tidak boleh lebih besar dari SN akhir"}, 400)
+                            if (v_end - v_start + 1) > 500:
+                                return send_json(self, {"ok": False, "error": "Maksimal rentang bulk adalah 500 part sekaligus"}, 400)
+                            pad_len = max(len(c_start), len(c_end))
+                            target_sns = [str(v).zfill(pad_len) for v in range(v_start, v_end + 1)]
+
+                        # Mode 2: List / Multi-line
+                        elif sns_raw is not None:
+                            if isinstance(sns_raw, str):
+                                lines = [x.strip() for x in re.split(r'[\r\n,]+', sns_raw) if x.strip()]
+                            elif isinstance(sns_raw, list):
+                                lines = [str(x).strip() for x in sns_raw if str(x).strip()]
+                            else:
+                                lines = []
+
+                            for raw_s in lines:
+                                if p_type in ('1', '12'):
+                                    c_sn = raw_s.replace('.', '').replace(',', '').replace(' ', '')
+                                    if c_sn.isdigit() and c_sn not in target_sns:
+                                        target_sns.append(c_sn)
+                                else:
+                                    c_sn = raw_s.replace(' ', '').upper()
+                                    if c_sn and c_sn[0].isalpha() and c_sn not in target_sns:
+                                        target_sns.append(c_sn)
+                        else:
+                            return send_json(self, {"ok": False, "error": "Harap masukkan daftar SN atau tentukan rentang SN awal-akhir"}, 400)
+
+                        if not target_sns:
+                            return send_json(self, {"ok": False, "error": "Tidak ada Serial Number yang valid untuk diproses"}, 400)
+
+                        added = []
+                        duplicates = []
+                        actor_role = user.get('role') or 'admin'
+
+                        for item_sn in target_sns:
+                            cur.execute("""
+                                SELECT id, status, sn FROM master_stocks 
+                                WHERE part_type = ? AND (sn = ? OR REPLACE(sn, '.', '') = REPLACE(?, '.', ''))
+                            """, (p_type, item_sn, item_sn))
+                            ex = cur.fetchone()
+                            if ex:
+                                duplicates.append({"sn": item_sn, "status": ex['status']})
+                            else:
+                                cur.execute("""
+                                    INSERT INTO master_stocks (sn, cs, part_type, status, created_at)
+                                    VALUES (?, ?, ?, 'Tersedia', datetime('now', 'localtime'))
+                                """, (item_sn, cs_val, p_type))
+                                cur.execute("""
+                                    INSERT INTO part_audit_logs (part_type, sn, old_status, new_status, action_type, actor_username, actor_role, reason, created_at)
+                                    VALUES (?, ?, '-', 'Tersedia', 'ADD_PART_NUMBER', ?, ?, ?, datetime('now', 'localtime'))
+                                """, (p_type, item_sn, user['username'], actor_role, reason))
+                                added.append(item_sn)
+
+                        conn.commit()
+                        return send_json(self, {
+                            "ok": True,
+                            "message": f"Berhasil menambahkan {len(added)} part baru. ({len(duplicates)} part sudah terdaftar sebelumnya)",
+                            "data": {
+                                "part_type": p_type,
+                                "added_count": len(added),
+                                "duplicate_count": len(duplicates),
+                                "added": added,
+                                "duplicates": duplicates
+                            }
+                        })
+
+                    elif path in ("/api/master/delete-part", "/api/admin/delete-part"):
+                        if not (is_super_admin(user) or user.get('role') in ('admin', 'Super Admin') or user_has_perm(user, 'users', require_write=True) or user_has_perm(user, 'add_part', require_write=True) or user_has_perm(user, 'master', require_write=True)):
+                            return send_json(self, {"ok": False, "error": "Akses khusus Administrator (Write)"}, 403)
+
+                        part_id = body.get("id")
+                        p_type = str(body.get("part_type") or "").strip()
+                        raw_sn = str(body.get("sn") or "").strip()
+
+                        if not part_id and (not p_type or not raw_sn):
+                            return send_json(self, {"ok": False, "error": "ID part atau Part Type & SN wajib disertakan"}, 400)
+
+                        if part_id:
+                            cur.execute("SELECT id, sn, cs, part_type, status, allocated_tray_id FROM master_stocks WHERE id = ?", (part_id,))
+                        else:
+                            clean_sn = raw_sn.replace('.', '').replace(',', '').replace(' ', '') if p_type in ('1', '12') else raw_sn.replace(' ', '').upper()
+                            cur.execute("SELECT id, sn, cs, part_type, status, allocated_tray_id FROM master_stocks WHERE part_type = ? AND (sn = ? OR REPLACE(sn, '.', '') = REPLACE(?, '.', ''))", (p_type, clean_sn, clean_sn))
+
+                        row_match = cur.fetchone()
+                        if not row_match:
+                            return send_json(self, {"ok": False, "error": "Part tidak ditemukan di Master Stok"}, 404)
+
+                        part_row = dict(row_match)
+
+                        # Cek status part: hanya boleh dihapus jika masih 'Tersedia' dan belum dialokasikan ke tray
+                        if part_row['status'] != 'Tersedia' or part_row.get('allocated_tray_id'):
+                            return send_json(self, {
+                                "ok": False,
+                                "error": f"Part {part_row['part_type']} SN {part_row['sn']} tidak dapat dihapus karena statusnya sudah '{part_row['status']}' atau sedang digunakan dalam produksi."
+                            }, 400)
+
+                        # Audit log
+                        actor_role = user.get('role') or 'admin'
+                        cur.execute("""
+                            INSERT INTO part_audit_logs (part_type, sn, old_status, new_status, action_type, actor_username, actor_role, reason, created_at)
+                            VALUES (?, ?, ?, 'Deleted', 'DELETE_PART_NUMBER', ?, ?, 'Dihapus dari menu Tambah Part', datetime('now', 'localtime'))
+                        """, (part_row['part_type'], part_row['sn'], part_row['status'], user['username'], actor_role))
+
+                        # Hapus dari master_stocks
+                        cur.execute("DELETE FROM master_stocks WHERE id = ?", (part_row['id'],))
+                        conn.commit()
+
+                        return send_json(self, {
+                            "ok": True,
+                            "message": f"Part {part_row['part_type']} SN {part_row['sn']} berhasil dihapus dari Master Stok.",
+                            "data": {
+                                "id": part_row['id'],
+                                "sn": part_row['sn'],
+                                "part_type": part_row['part_type']
+                            }
+                        })
+
                     elif path == "/api/assembly/save":
                         if not user_has_perm(user, 'assembly', require_write=True): return send_json(self, {"ok":False,"error":"Akses ditolak (butuh izin tulis Assembly)"}, 403)
                         
@@ -5193,8 +5450,11 @@ class Handler(SimpleHTTPRequestHandler):
                                 raise Exception(f"Part {sn} sudah selesai dirakit (Done)!")
 
                         if body.get('is_edit') and body.get('old_sns'):
-                            cur.execute("UPDATE parts SET status = 'Supplied' WHERE sn = ANY(?)", (body['old_sns'],))
-                            cur.execute("UPDATE master_stocks SET status = 'Supplied' WHERE sn = ANY(?)", (body['old_sns'],))
+                            old_sns_list = list(body['old_sns'])
+                            if old_sns_list:
+                                placeholders = ','.join('?' * len(old_sns_list))
+                                cur.execute(f"UPDATE parts SET status = 'Supplied' WHERE tray_id = ? AND sn IN ({placeholders})", (tray_id, *old_sns_list))
+                                cur.execute(f"UPDATE master_stocks SET status = 'Supplied', allocated_tray_id = NULL, used_at = NULL WHERE sn IN ({placeholders})", (*old_sns_list,))
                             cur.execute("DELETE FROM assemblies WHERE id = ?", (body['assembly_id'],))
 
                         # Auto-Update Master Database (Requirement B)
@@ -6156,6 +6416,19 @@ class Handler(SimpleHTTPRequestHandler):
                                     if not new_stock:
                                         return send_json(self, {"ok": False, "error": f"Part baru {p_type} SN {n_sn} tidak ditemukan atau statusnya bukan 'Tersedia' di Master Stok!"}, 400)
 
+                                    # Pastikan part baru tidak sedang aktif digunakan di set lain pada tray yang sama
+                                    cur.execute("""
+                                        SELECT a.set_number FROM assemblies a
+                                        WHERE a.tray_id = ? AND a.id != ? AND (
+                                            (a.part15_sn = ? AND ? = '15') OR 
+                                            (a.part1_sn = ? AND ? = '1') OR 
+                                            (a.part12_sn = ? AND ? = '12')
+                                        ) AND COALESCE(a.is_reregistered, 0) = 0
+                                    """, (assy['tray_id'], assembly_id, n_sn, p_type, n_sn, p_type, n_sn, p_type))
+                                    active_in_same = cur.fetchone()
+                                    if active_in_same:
+                                        return send_json(self, {"ok": False, "error": f"Part {p_type} SN {n_sn} sedang aktif digunakan di Set #{active_in_same['set_number']} pada tray ini!"}, 400)
+
                                     if p_type == '15':
                                         old_sn = assy['part15_sn']
                                     elif p_type == '1':
@@ -6535,14 +6808,26 @@ class Handler(SimpleHTTPRequestHandler):
                                         return send_json(self, {"ok": False, "error": f"Part baru {p_type} SN {n_sn} tidak ditemukan di Master Stok!"}, 400)
 
                                     if p_type == '15':
+                                        # Lepaskan dari set lain di tray ini jika ada (misal bekas PU yang sudah dilepas) agar tidak terjadi double
+                                        cur.execute("UPDATE assemblies SET part15_sn = '-' WHERE tray_id = ? AND part15_sn = ? AND id != ?", (assy['tray_id'], new_stock['sn'], target_assy_id))
                                         cur.execute("UPDATE assemblies SET part15_sn = ? WHERE id = ?", (new_stock['sn'], target_assy_id))
                                     elif p_type == '1':
+                                        cur.execute("UPDATE assemblies SET part1_sn = '-' WHERE tray_id = ? AND part1_sn = ? AND id != ?", (assy['tray_id'], new_stock['sn'], target_assy_id))
                                         cur.execute("UPDATE assemblies SET part1_sn = ? WHERE id = ?", (new_stock['sn'], target_assy_id))
                                     elif p_type == '12':
+                                        cur.execute("UPDATE assemblies SET part12_sn = '-' WHERE tray_id = ? AND part12_sn = ? AND id != ?", (assy['tray_id'], new_stock['sn'], target_assy_id))
                                         cur.execute("UPDATE assemblies SET part12_sn = ? WHERE id = ?", (new_stock['sn'], target_assy_id))
 
                                     # Update parts table for this tray (synchronizing WO documents)
+                                    # Bersihkan dulu jika new_stock['sn'] sempat tersisa di tray ini (misal sisa dari PU sebelumnya) agar tidak bentrok UNIQUE constraint
+                                    cur.execute("DELETE FROM parts WHERE tray_id = ? AND part_type = ? AND (sn = ? OR REPLACE(sn, '.', '') = REPLACE(?, '.', ''))", (assy['tray_id'], p_type, new_stock['sn'], new_stock['sn']))
                                     cur.execute("UPDATE parts SET sn = ? WHERE tray_id = ? AND part_type = ? AND (sn = ? OR REPLACE(sn, '.', '') = REPLACE(?, '.', ''))", (new_stock['sn'], assy['tray_id'], p_type, old_sn, old_sn))
+                                    if cur.rowcount == 0:
+                                        cur.execute("""
+                                            INSERT INTO parts (tray_id, part_type, sn, status)
+                                            VALUES (?, ?, ?, 'Supplied')
+                                            ON CONFLICT (tray_id, part_type, sn) DO NOTHING
+                                        """, (assy['tray_id'], p_type, new_stock['sn']))
 
                                     cur.execute("""
                                         UPDATE master_stocks 
@@ -7154,6 +7439,12 @@ class Handler(SimpleHTTPRequestHandler):
                                                     SET status = 'Supplied', allocated_tray_id = ?, allocated_at = datetime('now', 'localtime')
                                                     WHERE part_type = ? AND (sn = ? OR REPLACE(sn, '.', '') = REPLACE(?, '.', ''))
                                                 """, (new_tray_id, p_type, sn, sn))
+                                                # Hapus dari tabel parts tray asal agar tidak nyangkut/duplikat di tray lama
+                                                if a_item.get('tray_id'):
+                                                    cur.execute("""
+                                                        DELETE FROM parts 
+                                                        WHERE tray_id = ? AND part_type = ? AND (sn = ? OR REPLACE(sn, '.', '') = REPLACE(?, '.', ''))
+                                                    """, (a_item['tray_id'], p_type, sn, sn))
 
                                         # 3. Update the old assembly record:
                                         # Keep status as 'Dirakit Ulang' permanently as requested by user
