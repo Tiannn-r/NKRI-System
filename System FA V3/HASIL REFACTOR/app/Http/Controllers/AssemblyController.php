@@ -379,151 +379,196 @@ class AssemblyController extends Controller
     public function getPendingReassembly() { return $this->pendingReassembly(); }
 
     /**
-     * Ganti Part Perakitan (Replace Part) dengan Anti-Duplikasi
+     * Ganti Part Perakitan (Replace Part Request)
+     * Mengajukan pergantian 1 atau lebih part bermasalah ke antrean Verifikasi Admin
+     * Endpoint: POST /api/assembly/replace-part
      */
     public function replacePart(Request $request)
     {
-        $request->validate([
-            'tray_id' => 'required|integer',
-            'assembly_id' => 'required|integer',
-            'part_type' => 'required|string',
-            'new_sn' => 'required|string',
-        ]);
+        $assemblyId = (int)$request->input('assembly_id');
+        $reason = trim((string)$request->input('reason', '')) ?: 'Penggantian part bermasalah';
+        $oldPartStatus = trim((string)$request->input('old_part_status', 'Hold'));
+        if (!in_array($oldPartStatus, ['Hold', 'Rework', 'Scrap'])) {
+            $oldPartStatus = 'Hold';
+        }
 
-        $trayId = $request->tray_id;
-        $assemblyId = $request->assembly_id;
-        $partType = $request->part_type;
-        $newSn = trim($request->new_sn);
-        $reason = $request->input('reason', 'Penggantian part');
-        $operator = auth()->user()?->username ?: $request->input('operator', 'assembly');
+        // Mendukung array replacements (multi-part) maupun legacy single part
+        $replacements = $request->input('replacements');
+        if (!is_array($replacements) || empty($replacements)) {
+            $pType = trim((string)$request->input('part_type', ''));
+            $nSn = trim((string)$request->input('new_sn', ''));
+            if ($pType && $nSn) {
+                $replacements = [['part_type' => $pType, 'new_sn' => $nSn]];
+            } else {
+                $replacements = [];
+            }
+        }
 
-        return DB::transaction(function () use ($trayId, $assemblyId, $partType, $newSn, $reason, $operator) {
-            $assy = Assembly::where('id', $assemblyId)->where('tray_id', $trayId)->firstOrFail();
+        if (!$assemblyId || empty($replacements)) {
+            return response()->json([
+                'ok' => false,
+                'error' => 'Data rakitan (assembly_id) dan minimal 1 part baru pengganti wajib diisi.'
+            ], 422);
+        }
 
-            // Cek ketersediaan part baru di Master Stok
-            $newStock = MasterStock::where('part_type', $partType)
-                ->where('sn', $newSn)
-                ->first();
+        $operator = auth()->user()?->username ?: $request->input('operator', 'operator');
+        $operatorRole = auth()->user()?->role ?: 'operator';
 
-            if (!$newStock || $newStock->status !== 'Tersedia') {
+        return DB::transaction(function () use ($assemblyId, $replacements, $reason, $oldPartStatus, $operator, $operatorRole) {
+            $assembly = Assembly::with('tray')->find($assemblyId);
+            if (!$assembly) {
                 return response()->json([
                     'ok' => false,
-                    'error' => "Part baru {$partType} SN {$newSn} tidak ditemukan atau statusnya bukan 'Tersedia' di Master Stok!"
+                    'error' => 'Data perakitan tidak ditemukan.'
+                ], 404);
+            }
+
+            $trayId = $assembly->tray_id;
+            $trayCode = $assembly->tray?->tray_code ?: '-';
+
+            // Cek apakah sudah ada permohonan ganti part yang masih PENDING untuk rakitan ini
+            $existingPending = DB::table('part_replacement_requests')
+                ->where('assembly_id', $assemblyId)
+                ->where('status', 'PENDING')
+                ->first();
+
+            if ($existingPending || $assembly->verified_status === 'PENDING_REPLACEMENT') {
+                return response()->json([
+                    'ok' => false,
+                    'error' => 'Rakitan ini sudah memiliki pengajuan pergantian part yang sedang menunggu verifikasi Administrator.'
                 ], 400);
             }
 
-            // Validasi: pastikan part baru tidak sedang aktif digunakan di set lain pada tray yang sama
-            $activeInSame = Assembly::where('tray_id', $trayId)
-                ->where('id', '!=', $assemblyId)
-                ->where(function ($w) use ($newSn, $partType) {
-                    if ($partType === '15') $w->where('part15_sn', $newSn);
-                    elseif ($partType === '1') $w->where('part1_sn', $newSn);
-                    elseif ($partType === '12') $w->where('part12_sn', $newSn);
-                })
-                ->where(function ($w) {
-                    $w->whereNull('is_reregistered')->orWhere('is_reregistered', 0);
-                })
-                ->first();
+            $detailedReplacements = [];
 
-            if ($activeInSame) {
+            foreach ($replacements as $rep) {
+                if (!is_array($rep)) continue;
+                $pType = trim((string)($rep['part_type'] ?? ''));
+                $nSn = trim((string)($rep['new_sn'] ?? ''));
+
+                if (!$pType || !$nSn || !in_array($pType, ['15', '1', '12'])) {
+                    continue;
+                }
+
+                $newStock = MasterStock::where('part_type', $pType)
+                    ->where(function ($w) use ($nSn) {
+                        $w->where('sn', $nSn)
+                          ->orWhere(DB::raw("REPLACE(sn, '.', '')"), str_replace('.', '', $nSn));
+                    })
+                    ->whereIn('status', ['Tersedia', 'Good'])
+                    ->first();
+
+                if (!$newStock) {
+                    return response()->json([
+                        'ok' => false,
+                        'error' => "Part baru {$pType} SN {$nSn} tidak ditemukan atau statusnya bukan 'Tersedia' di Master Stok!"
+                    ], 400);
+                }
+
+                // Pastikan part baru tidak sedang aktif digunakan di set lain pada tray yang sama
+                $activeInSame = Assembly::where('tray_id', $trayId)
+                    ->where('id', '!=', $assemblyId)
+                    ->where(function ($w) use ($nSn, $pType) {
+                        if ($pType === '15') $w->where('part15_sn', $nSn);
+                        elseif ($pType === '1') $w->where('part1_sn', $nSn);
+                        elseif ($pType === '12') $w->where('part12_sn', $nSn);
+                    })
+                    ->where(function ($w) {
+                        $w->whereNull('is_reregistered')->orWhere('is_reregistered', 0);
+                    })
+                    ->first();
+
+                if ($activeInSame) {
+                    return response()->json([
+                        'ok' => false,
+                        'error' => "Part {$pType} SN {$nSn} sedang aktif digunakan di Set #{$activeInSame->set_number} pada tray ini!"
+                    ], 400);
+                }
+
+                $oldSn = match ($pType) {
+                    '15' => $assembly->part15_sn,
+                    '1' => $assembly->part1_sn,
+                    '12' => $assembly->part12_sn,
+                    default => '-',
+                };
+
+                $detailedReplacements[] = [
+                    'part_type' => $pType,
+                    'old_sn' => $oldSn,
+                    'new_sn' => $newStock->sn,
+                    'new_stock_id' => $newStock->id,
+                ];
+            }
+
+            if (empty($detailedReplacements)) {
                 return response()->json([
                     'ok' => false,
-                    'error' => "Part {$partType} SN {$newSn} sedang aktif digunakan di Set #{$activeInSame->set_number} pada tray ini!"
+                    'error' => 'Tidak ada part valid yang diajukan untuk diganti.'
                 ], 400);
             }
 
-            // Ambil SN lama
-            $oldSn = match ($partType) {
-                '15' => $assy->part15_sn,
-                '1' => $assy->part1_sn,
-                '12' => $assy->part12_sn,
-                default => null,
-            };
+            // Tandai part baru di master_stocks sebagai 'Pending Verif Admin' agar ter-reserve
+            foreach ($detailedReplacements as $dr) {
+                MasterStock::where('id', $dr['new_stock_id'])->update([
+                    'status' => 'Pending Verif Admin',
+                    'last_reason' => "Diajukan ganti part Set #{$assembly->set_number} WO {$trayCode}: {$reason}",
+                    'allocated_tray_id' => $trayId,
+                    'last_operator' => auth()->user()?->full_name ?: $operator,
+                ]);
 
-            // Lepaskan dari set lain di tray ini jika ada (misal bekas PU yang sudah dilepas)
-            if ($partType === '15') {
-                Assembly::where('tray_id', $trayId)->where('part15_sn', $newSn)->where('id', '!=', $assemblyId)->update(['part15_sn' => '-']);
-                $assy->part15_sn = $newSn;
-            } elseif ($partType === '1') {
-                Assembly::where('tray_id', $trayId)->where('part1_sn', $newSn)->where('id', '!=', $assemblyId)->update(['part1_sn' => '-']);
-                $assy->part1_sn = $newSn;
-            } elseif ($partType === '12') {
-                Assembly::where('tray_id', $trayId)->where('part12_sn', $newSn)->where('id', '!=', $assemblyId)->update(['part12_sn' => '-']);
-                $assy->part12_sn = $newSn;
-            }
-            $assy->save();
-
-            // Bersihkan dulu jika newSn sempat tersisa di tray ini agar tidak bentrok UNIQUE constraint
-            DB::table('parts')->where('tray_id', $trayId)->where('part_type', $partType)->where('sn', $newSn)->delete();
-            $updated = DB::table('parts')->where('tray_id', $trayId)->where('part_type', $partType)->where('sn', $oldSn)->update(['sn' => $newSn]);
-            if ($updated === 0) {
-                DB::table('parts')->insertOrIgnore([
-                    'tray_id' => $trayId,
-                    'part_type' => $partType,
-                    'sn' => $newSn,
-                    'status' => 'Supplied',
+                DB::table('part_audit_logs')->insert([
+                    'part_type' => $dr['part_type'],
+                    'sn' => $dr['new_sn'],
+                    'old_status' => 'Tersedia',
+                    'new_status' => 'Pending Verif Admin',
+                    'action_type' => 'REPLACE_PART_REQUESTED',
+                    'actor_username' => $operator,
+                    'actor_role' => $operatorRole,
+                    'reason' => "Diajukan ganti part Set #{$assembly->set_number} WO {$trayCode} menggantikan SN {$dr['old_sn']}: {$reason}",
                     'created_at' => now(),
-                    'updated_at' => now(),
                 ]);
             }
 
-            // Update master stock part baru
-            $newStock->update([
-                'status' => 'Supplied',
-                'allocated_tray_id' => $trayId,
-                'allocated_at' => now(),
+            // Simpan permohonan ke part_replacement_requests untuk diverifikasi Admin
+            $replacementsJson = array_map(function ($r) {
+                return [
+                    'part_type' => $r['part_type'],
+                    'old_sn' => $r['old_sn'],
+                    'new_sn' => $r['new_sn'],
+                ];
+            }, $detailedReplacements);
+
+            DB::table('part_replacement_requests')->insert([
+                'assembly_id' => $assemblyId,
+                'tray_id' => $trayId,
+                'set_number' => $assembly->set_number,
+                'replacements_json' => json_encode($replacementsJson),
+                'old_part_status' => $oldPartStatus,
+                'reason' => $reason,
+                'requestor_username' => $operator,
+                'requestor_role' => $operatorRole,
+                'status' => 'PENDING',
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
 
-            // Update master stock part lama: Masuk Master Stock status Hold dengan catatan part diganti
-            if ($oldSn && $oldSn !== '-') {
-                MasterStock::where('sn', $oldSn)->where('part_type', $partType)->update([
-                    'status' => 'Hold',
-                    'allocated_tray_id' => null,
-                    'allocated_at' => null,
-                    'used_at' => null,
-                    'last_tray_id' => null,
-                    'is_replaced_from_assy' => 1,
-                    'last_reason' => "Part yang diganti di Set #{$assy->set_number} (Diganti SN {$newSn}): {$reason}",
-                    'last_operator' => $operator,
-                ]);
+            // Update status verifikasi assembly menjadi PENDING_REPLACEMENT
+            $assembly->update([
+                'original_assembly_status' => $assembly->original_assembly_status ?: $assembly->status,
+                'verified_status' => 'PENDING_REPLACEMENT',
+            ]);
 
-                // Audit log
-                DB::table('part_audit_logs')->insert([
-                    'part_type' => $partType,
-                    'sn' => $oldSn,
-                    'old_status' => 'Supplied',
-                    'new_status' => 'Hold',
-                    'action_type' => 'REPLACE_PART',
-                    'actor_username' => $operator,
-                    'actor_role' => auth()->user()?->role ?: 'operator',
-                    'reason' => "Part yang diganti dengan SN {$newSn}: {$reason}",
-                    'created_at' => now(),
-                ]);
+            // Hapus re_register_requests pending untuk part rakitan ini jika ada
+            DB::table('re_register_requests')
+                ->whereIn('sn', array_filter([$assembly->part15_sn, $assembly->part1_sn, $assembly->part12_sn]))
+                ->where('status', 'PENDING')
+                ->delete();
 
-                // Masuk ke antrean Verifikasi Pergantian Part (Admin)
-                DB::table('part_replacement_requests')->insert([
-                    'assembly_id' => $assemblyId,
-                    'tray_id' => $trayId,
-                    'set_number' => $assy->set_number,
-                    'replacements_json' => json_encode([
-                        [
-                            'part_type' => $partType,
-                            'old_sn' => $oldSn,
-                            'new_sn' => $newSn,
-                        ]
-                    ]),
-                    'old_part_status' => 'Hold',
-                    'reason' => $reason,
-                    'requestor_username' => $operator,
-                    'status' => 'PENDING',
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-
-                $assy->update(['verified_status' => 'PENDING_REPLACEMENT_VERIF']);
-            }
-
-            return $this->successResponse($assy, "Part {$partType} SN {$oldSn} berhasil diajukan ganti dengan SN {$newSn} (Menunggu Verifikasi Admin).");
+            $count = count($detailedReplacements);
+            return response()->json([
+                'ok' => true,
+                'message' => "Permohonan penggantian {$count} part pada Set #{$assembly->set_number} berhasil diajukan untuk verifikasi Administrator!"
+            ]);
         });
     }
 

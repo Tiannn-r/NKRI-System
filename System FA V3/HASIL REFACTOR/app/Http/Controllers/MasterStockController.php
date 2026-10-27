@@ -193,6 +193,26 @@ class MasterStockController extends Controller
         $query->where('status', 'Tersedia')
             ->whereNull('allocated_tray_id');
 
+        // Jika tray_id diberikan, kecualikan part yang sedang aktif digunakan pada tray yang sama
+        $trayId = $request->input('tray_id') ?: $request->input('exclude_tray_id');
+        if ($trayId) {
+            $usedSnsInTray = DB::table('assemblies')
+                ->where('tray_id', $trayId)
+                ->where(function ($w) {
+                    $w->whereNull('is_reregistered')->orWhere('is_reregistered', 0);
+                })
+                ->get(['part15_sn', 'part1_sn', 'part12_sn']);
+            $usedSns = [];
+            foreach ($usedSnsInTray as $row) {
+                if ($row->part15_sn && $row->part15_sn !== '-') $usedSns[] = $row->part15_sn;
+                if ($row->part1_sn && $row->part1_sn !== '-') $usedSns[] = $row->part1_sn;
+                if ($row->part12_sn && $row->part12_sn !== '-') $usedSns[] = $row->part12_sn;
+            }
+            if (!empty($usedSns)) {
+                $query->whereNotIn('sn', array_unique($usedSns));
+            }
+        }
+
         if ($q !== '') {
             $qClean = str_replace(['.', ',', ' '], '', $q);
             $query->where(function ($w) use ($q, $qClean) {

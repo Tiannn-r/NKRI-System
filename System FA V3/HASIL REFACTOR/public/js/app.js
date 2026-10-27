@@ -10977,10 +10977,13 @@
 
         const loadAllAvailableReplaceParts = async () => {
           const types = ['15', '1', '12'];
+          const curItem = selectedAssemblyItem.value || selectedHoldItem.value;
+          const curTrayId = curItem?.tray_id || '';
           await Promise.all(types.map(async (t) => {
             isLoadingPartsByType.value[t] = true;
             try {
-              const res = await fetchAPI(`/master/available?type=${encodeURIComponent(t)}&limit=100`);
+              const url = `/master/available?type=${encodeURIComponent(t)}&limit=100${curTrayId ? `&tray_id=${encodeURIComponent(curTrayId)}` : ''}`;
+              const res = await fetchAPI(url);
               if (res && res.ok && Array.isArray(res.data)) {
                 availableReplacePartsByType.value[t] = res.data;
               } else {
@@ -11075,6 +11078,7 @@
               method: 'POST',
               body: JSON.stringify({
                 assembly_id: targetAssemblyId,
+                tray_id: curItem?.tray_id || undefined,
                 replacements: reps,
                 part_type: reps[0] ? reps[0].part_type : '',
                 new_sn: reps[0] ? reps[0].new_sn : '',
@@ -11110,7 +11114,7 @@
               if (typeof loadProductionHoldItems === 'function') await loadProductionHoldItems();
               if (typeof loadPendingVerifications === 'function') await loadPendingVerifications();
             } else {
-              triggerToast('Gagal', res.error || 'Gagal melakukan penggantian part', 'error');
+              triggerToast('Gagal', res.error || res.message || 'Gagal melakukan penggantian part', 'error');
             }
           } catch (err) {
             triggerToast('Error', err.message || 'Terjadi kesalahan sistem', 'error');
