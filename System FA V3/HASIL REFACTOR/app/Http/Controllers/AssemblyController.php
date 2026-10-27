@@ -132,6 +132,23 @@ class AssemblyController extends Controller
 
             $operator = $request->input('operator') ?: (auth()->user()?->username ?: $request->input('pic_assembly', 'assembly'));
 
+            // Format defective_parts as CSV string (e.g. "15,1" or null)
+            $rawDefective = $request->input('defective_parts');
+            $defCsv = null;
+            $defectiveSet = [];
+            if (is_array($rawDefective)) {
+                $filtered = array_filter(array_map('trim', $rawDefective));
+                if (!empty($filtered)) {
+                    $defCsv = implode(',', $filtered);
+                    $defectiveSet = $filtered;
+                }
+            } elseif (is_string($rawDefective) && trim($rawDefective) !== '') {
+                $defCsv = trim($rawDefective);
+                $defectiveSet = array_filter(array_map('trim', explode(',', $defCsv)));
+            }
+
+            $reason = ($request->status !== 'Good') ? trim((string)$request->input('reason', '')) : null;
+
             $assembly = Assembly::updateOrCreate(
                 [
                     'tray_id' => $request->tray_id,
@@ -143,20 +160,32 @@ class AssemblyController extends Controller
                     'part12_sn' => $p12,
                     'part1_sn' => $p1,
                     'status' => $request->status,
-                    'reason' => $request->input('reason'),
-                    'defective_parts' => $request->input('defective_parts'),
+                    'reason' => $reason,
+                    'defective_parts' => $defCsv,
                     'started_at' => $request->input('started_at') ?: now(),
                     'finished_at' => now(),
                 ]
             );
 
-            // Update status master stocks jika Done/Good
-            $stockStatus = ($request->status === 'Good') ? 'Done' : $request->status;
-            foreach ([$p15, $p1, $p12] as $sn) {
-                MasterStock::where('sn', $sn)->update([
-                    'status' => $stockStatus,
-                    'used_at' => now(),
-                ]);
+            // Update status di tabel parts dan master_stocks (sesuai original app.py)
+            $partMapping = [['15', $p15], ['12', $p12], ['1', $p1]];
+            foreach ($partMapping as [$pType, $sn]) {
+                if ($request->status === 'Good') {
+                    DB::table('parts')->where('sn', $sn)->where('tray_id', $tray->id)->update(['status' => 'Done']);
+                    MasterStock::where('sn', $sn)->update([
+                        'status' => 'Done',
+                        'used_at' => now(),
+                    ]);
+                } else {
+                    $isDefective = in_array($pType, $defectiveSet) || in_array($sn, $defectiveSet) || in_array("part{$pType}", $defectiveSet) || in_array("p{$pType}", $defectiveSet);
+                    $targetStatus = $isDefective ? $request->status : 'Good';
+                    $partStatus = $isDefective ? $request->status : 'Good';
+                    DB::table('parts')->where('sn', $sn)->where('tray_id', $tray->id)->update(['status' => $partStatus]);
+                    MasterStock::where('sn', $sn)->update([
+                        'status' => $targetStatus,
+                        'used_at' => now(),
+                    ]);
+                }
             }
 
             // Catat ke WO History
@@ -169,12 +198,20 @@ class AssemblyController extends Controller
                 'part12_sn' => $assembly->part12_sn,
                 'part1_sn' => $assembly->part1_sn,
                 'status' => $assembly->status,
-                'reason' => $assembly->reason,
-                'defective_parts' => $assembly->defective_parts,
+                'reason' => $reason,
+                'defective_parts' => $defCsv,
                 'started_at' => $assembly->started_at,
                 'finished_at' => $assembly->finished_at,
                 'source' => 'ASSEMBLY',
             ]);
+
+            // Bersihkan slot in-progress jika ada
+            DB::table('assembly_in_progress')->where('tray_id', $tray->id)->delete();
+
+            // Update assigned operator jika masih kosong / generic
+            if (empty($tray->assigned_operator) || in_array($tray->assigned_operator, ['ALL', 'Semua Operator', 'Semua Operator Assembly'])) {
+                $tray->update(['assigned_operator' => $operator]);
+            }
 
             // Cek apakah seluruh 22 set telah selesai dirakit
             $totalFinished = Assembly::where('tray_id', $tray->id)

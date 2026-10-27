@@ -56,6 +56,16 @@ class Assembly extends Model
         return $this->belongsTo(Tray::class, 'tray_id');
     }
 
+    public function setDefectivePartsAttribute($value)
+    {
+        if (is_array($value)) {
+            $filtered = array_filter(array_map('trim', $value));
+            $this->attributes['defective_parts'] = !empty($filtered) ? implode(',', $filtered) : null;
+        } else {
+            $this->attributes['defective_parts'] = $value ?: null;
+        }
+    }
+
     public function replacements()
     {
         return $this->hasMany(PartReplacementRequest::class, 'assembly_id');

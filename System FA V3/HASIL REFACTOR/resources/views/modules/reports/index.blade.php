@@ -558,9 +558,9 @@
                     {{ formatDateTime(it.finished_at || it.tray_created_at) }}
                   </td>
                   <td class="p-2.5 sm:p-3 w-36 text-center whitespace-nowrap font-sans">
-                    <span :class="getStatusBadgeClass(it.assembly_status || it.status || 'Good')"
+                    <span :class="getStatusHistoryBadgeClass(it.assy_status_history, it.assembly_status || it.status)"
                       class="px-2 py-0.5 rounded text-[10px] font-black uppercase border inline-block">
-                      {{ it.assembly_status || it.status || 'Good' }}
+                      {{ formatLifecycleHistory(it.assy_status_history, it.assembly_status || it.status || 'Good') }}
                     </span>
                   </td>
                   <td class="p-2.5 sm:p-3 min-w-[180px] text-slate-500 font-sans italic text-xs">
@@ -720,9 +720,9 @@
                     {{ formatDateTime(it.created_at) }}
                   </td>
                   <td class="p-2.5 sm:p-3 w-36 text-center whitespace-nowrap font-sans">
-                    <span :class="getStatusBadgeClass(it.status)"
+                    <span :class="getStatusHistoryBadgeClass(it.status_history, it.status)"
                       class="text-[10px] font-black uppercase px-2 py-0.5 rounded-lg border inline-block">
-                      {{ it.status }}
+                      {{ formatLifecycleHistory(it.status_history, it.status) }}
                     </span>
                   </td>
                   <td class="p-2.5 sm:p-3 min-w-[180px] font-sans text-xs">
@@ -890,9 +890,9 @@
                     {{ formatDateTime(it.created_at) }}
                   </td>
                   <td class="p-2.5 sm:p-3 w-36 text-center whitespace-nowrap font-sans">
-                    <span :class="getStatusBadgeClass(it.status)"
+                    <span :class="getStatusHistoryBadgeClass(it.status_history, it.status)"
                       class="text-[10px] font-black uppercase px-2 py-0.5 rounded-lg border inline-block">
-                      {{ it.status }}
+                      {{ formatLifecycleHistory(it.status_history, it.status) }}
                     </span>
                   </td>
                   <td class="p-2.5 sm:p-3 min-w-[180px] font-sans text-xs">

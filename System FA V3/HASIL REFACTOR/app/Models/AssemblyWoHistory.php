@@ -31,4 +31,14 @@ class AssemblyWoHistory extends Model
         'started_at' => 'datetime',
         'finished_at' => 'datetime',
     ];
+
+    public function setDefectivePartsAttribute($value)
+    {
+        if (is_array($value)) {
+            $filtered = array_filter(array_map('trim', $value));
+            $this->attributes['defective_parts'] = !empty($filtered) ? implode(',', $filtered) : null;
+        } else {
+            $this->attributes['defective_parts'] = $value ?: null;
+        }
+    }
 }

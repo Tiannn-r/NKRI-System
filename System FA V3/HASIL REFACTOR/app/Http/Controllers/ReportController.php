@@ -76,6 +76,8 @@ class ReportController extends Controller
                 'a.qc_notes',
                 'a.rework_reason',
                 'a.lifecycle_path',
+                'a.assy_status_history',
+                'a.qc_status_history',
                 DB::raw("COALESCE(a.assy_test_checklist, '[]') as assy_test_checklist"),
                 DB::raw("COALESCE(a.assy_test_checklist, '[]') as test_checklist"),
                 'a.assy_failure_reasons',
