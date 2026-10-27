@@ -10,6 +10,11 @@ class AnomalyDetectionService
     /**
      * Memindai seluruh ketidaksinkronan data dan bottleneck penyebab lag
      */
+    public function scanAll(): array
+    {
+        return $this->scanAnomalies();
+    }
+
     public function scanAnomalies(): array
     {
         // 1. Orphan Parts (Part yang menunjuk ke tray yang sudah tidak ada)
@@ -22,29 +27,32 @@ class AnomalyDetectionService
 
         // 2. Stuck Sessions (Sesi perakitan aktif menggantung lebih dari 8 jam)
         $stuckAssemblies = DB::select("
-            SELECT a.id, a.tray_id, a.set_number, a.pic_assembly, a.started_at,
+            SELECT a.id, a.tray_id, t.tray_code, a.set_number, a.pic_assembly, a.started_at,
                    TIMESTAMPDIFF(HOUR, a.started_at, NOW()) as hours_elapsed
             FROM assemblies a
+            LEFT JOIN trays t ON a.tray_id = t.id
             WHERE a.finished_at IS NULL AND a.started_at IS NOT NULL
               AND TIMESTAMPDIFF(HOUR, a.started_at, NOW()) >= 8
         ");
 
         // 3. Stock Desync: Master stock status 'Supplied' tapi tray sudah tidak aktif atau selesai
         $desyncedStocks = DB::select("
-            SELECT m.id, m.part_type, m.sn, m.status, m.allocated_tray_id
+            SELECT m.id, m.part_type, m.sn, m.status, m.allocated_tray_id, t.tray_code
             FROM master_stocks m
             LEFT JOIN trays t ON m.allocated_tray_id = t.id
-            WHERE m.status = 'Supplied' AND (t.id IS NULL OR t.status IN ('finished', 'returned'))
+            WHERE m.status = 'Supplied' AND (t.id IS NULL OR t.status IN ('finished', 'returned', 'completed'))
         ");
 
-        // 4. Duplicate Part SN dalam tray aktif
+        // 4. Duplicate Part SN dalam tray aktif (disertai daftar kode baki/tray)
         $duplicatePartAssignments = DB::select("
-            SELECT p.part_type, p.sn, COUNT(*) as occurrence_count
+            SELECT p.part_type, p.sn, COUNT(*) as occurrence_count,
+                   GROUP_CONCAT(DISTINCT t.tray_code ORDER BY t.id ASC SEPARATOR ', ') as tray_codes
             FROM parts p
             JOIN trays t ON p.tray_id = t.id
             WHERE t.status = 'active'
             GROUP BY p.part_type, p.sn
             HAVING COUNT(*) > 1
+            ORDER BY occurrence_count DESC, p.sn ASC
         ");
 
         $totalAnomalies = count($orphanParts) + count($stuckAssemblies) + count($desyncedStocks) + count($duplicatePartAssignments);
@@ -103,12 +111,17 @@ class AnomalyDetectionService
                   AND TIMESTAMPDIFF(HOUR, started_at, NOW()) >= 8
             ");
 
-            // 3. Sinkronkan master stock yang desync
+            // 3. Sinkronkan master stock yang desync (putus total seluruh relasi lama)
             $repaired['stocks_resynced'] = DB::update("
                 UPDATE master_stocks m
                 LEFT JOIN trays t ON m.allocated_tray_id = t.id
-                SET m.status = 'Tersedia', m.allocated_tray_id = NULL
-                WHERE m.status = 'Supplied' AND (t.id IS NULL OR t.status IN ('finished', 'returned'))
+                SET m.status = 'Tersedia', 
+                    m.allocated_tray_id = NULL,
+                    m.allocated_at = NULL,
+                    m.used_at = NULL,
+                    m.last_tray_id = NULL,
+                    m.is_replaced_from_assy = 0
+                WHERE m.status = 'Supplied' AND (t.id IS NULL OR t.status IN ('finished', 'returned', 'completed'))
             ");
 
             // Log tindakan perbaikan di audit

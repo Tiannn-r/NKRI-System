@@ -29,7 +29,7 @@ class MasterStockController extends Controller
 
         $query = DB::table('master_stocks as m')
             ->leftJoin('trays as t', function ($join) {
-                $join->on(DB::raw('COALESCE(m.allocated_tray_id, m.last_tray_id)'), '=', 't.id');
+                $join->on('m.allocated_tray_id', '=', 't.id');
             })
             ->leftJoin('users as u_wh', function ($join) {
                 $join->on('t.pic_warehouse', '=', 'u_wh.username')
@@ -120,6 +120,7 @@ class MasterStockController extends Controller
             'a.verified_status',
             'a.declined_reason',
             DB::raw('CASE 
+                WHEN m.status = "Tersedia" THEN "Tersedia"
                 WHEN (a.is_declined = 1 OR a.verified_status = "DECLINED" OR m.status IN ("Declined", "Decline", "Pending Verif Admin")) THEN "Declined"
                 WHEN COALESCE(m.is_replaced_from_assy, 0) = 1 THEN "Part Diganti"
                 ELSE COALESCE(a.status, m.status, "Tersedia")
@@ -157,13 +158,13 @@ class MasterStockController extends Controller
             ->select([
                 'm.part_type',
                 DB::raw('COUNT(*) as total'),
-                DB::raw('COUNT(CASE WHEN (a.is_declined = 1 OR a.verified_status = "DECLINED" OR m.status IN ("Declined", "Decline", "Pending Verif Admin")) THEN NULL WHEN COALESCE(a.status, m.status, "Tersedia") = "Tersedia" THEN 1 END) as available'),
-                DB::raw('COUNT(CASE WHEN (a.is_declined = 1 OR a.verified_status = "DECLINED" OR m.status IN ("Declined", "Decline", "Pending Verif Admin")) THEN NULL WHEN COALESCE(a.status, m.status) = "Supplied" THEN 1 END) as allocated'),
-                DB::raw('COUNT(CASE WHEN (a.is_declined = 1 OR a.verified_status = "DECLINED" OR m.status IN ("Declined", "Decline", "Pending Verif Admin")) THEN NULL WHEN COALESCE(a.status, m.status) = "Done" THEN 1 END) as used'),
-                DB::raw('COUNT(CASE WHEN (a.is_declined = 1 OR a.verified_status = "DECLINED" OR m.status IN ("Declined", "Decline", "Pending Verif Admin")) THEN NULL WHEN COALESCE(a.status, m.status) IN ("Good", "Done") THEN 1 END) as good_count'),
-                DB::raw('COUNT(CASE WHEN (a.is_declined = 1 OR a.verified_status = "DECLINED" OR m.status IN ("Declined", "Decline", "Pending Verif Admin")) THEN NULL WHEN COALESCE(a.status, m.status) = "Hold" THEN 1 END) as hold_count'),
-                DB::raw('COUNT(CASE WHEN (a.is_declined = 1 OR a.verified_status = "DECLINED" OR m.status IN ("Declined", "Decline", "Pending Verif Admin")) THEN NULL WHEN COALESCE(a.status, m.status) = "Scrap" THEN 1 END) as scrap_count'),
-                DB::raw('COUNT(CASE WHEN (a.is_declined = 1 OR a.verified_status = "DECLINED" OR m.status IN ("Declined", "Decline", "Pending Verif Admin")) THEN NULL WHEN COALESCE(a.status, m.status) = "Rework" THEN 1 END) as rework_count'),
+                DB::raw('COUNT(CASE WHEN m.status = "Tersedia" THEN 1 END) as available'),
+                DB::raw('COUNT(CASE WHEN m.status != "Tersedia" AND (a.is_declined = 1 OR a.verified_status = "DECLINED" OR m.status IN ("Declined", "Decline", "Pending Verif Admin")) THEN NULL WHEN m.status != "Tersedia" AND COALESCE(a.status, m.status) = "Supplied" THEN 1 END) as allocated'),
+                DB::raw('COUNT(CASE WHEN m.status != "Tersedia" AND (a.is_declined = 1 OR a.verified_status = "DECLINED" OR m.status IN ("Declined", "Decline", "Pending Verif Admin")) THEN NULL WHEN m.status != "Tersedia" AND COALESCE(a.status, m.status) = "Done" THEN 1 END) as used'),
+                DB::raw('COUNT(CASE WHEN m.status != "Tersedia" AND (a.is_declined = 1 OR a.verified_status = "DECLINED" OR m.status IN ("Declined", "Decline", "Pending Verif Admin")) THEN NULL WHEN m.status != "Tersedia" AND COALESCE(a.status, m.status) IN ("Good", "Done") THEN 1 END) as good_count'),
+                DB::raw('COUNT(CASE WHEN m.status != "Tersedia" AND (a.is_declined = 1 OR a.verified_status = "DECLINED" OR m.status IN ("Declined", "Decline", "Pending Verif Admin")) THEN NULL WHEN m.status != "Tersedia" AND COALESCE(a.status, m.status) = "Hold" THEN 1 END) as hold_count'),
+                DB::raw('COUNT(CASE WHEN m.status != "Tersedia" AND (a.is_declined = 1 OR a.verified_status = "DECLINED" OR m.status IN ("Declined", "Decline", "Pending Verif Admin")) THEN NULL WHEN m.status != "Tersedia" AND COALESCE(a.status, m.status) = "Scrap" THEN 1 END) as scrap_count'),
+                DB::raw('COUNT(CASE WHEN m.status != "Tersedia" AND (a.is_declined = 1 OR a.verified_status = "DECLINED" OR m.status IN ("Declined", "Decline", "Pending Verif Admin")) THEN NULL WHEN m.status != "Tersedia" AND COALESCE(a.status, m.status) = "Rework" THEN 1 END) as rework_count'),
                 DB::raw('COUNT(CASE WHEN (a.is_declined = 1 OR a.verified_status = "DECLINED" OR m.status IN ("Declined", "Decline", "Pending Verif Admin")) THEN 1 END) as decline_count'),
                 DB::raw('COUNT(CASE WHEN COALESCE(m.is_replaced_from_assy, 0) = 1 THEN 1 END) as replaced_count'),
             ])
@@ -179,29 +180,37 @@ class MasterStockController extends Controller
      */
     public function available(Request $request)
     {
-        $partType = $request->input('type');
-        $q = trim($request->input('q', ''));
+        $partType = $request->input('type') ?: $request->input('part_type');
+        $q = trim((string)$request->input('q', ''));
         $limitParam = $request->input('limit');
 
-        $query = MasterStock::where('status', 'Tersedia')
-            ->whereNull('allocated_tray_id');
+        $query = MasterStock::query();
 
         if ($partType) {
             $query->where('part_type', $partType);
         }
 
-        if ($q) {
-            $query->where(function ($w) use ($q) {
-                $w->where('sn', 'like', "%{$q}%")
-                  ->orWhere(DB::raw("REPLACE(sn, '.', '')"), 'like', "%{$q}%");
+        $query->where('status', 'Tersedia')
+            ->whereNull('allocated_tray_id');
+
+        if ($q !== '') {
+            $qClean = str_replace(['.', ',', ' '], '', $q);
+            $query->where(function ($w) use ($q, $qClean) {
+                $w->where('sn', 'like', "{$q}%");
+                if ($qClean !== '' && $qClean !== $q) {
+                    $w->orWhere('sn', 'like', "{$qClean}%");
+                }
+                $w->orWhere('sn', 'like', "%{$q}%");
+                if ($qClean !== '' && $qClean !== $q) {
+                    $w->orWhere('sn', 'like', "%{$qClean}%");
+                }
             });
         }
 
         $query->orderBy('sn', 'asc');
 
-        if ($limitParam && is_numeric($limitParam) && (int)$limitParam > 0) {
-            $query->limit((int)$limitParam);
-        }
+        $limit = ($limitParam && is_numeric($limitParam) && (int)$limitParam > 0) ? min((int)$limitParam, 200) : 60;
+        $query->limit($limit);
 
         $items = $query->select('sn', 'cs', 'part_type', 'status')->get();
 
@@ -226,13 +235,149 @@ class MasterStockController extends Controller
             return $this->errorResponse('Data part tidak ditemukan', 404);
         }
 
-        $tray = $stock->allocated_tray_id ? DB::table('trays')->where('id', $stock->allocated_tray_id)->first() : null;
-        $assembly = DB::table('assemblies')
-            ->where(function ($w) use ($sn) {
-                $w->where('part15_sn', $sn)
-                  ->orWhere('part1_sn', $sn)
-                  ->orWhere('part12_sn', $sn);
-            })->first();
+        // Relasi Tray & Assembly HANYA diambil jika part sedang AKTIF teralokasi (bukan Tersedia / bukan detached)
+        $tray = null;
+        $assembly = null;
+
+        if ($stock->status !== 'Tersedia' && !empty($stock->allocated_tray_id)) {
+            $tray = DB::table('trays')->where('id', $stock->allocated_tray_id)->first();
+            $assembly = DB::table('assemblies')
+                ->where('tray_id', $stock->allocated_tray_id)
+                ->where(function ($w) use ($sn) {
+                    $w->where('part15_sn', $sn)
+                      ->orWhere('part1_sn', $sn)
+                      ->orWhere('part12_sn', $sn);
+                })
+                ->orderBy('id', 'desc')
+                ->first();
+        }
+
+        // 1. Cek informasi pengiriman jika Part 15 (Final Unit SN)
+        $shipping = null;
+        if ($stock->part_type === '15') {
+            $shipping = DB::table('packing_list_items as pli')
+                ->join('delivery_orders as do', 'pli.delivery_order_id', '=', 'do.id')
+                ->leftJoin('packing_list_boxes as b', 'pli.box_id', '=', 'b.id')
+                ->leftJoin('packing_lists as pl', 'b.packing_list_id', '=', 'pl.id')
+                ->where('pli.serial_number', $sn)
+                ->select([
+                    'do.id as delivery_order_id',
+                    'do.do_number',
+                    'do.pl_number',
+                    'do.do_date',
+                    'do.customer_name',
+                    'do.status as do_status',
+                    'pl.crate_number',
+                    'b.box_number',
+                    'pli.slot_number',
+                    'pli.created_at as packed_at',
+                ])
+                ->first();
+        }
+
+        // 2. Tentukan Milestone / Lifecycle Stage secara presisi dan mudah dibaca
+        $lifecycle = [
+            'stage_key' => 'TERSEDIA',
+            'stage_title' => 'Stok Tersedia di Gudang (Bebas / Steril)',
+            'badge_color' => 'emerald',
+            'current_location' => 'Gudang Komponen',
+            'active_doc' => null,
+            'description' => 'Komponen steril tanpa ikatan baki, siap dialokasikan ke Tray baru.'
+        ];
+
+        if ($stock->status === 'Tersedia') {
+            $lifecycle['stage_key'] = 'TERSEDIA';
+            $lifecycle['stage_title'] = 'Stok Tersedia di Gudang (Bebas / Steril)';
+            $lifecycle['badge_color'] = 'emerald';
+            $lifecycle['current_location'] = 'Gudang Komponen';
+            $lifecycle['description'] = 'Komponen steril tanpa ikatan baki, siap dialokasikan ke Tray baru.';
+        } elseif ($stock->is_replaced_from_assy == 1 || $stock->status === 'Part Diganti') {
+            $lifecycle['stage_key'] = 'PART_DIGANTI';
+            $lifecycle['stage_title'] = 'Part Rusak Saat Perakitan (Telah Diganti)';
+            $lifecycle['badge_color'] = 'rose';
+            $lifecycle['current_location'] = 'Karantina Material / Evaluasi Admin';
+            $lifecycle['description'] = 'Part telah dilepas dari set rakitan asalnya dan digantikan oleh part baru.';
+        } elseif ($stock->status === 'Scrap') {
+            $lifecycle['stage_key'] = 'SCRAP';
+            $lifecycle['stage_title'] = 'Material Rusak Permanen (Scrap)';
+            $lifecycle['badge_color'] = 'rose';
+            $lifecycle['current_location'] = 'Area Scrap / Pemusnahan';
+            $lifecycle['description'] = 'Part tidak dapat digunakan kembali dalam proses produksi.';
+        } elseif ($shipping) {
+            $lifecycle['stage_key'] = 'SHIPPED';
+            $lifecycle['stage_title'] = "Terkirim ke Customer ({$shipping->customer_name})";
+            $lifecycle['badge_color'] = 'blue';
+            $lifecycle['current_location'] = "Surat Jalan: {$shipping->do_number}";
+            $lifecycle['active_doc'] = $shipping->do_number;
+            $lifecycle['description'] = "Dikemas di Peti #{$shipping->crate_number}, Box #{$shipping->box_number}, Slot #{$shipping->slot_number} (Tgl: {$shipping->do_date}).";
+        } elseif ($assembly && in_array(strtoupper($assembly->warehouse_receipt_status ?? ''), ['ACCEPTED', 'ACC'])) {
+            $tray = $assembly->tray;
+            $cleanSeq = ($tray && preg_match('/(\d+)$/', $tray->tray_code, $m)) ? str_pad($m[1], 6, '0', STR_PAD_LEFT) : str_pad($assembly->tray_id, 6, '0', STR_PAD_LEFT);
+            $isPU = $tray && (str_contains($tray->tray_code, 'PU') || str_contains($tray->tray_code, '-PU'));
+            $fallbackGR = $isPU && preg_match('/PU[^\d]*(\d+)/i', $tray->tray_code, $pm) ? "WH/GR/PU/{$pm[1]}" : "WH/GR/{$cleanSeq}";
+            $docNum = $assembly->warehouse_doc_number ?: $fallbackGR;
+            $lifecycle['stage_key'] = 'WAREHOUSE_ACCEPTED';
+            $lifecycle['stage_title'] = 'Diterima Fisik Gudang Barang Jadi (Siap Kirim)';
+            $lifecycle['badge_color'] = 'emerald';
+            $lifecycle['current_location'] = 'Gudang Barang Jadi';
+            $lifecycle['active_doc'] = $docNum;
+            $lifecycle['description'] = "Fisik unit telah di-ACC oleh Gudang (Dokumen: {$docNum}). Siap diterbitkan Surat Jalan.";
+        } elseif ($assembly && in_array(strtoupper($assembly->qc_status ?? ''), ['GOOD', 'GOOD_QC'])) {
+            $tray = $assembly->tray;
+            $cleanSeq = ($tray && preg_match('/(\d+)$/', $tray->tray_code, $m)) ? str_pad($m[1], 6, '0', STR_PAD_LEFT) : str_pad($assembly->tray_id, 6, '0', STR_PAD_LEFT);
+            $isPU = $tray && (str_contains($tray->tray_code, 'PU') || str_contains($tray->tray_code, '-PU'));
+            $fallbackQC = $isPU && preg_match('/PU[^\d]*(\d+)/i', $tray->tray_code, $pm) ? "WH/QC/PU/{$pm[1]}" : "WH/QC/{$cleanSeq}";
+            $docNum = $assembly->qc_doc_number ?: $fallbackQC;
+            $lifecycle['stage_key'] = 'QC_GOOD';
+            $lifecycle['stage_title'] = 'Lolos Uji Mutu QC (Menunggu Penerimaan Gudang)';
+            $lifecycle['badge_color'] = 'cyan';
+            $lifecycle['current_location'] = 'Area Quality Control';
+            $lifecycle['active_doc'] = $docNum;
+            $lifecycle['description'] = "Lolos inspeksi mutu QC (Dokumen: {$docNum}). Menunggu verifikasi fisik oleh Gudang.";
+        } elseif ($assembly && strtoupper($assembly->qc_status ?? '') === 'HOLD_QC') {
+            $lifecycle['stage_key'] = 'QC_HOLD';
+            $lifecycle['stage_title'] = 'Tertahan di Quality Control (Hold QC)';
+            $lifecycle['badge_color'] = 'amber';
+            $lifecycle['current_location'] = 'Area Karantina QC';
+            $lifecycle['active_doc'] = $assembly->qc_doc_number;
+            $lifecycle['description'] = "Tertahan inspeksi QC dengan alasan: " . ($assembly->qc_failure_reasons ?: 'Kendala mutu fisik');
+        } elseif ($assembly && strtoupper($assembly->assy_test_status ?? '') === 'GOOD') {
+            $tray = $assembly->tray;
+            $cleanSeq = ($tray && preg_match('/(\d+)$/', $tray->tray_code, $m)) ? str_pad($m[1], 6, '0', STR_PAD_LEFT) : str_pad($assembly->tray_id, 6, '0', STR_PAD_LEFT);
+            $isPU = $tray && (str_contains($tray->tray_code, 'PU') || str_contains($tray->tray_code, '-PU'));
+            if ($isPU) {
+                preg_match('/PU[^\d]*(\d+)/i', $tray->tray_code, $m);
+                $puNum = !empty($m[1]) ? (int)$m[1] : 1;
+                $fallbackTF1 = "ASSY/QC/PU/{$puNum}";
+            } else {
+                $fallbackTF1 = "ASSY/QC/{$cleanSeq}";
+            }
+            $docNum = $assembly->assy_doc_number ?: $fallbackTF1;
+            $lifecycle['stage_key'] = 'TF1_GOOD';
+            $lifecycle['stage_title'] = 'Lolos Uji Fungsional 1 (Menunggu Inspeksi QC)';
+            $lifecycle['badge_color'] = 'indigo';
+            $lifecycle['current_location'] = 'Antrean Quality Control (TF 2)';
+            $lifecycle['active_doc'] = $docNum;
+            $lifecycle['description'] = "17 parameter checklist TF 1 lulus (Dokumen: {$docNum}). Siap diuji QC.";
+        } elseif ($assembly && strtoupper($assembly->assy_test_status ?? '') === 'HOLD') {
+            $lifecycle['stage_key'] = 'TF1_HOLD';
+            $lifecycle['stage_title'] = 'Tertahan di Uji Fungsional 1 (TF 1 Hold)';
+            $lifecycle['badge_color'] = 'amber';
+            $lifecycle['current_location'] = 'Meja Kerja Assembly';
+            $lifecycle['description'] = 'Ada parameter checklist TF 1 yang belum sesuai. Memerlukan single retest atau perbaikan fisik.';
+        } elseif ($assembly && $assembly->finished_at) {
+            $lifecycle['stage_key'] = 'ASSEMBLED';
+            $lifecycle['stage_title'] = "Selesai Dirakit di Set #{$assembly->set_number} (Menunggu TF 1)";
+            $lifecycle['badge_color'] = 'violet';
+            $lifecycle['current_location'] = "Tray " . ($tray?->tray_code ?: '-') . " (Slot #{$assembly->set_number})";
+            $lifecycle['description'] = 'Perakitan selesai. Menunggu pengujian fungsional 17 parameter checklist.';
+        } elseif ($tray) {
+            $lifecycle['stage_key'] = 'SUPPLIED';
+            $lifecycle['stage_title'] = "Dialokasikan ke Tray {$tray->tray_code}";
+            $lifecycle['badge_color'] = 'sky';
+            $lifecycle['current_location'] = "Baki Produksi {$tray->tray_code}";
+            $lifecycle['description'] = "Ditugaskan ke operator: " . ($tray->assigned_operator ?: 'Belum ditentukan') . " (MO: " . ($tray->source_document_mo ?: '-') . ")";
+        }
 
         $auditLogs = DB::table('part_audit_logs')
             ->where('sn', $sn)
@@ -243,6 +388,8 @@ class MasterStockController extends Controller
             'stock' => $stock,
             'tray' => $tray,
             'assembly' => $assembly,
+            'shipping' => $shipping,
+            'lifecycle' => $lifecycle,
             'audit_logs' => $auditLogs,
         ]);
     }
@@ -609,11 +756,26 @@ class MasterStockController extends Controller
     {
         $sn = trim($request->input('sn', ''));
         if (!$sn) return $this->errorResponse('Nomor seri part diperlukan');
+
+        $stock = DB::table('master_stocks')->where('sn', $sn)->first();
+        if (!$stock || $stock->status === 'Tersedia' || empty($stock->allocated_tray_id)) {
+            // Part berstatus Tersedia atau tidak memiliki alokasi aktif -> BEBAS DARI RELASI APAPUN
+            return $this->successResponse(null);
+        }
+
+        // HANYA ambil rakitan pada tray yang sedang aktif teralokasi
         $assy = DB::table('assemblies')
-            ->where('part15_sn', $sn)
-            ->orWhere('part1_sn', $sn)
-            ->orWhere('part12_sn', $sn)
+            ->where('tray_id', $stock->allocated_tray_id)
+            ->where(function ($w) use ($sn) {
+                $w->where('part15_sn', $sn)
+                  ->orWhere('part1_sn', $sn)
+                  ->orWhere('part12_sn', $sn);
+            })
+            ->where(function ($w) {
+                $w->whereNull('is_reregistered')->orWhere('is_reregistered', 0);
+            })
             ->first();
+
         return $this->successResponse($assy);
     }
 
@@ -624,18 +786,36 @@ class MasterStockController extends Controller
         $notes = $request->input('notes', '');
         if (!$sn) return $this->errorResponse('Nomor seri part diperlukan');
         
+        $stock = DB::table('master_stocks')->where('sn', $sn)->first();
+        if (!$stock) return $this->errorResponse("Part {$sn} tidak ditemukan", 404);
+        $oldStatus = $stock->status;
+
         DB::table('master_stocks')
             ->where('sn', $sn)
             ->update([
                 'status' => 'Tersedia',
                 'allocated_tray_id' => null,
+                'allocated_at' => null,
                 'used_at' => null,
-                'last_reason' => $notes,
+                'last_tray_id' => null,
+                'is_replaced_from_assy' => 0,
+                'last_reason' => $notes ?: 'Daftar ulang part ke status Tersedia',
                 'last_operator' => $operator,
                 'updated_at' => now(),
             ]);
+
+        PartAuditLog::create([
+            'part_type' => $stock->part_type,
+            'sn' => $sn,
+            'old_status' => $oldStatus,
+            'new_status' => 'Tersedia',
+            'action_type' => 'RE_REGISTER_PART',
+            'actor_username' => $operator,
+            'actor_role' => auth()->user()?->role ?: 'operator',
+            'reason' => $notes ?: 'Daftar ulang part ke status Tersedia',
+        ]);
             
-        return $this->successResponse(null, "Part {$sn} berhasil diregister ulang.");
+        return $this->successResponse(null, "Part {$sn} berhasil diregister ulang dan kembali Tersedia tanpa ikatan set lama.");
     }
 
 }

@@ -9,6 +9,7 @@ use App\Models\PackingList;
 use App\Models\PackingListBox;
 use App\Models\PackingListItem;
 use App\Models\DoSetting;
+use App\Models\Customer;
 use App\Services\CloudinaryService;
 
 class DeliveryOrderController extends Controller
@@ -74,7 +75,19 @@ class DeliveryOrderController extends Controller
 
         $available = DB::table('assemblies as a')
             ->join('trays as t', 'a.tray_id', '=', 't.id')
+            ->join('master_stocks as m15', function ($join) {
+                $join->on('a.part15_sn', '=', 'm15.sn')
+                     ->where('m15.part_type', '=', '15');
+            })
             ->where('a.qc_status', 'GOOD')
+            ->where(function ($w) {
+                $w->whereNull('a.is_declined')->orWhere('a.is_declined', 0);
+            })
+            ->where(function ($w) {
+                $w->whereNull('a.verified_status')->orWhere('a.verified_status', '!=', 'DECLINED');
+            })
+            ->whereIn(DB::raw("UPPER(COALESCE(a.warehouse_receipt_status, ''))"), ['ACCEPTED', 'ACC'])
+            ->whereNotIn('m15.status', ['Tersedia', 'Scrap', 'Part Diganti', 'Hold', 'Declined', 'Decline'])
             ->whereNotIn('a.part15_sn', $usedSns)
             ->select([
                 'a.part15_sn as serial_number',
@@ -152,12 +165,50 @@ class DeliveryOrderController extends Controller
             $totalBoxes = 0;
             $totalUnits = 0;
 
+            // VALIDASI KEPATUHAN ALUR & ANTI-DUPLIKASI SURAT JALAN
+            $seenInPayload = [];
             foreach ($crates as $c) {
-                $boxes = $c['boxes'] ?? [];
-                $totalBoxes += count($boxes);
-                foreach ($boxes as $b) {
-                    $items = $b['items'] ?? [];
-                    $totalUnits += count(array_filter($items, fn($it) => !empty($it['serial_number'])));
+                foreach ($c['boxes'] ?? [] as $b) {
+                    foreach ($b['items'] ?? [] as $it) {
+                        $sn = trim($it['serial_number'] ?? '');
+                        if (!empty($sn)) {
+                            // 1. Anti-duplikasi di payload sendiri
+                            if (isset($seenInPayload[$sn])) {
+                                return response()->json([
+                                    'ok' => false,
+                                    'error' => "Nomor seri {$sn} terduplikasi di dalam dokumen pengiriman ini!"
+                                ], 400);
+                            }
+                            $seenInPayload[$sn] = true;
+
+                            // 2. Anti-duplikasi dengan Surat Jalan yang sudah terbit sebelumnya
+                            $alreadyInDo = PackingListItem::where('serial_number', $sn)->first();
+                            if ($alreadyInDo) {
+                                return response()->json([
+                                    'ok' => false,
+                                    'error' => "Nomor seri {$sn} sudah pernah terdaftar pada Surat Jalan ID #{$alreadyInDo->delivery_order_id}!"
+                                ], 400);
+                            }
+
+                            // 3. Validasi kepatuhan alur: Wajib lolos QC GOOD dan telah di-ACCEPT fisik oleh Gudang
+                            $validUnit = DB::table('assemblies as a')
+                                ->join('master_stocks as m15', function ($j) {
+                                    $j->on('a.part15_sn', '=', 'm15.sn')->where('m15.part_type', '15');
+                                })
+                                ->where('a.part15_sn', $sn)
+                                ->where('a.qc_status', 'GOOD')
+                                ->whereIn(DB::raw("UPPER(COALESCE(a.warehouse_receipt_status, ''))"), ['ACCEPTED', 'ACC'])
+                                ->whereNotIn('m15.status', ['Tersedia', 'Scrap', 'Part Diganti', 'Hold', 'Declined', 'Decline'])
+                                ->exists();
+
+                            if (!$validUnit) {
+                                return response()->json([
+                                    'ok' => false,
+                                    'error' => "Nomor seri {$sn} tidak valid untuk Surat Jalan! Unit harus telah menyelesaikan seluruh alur (Rakit Good -> TF 1 Good -> QC Good -> Penerimaan Fisik Gudang ACCEPT) dan tidak sedang berstatus Hold/Scrap/Tersedia."
+                                ], 400);
+                            }
+                        }
+                    }
                 }
             }
 
@@ -358,4 +409,276 @@ class DeliveryOrderController extends Controller
         $do->delete(); // Cascade deletes packing_lists, boxes, items
         return $this->successResponse(null, 'Delivery Order berhasil dihapus.');
     }
+
+    /**
+     * Detail DO (alias untuk show)
+     */
+    public function detail(Request $request)
+    {
+        $id = $request->input('id') ?: $request->input('do_id');
+        return $this->show($id);
+    }
+
+    /**
+     * Hapus PDF Cloudinary dari Delivery Order
+     */
+    public function deleteCloudPdf(Request $request)
+    {
+        $doId = $request->input('do_id') ?: $request->input('id');
+        $do = DeliveryOrder::find($doId);
+        if ($do && $do->cloud_public_id) {
+            $this->cloudinary->deleteFile($do->cloud_public_id);
+            $do->update([
+                'cloud_pdf_url' => null,
+                'cloud_public_id' => null,
+                'cloud_uploaded_at' => null,
+            ]);
+        }
+        return $this->successResponse(null, 'PDF Cloud berhasil dihapus.');
+    }
+
+    /**
+     * Informasi Status Konfigurasi Cloudinary
+     */
+    public function cloudinarySettings()
+    {
+        return $this->successResponse($this->cloudinary->getPublicInfo());
+    }
+
+    /**
+     * Mengambil daftar customer
+     */
+    public function customers(Request $request)
+    {
+        $q = trim($request->input('q', ''));
+        $query = Customer::orderBy('name', 'asc');
+        if ($q) {
+            $query->where(function ($w) use ($q) {
+                $w->where('name', 'like', "%{$q}%")
+                  ->orWhere('address', 'like', "%{$q}%")
+                  ->orWhere('phone', 'like', "%{$q}%");
+            });
+        }
+        return $this->successResponse($query->get());
+    }
+
+    /**
+     * Tambah Customer Baru
+     */
+    public function createCustomer(Request $request)
+    {
+        $request->validate(['name' => 'required|string']);
+        $cust = Customer::create([
+            'name' => trim($request->input('name')),
+            'address' => trim($request->input('address', '')),
+            'phone' => trim($request->input('phone', '')),
+            'fax' => trim($request->input('fax', '')),
+        ]);
+        return $this->successResponse($cust, 'Customer berhasil ditambahkan.');
+    }
+
+    /**
+     * Perbarui Customer
+     */
+    public function updateCustomer(Request $request)
+    {
+        $id = $request->input('id');
+        $cust = Customer::findOrFail($id);
+        $cust->update([
+            'name' => trim($request->input('name', $cust->name)),
+            'address' => trim($request->input('address', $cust->address)),
+            'phone' => trim($request->input('phone', $cust->phone)),
+            'fax' => trim($request->input('fax', $cust->fax)),
+        ]);
+        return $this->successResponse($cust, 'Customer berhasil diperbarui.');
+    }
+
+    /**
+     * Hapus Customer
+     */
+    public function deleteCustomer(Request $request)
+    {
+        $id = $request->input('id');
+        Customer::where('id', $id)->delete();
+        return $this->successResponse(null, 'Customer berhasil dihapus.');
+    }
+
+    /**
+     * Mengambil daftar Standalone Packing Labels
+     */
+    public function getPackingLabels()
+    {
+        $rows = DB::table('standalone_packing_labels')
+            ->orderBy('id', 'desc')
+            ->get();
+
+        $data = $rows->map(function ($r) {
+            $rArray = (array) $r;
+            $rArray['crates'] = json_decode($r->crates_json ?? '[]', true) ?: [];
+            return $rArray;
+        });
+
+        $maxBatch = DB::table('delivery_orders')->max('batch_number') ?? 0;
+        $maxStandalone = DB::table('standalone_packing_labels')->max('batch_number') ?? 0;
+        $nextBatch = max((int)$maxBatch, (int)$maxStandalone) + 1;
+
+        return response()->json([
+            'ok' => true,
+            'data' => $data,
+            'next_batch' => $nextBatch,
+        ]);
+    }
+
+    /**
+     * Detail Standalone Packing Label
+     */
+    public function getPackingLabelDetail(Request $request)
+    {
+        $id = $request->input('id');
+        $row = DB::table('standalone_packing_labels')->where('id', $id)->first();
+        if (!$row) {
+            return response()->json(['ok' => false, 'error' => 'Data label tidak ditemukan'], 404);
+        }
+
+        $data = (array) $row;
+        $data['crates'] = json_decode($row->crates_json ?? '[]', true) ?: [];
+
+        return response()->json(['ok' => true, 'data' => $data]);
+    }
+
+    /**
+     * Simpan Standalone Packing Label
+     */
+    public function createPackingLabel(Request $request)
+    {
+        $pkgType = trim($request->input('package_type', 'crate'));
+        $batchNum = (int) $request->input('batch_number', 1);
+        $prodName = trim($request->input('product_name', 'Nanggala P9'));
+        $notes = trim($request->input('notes', ''));
+        $createdBy = trim($request->input('created_by', auth()->user()?->full_name ?? 'PPIC'));
+        $cratesData = $request->input('crates', []);
+
+        $dateStr = $request->input('date') ?: $request->input('pl_date') ?: now()->format('Y-m-d');
+        $targetDt = \Carbon\Carbon::parse($dateStr);
+        $targetDayStr = $targetDt->format('Ymd');
+        $mmYyyy = $targetDt->format('m/Y');
+
+        // Cari max label_batch_id pada tanggal target
+        $existingLabels = DB::table('standalone_packing_labels')
+            ->where('label_batch_id', 'like', "LBL-{$targetDayStr}-%")
+            ->pluck('label_batch_id');
+
+        $maxSeq = 0;
+        foreach ($existingLabels as $lid) {
+            if (preg_match('/LBL-\d+-(\d+)/', $lid, $m)) {
+                $maxSeq = max($maxSeq, (int)$m[1]);
+            }
+        }
+        $nextLblSeq = $maxSeq + 1;
+        $labelBatchId = sprintf("LBL-%s-%03d", $targetDayStr, $nextLblSeq);
+        while (DB::table('standalone_packing_labels')->where('label_batch_id', $labelBatchId)->exists()) {
+            $nextLblSeq++;
+            $labelBatchId = sprintf("LBL-%s-%03d", $targetDayStr, $nextLblSeq);
+        }
+
+        // Cari nomor urut PL berikutnya
+        $rowsPl = DB::table('packing_lists')->where('pl_number', 'like', "%/PL/PPIC/{$mmYyyy}")->pluck('pl_number')->toArray();
+        $rowsLbl = DB::table('standalone_packing_labels')->where('pl_number', 'like', "%/PL/PPIC/{$mmYyyy}")->pluck('pl_number')->toArray();
+
+        $maxPlSeq = 0;
+        foreach (array_merge($rowsPl, $rowsLbl) as $pn) {
+            if (preg_match('/^(\d+)\//', $pn, $m)) {
+                $maxPlSeq = max($maxPlSeq, (int)$m[1]);
+            }
+        }
+        $plSeq = $maxPlSeq + 1;
+        $plNumber = sprintf("%03d/PL/PPIC/%s", $plSeq, $mmYyyy);
+        while (DB::table('packing_lists')->where('pl_number', $plNumber)->exists() || DB::table('standalone_packing_labels')->where('pl_number', $plNumber)->exists()) {
+            $plSeq++;
+            $plNumber = sprintf("%03d/PL/PPIC/%s", $plSeq, $mmYyyy);
+        }
+
+        // Hitung total unit dan container
+        $totalQty = 0;
+        foreach ($cratesData as &$c) {
+            $boxes = $c['boxes'] ?? [];
+            $cQty = 0;
+            foreach ($boxes as &$b) {
+                $items = $b['items'] ?? [];
+                foreach ($items as $it) {
+                    $sVal = is_array($it) ? ($it['serial_number'] ?? '') : (string)$it;
+                    if (!empty(trim($sVal))) {
+                        $cQty++;
+                    }
+                }
+            }
+            if ($cQty > 0) {
+                $c['total_quantity'] = $cQty;
+            } elseif (empty($c['total_quantity'])) {
+                $c['total_quantity'] = ($pkgType === 'crate') ? 20 : 10;
+            }
+            $totalQty += $c['total_quantity'];
+        }
+        unset($c);
+
+        $totalContainers = count($cratesData);
+
+        $id = DB::table('standalone_packing_labels')->insertGetId([
+            'label_batch_id' => $labelBatchId,
+            'pl_number' => $plNumber,
+            'label_date' => $targetDt->toDateString(),
+            'package_type' => $pkgType,
+            'batch_number' => $batchNum,
+            'product_name' => $prodName,
+            'total_quantity' => $totalQty,
+            'total_containers' => $totalContainers,
+            'crates_json' => json_encode($cratesData),
+            'notes' => $notes,
+            'created_by' => $createdBy,
+            'created_at' => $targetDt->toDateTimeString(),
+            'updated_at' => now(),
+        ]);
+
+        $maxBatch = DB::table('delivery_orders')->max('batch_number') ?? 0;
+        $maxStandalone = DB::table('standalone_packing_labels')->max('batch_number') ?? 0;
+        $nextBatch = max((int)$maxBatch, (int)$maxStandalone) + 1;
+
+        return response()->json([
+            'ok' => true,
+            'id' => $id,
+            'label_batch_id' => $labelBatchId,
+            'pl_number' => $plNumber,
+            'crates' => $cratesData,
+            'next_batch' => $nextBatch,
+            'message' => "Label Packing List {$labelBatchId} berhasil dibuat dan disimpan!"
+        ]);
+    }
+
+    /**
+     * Hapus Standalone Packing Label
+     */
+    public function deletePackingLabel(Request $request)
+    {
+        $id = $request->input('id');
+        if (!$id) {
+            return response()->json(['ok' => false, 'error' => 'ID label wajib diberikan'], 400);
+        }
+
+        DB::table('standalone_packing_labels')->where('id', $id)->delete();
+        return response()->json(['ok' => true, 'message' => 'Label Packing List berhasil dihapus!']);
+    }
+
+    /**
+     * Test Koneksi Cloudinary
+     */
+    public function cloudinaryTest(Request $request)
+    {
+        $url = env('CLOUDINARY_URL', '');
+        return response()->json([
+            'ok' => true,
+            'message' => 'Layanan Cloudinary siap.',
+            'configured' => !empty($url),
+        ]);
+    }
 }
+

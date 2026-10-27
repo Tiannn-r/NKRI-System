@@ -28,18 +28,42 @@ Route::get('/auth/me', [AuthController::class, 'me']);
 Route::get('/operators', [AuthController::class, 'getOperators']);
 Route::get('/users/lookup', [AuthController::class, 'lookup']);
 
-// Kelola Pengguna (Admin)
+// Kelola Pengguna & Verifikasi Admin
 Route::prefix('admin')->group(function () {
     Route::get('/users', [AuthController::class, 'getUsers']);
     Route::post('/users', [AuthController::class, 'createUser']);
     Route::post('/users/update', [AuthController::class, 'updateUser']);
     Route::post('/users/delete', [AuthController::class, 'deleteUser']);
     Route::post('/users/reset-session', [AuthController::class, 'resetSession']);
+    Route::post('/users/toggle-cms', [AuthController::class, 'toggleCmsAccess']);
     Route::post('/add-part', [MasterStockController::class, 'addPart']);
     Route::post('/add-part-bulk', [MasterStockController::class, 'addPartBulk']);
     Route::post('/delete-part', [MasterStockController::class, 'deletePart']);
     Route::get('/recent-added', [MasterStockController::class, 'recentAdded']);
+    Route::get('/audit-logs', [AdminCmsController::class, 'getAuditLogs']);
+    Route::get('/pending-verifications', [AdminCmsController::class, 'getPendingVerifications']);
+    Route::get('/pending-assemblies', [AdminCmsController::class, 'getPendingAssemblies']);
+    Route::get('/pending-replacements', [AdminCmsController::class, 'getPendingReplacements']);
+
+    // Verifikasi Pergantian Part & Daftar Ulang
+    Route::post('/approve-replacement', [AdminCmsController::class, 'approveReplacement']);
+    Route::post('/reject-replacement', [AdminCmsController::class, 'rejectReplacement']);
+    Route::post('/approve-assy-rereg', [AdminCmsController::class, 'approveAssyRereg']);
+    Route::post('/approve-re-register', [AdminCmsController::class, 'approveReRegister']);
+    Route::post('/approve-part-direct', [AdminCmsController::class, 'approvePartDirect']);
+    Route::post('/approve-declined-set-restore', [AdminCmsController::class, 'approveDeclinedSetRestore']);
+    Route::post('/delete-re-register', [AdminCmsController::class, 'deleteReRegister']);
+    Route::post('/delete-declined-set', [AdminCmsController::class, 'deleteDeclinedSet']);
+    Route::post('/clear_trays', [AdminCmsController::class, 'clearTrays']);
+    Route::post('/testing-points', [AdminCmsController::class, 'createTestingPoint']);
+    Route::post('/testing-points/delete', [AdminCmsController::class, 'deleteTestingPoint']);
+    Route::get('/database-status', [AdminCmsController::class, 'getDatabaseStatus']);
+    Route::post('/switch-database', [AdminCmsController::class, 'switchDatabase']);
+    Route::post('/clone-testing-database', [AdminCmsController::class, 'cloneTestingDatabase']);
 });
+
+Route::get('/database/status', [AdminCmsController::class, 'getDatabaseStatus']);
+Route::post('/database/switch', [AdminCmsController::class, 'switchDatabase']);
 
 // ==========================================
 // 2. MASTER STOK (UN-CAPPED 18.000+ ITEMS)
@@ -62,11 +86,19 @@ Route::prefix('master')->group(function () {
 // 3. GUDANG & TRAY SUPPLY
 // ==========================================
 Route::get('/assembly/trays', [WarehouseController::class, 'getTrays']);
+Route::get('/assembly/tray', [WarehouseController::class, 'getTrayDetail']);
+Route::get('/tray/detail', [WarehouseController::class, 'getTrayDetail']);
+Route::post('/gudang/save', [WarehouseController::class, 'saveGudang']);
 Route::post('/gudang/verify-tray', [WarehouseController::class, 'createTray']);
 Route::get('/gudang/tray_detail', [WarehouseController::class, 'getTrayDetail']);
 Route::get('/gudang/tray_verification_detail', [WarehouseController::class, 'getTrayDetail']);
 Route::post('/tray/update_mo', [WarehouseController::class, 'updateMo']);
+Route::post('/gudang/override-status', [WarehouseController::class, 'overrideStatus']);
+Route::post('/gudang/verify-set', [WarehouseController::class, 'verifySet']);
+Route::post('/gudang/verify-return-set', [WarehouseController::class, 'verifyReturnSet']);
+Route::post('/gudang/decline-return-set', [WarehouseController::class, 'declineReturnSet']);
 Route::post('/gudang/verify-return-tray', [WarehouseController::class, 'verifyTray']);
+Route::post('/gudang/acknowledge-return', [WarehouseController::class, 'acknowledgeReturn']);
 Route::post('/warehouse/verify-qc-receipt', [WarehouseController::class, 'verifyQcReceipt']);
 Route::get('/gudang/returned-trays', [WarehouseController::class, 'getReturnedTrays']);
 
@@ -77,23 +109,30 @@ Route::prefix('assembly')->group(function () {
     Route::post('/start-set', [AssemblyController::class, 'startSet']);
     Route::post('/save', [AssemblyController::class, 'saveAssembly']);
     Route::post('/submit-test', [AssemblyController::class, 'submitTest']); // TF 1: 17 Checklist Points
+    Route::post('/submit-single-retest', [AssemblyController::class, 'submitSingleRetest']);
     Route::post('/pause', [AssemblyController::class, 'pause']);
     Route::post('/resume', [AssemblyController::class, 'resume']);
     Route::post('/replace-part', [AssemblyController::class, 'replacePart']);
     Route::get('/pending-reassembly', [AssemblyController::class, 'getPendingReassembly']);
     Route::post('/dispatch-reassembly', [AssemblyController::class, 'dispatchReassembly']);
+    Route::post('/session-action', [AssemblyController::class, 'sessionAction']);
+    Route::post('/transfer-to-warehouse', [AssemblyController::class, 'transferToWarehouse']);
+    Route::post('/reregister-set', [AssemblyController::class, 'reregisterSet']);
+    Route::post('/direct-resume', [AssemblyController::class, 'directResume']);
 });
 Route::get('/admin/downtime-logs', [AssemblyController::class, 'getDowntimeLogs']);
 
 // ==========================================
-// 5. QUALITY CONTROL (QC / TF 2)
-// Aturan Baku: Hanya Good atau Not Good (Hold)
-// Tidak ada 17 pengujian di QC
+// 5. QUALITY CONTROL & PRODUKSI
 // ==========================================
 Route::get('/qc/items', [QcController::class, 'getItems']);
 Route::get('/qc/pending-items', [QcController::class, 'getItems']);
 Route::post('/qc/submit-test', [QcController::class, 'submitTest']);
-Route::get('/production/hold-items', [QcController::class, 'getHoldItems']);
+Route::prefix('production')->group(function () {
+    Route::get('/products', [AssemblyController::class, 'getProductionProducts']);
+    Route::get('/assembly-results', [AssemblyController::class, 'getAssemblyResults']);
+    Route::get('/hold-items', [QcController::class, 'getHoldItems']);
+});
 Route::post('/admin/approve-hold-item', [QcController::class, 'approveHoldItem']);
 
 // ==========================================
@@ -107,7 +146,7 @@ Route::prefix('reports')->group(function () {
 });
 
 // ==========================================
-// 7. DELIVERY ORDER, PACKING LIST & CLOUDINARY
+// 7. DELIVERY ORDER, PACKING LIST & LABELS
 // ==========================================
 Route::prefix('delivery-orders')->group(function () {
     Route::get('/', [DeliveryOrderController::class, 'index']);
@@ -115,7 +154,7 @@ Route::prefix('delivery-orders')->group(function () {
     Route::get('/detail', [DeliveryOrderController::class, 'detail']);
     Route::post('/delete', [DeliveryOrderController::class, 'destroy']);
     Route::get('/next-meta', [DeliveryOrderController::class, 'nextMeta']);
-    Route::get('/export-data', [DeliveryOrderController::class, 'exportData']); // Fixed clean single export
+    Route::get('/export-data', [DeliveryOrderController::class, 'exportData']);
     Route::get('/settings', [AdminCmsController::class, 'getDoSettings']);
     Route::post('/settings', [AdminCmsController::class, 'updateDoSettings']);
     Route::post('/cloud-pdf', [DeliveryOrderController::class, 'uploadCloudPdf']);
@@ -123,6 +162,16 @@ Route::prefix('delivery-orders')->group(function () {
 });
 Route::get('/available-serial-numbers', [DeliveryOrderController::class, 'availableSerialNumbers']);
 Route::get('/cloudinary/settings', [DeliveryOrderController::class, 'cloudinarySettings']);
+Route::get('/cloudinary/test', [DeliveryOrderController::class, 'cloudinaryTest']);
+Route::post('/cloudinary/test', [DeliveryOrderController::class, 'cloudinaryTest']);
+
+// Standalone Packing Labels
+Route::prefix('packing-labels')->group(function () {
+    Route::get('/', [DeliveryOrderController::class, 'getPackingLabels']);
+    Route::get('/detail', [DeliveryOrderController::class, 'getPackingLabelDetail']);
+    Route::post('/', [DeliveryOrderController::class, 'createPackingLabel']);
+    Route::post('/delete', [DeliveryOrderController::class, 'deletePackingLabel']);
+});
 
 // Master Customer untuk Surat Jalan
 Route::prefix('customers')->group(function () {
@@ -134,12 +183,19 @@ Route::prefix('customers')->group(function () {
 
 // Testing Points (17 Parameter TF 1)
 Route::get('/testing-points', [AdminCmsController::class, 'getTestingPoints']);
+Route::get('/admin/testing-points', [AdminCmsController::class, 'getTestingPoints']);
+Route::post('/admin/testing-points', [AdminCmsController::class, 'createTestingPoint']);
 Route::post('/admin/testing-points/update', [AdminCmsController::class, 'updateTestingPoint']);
+Route::post('/admin/testing-points/delete', [AdminCmsController::class, 'deleteTestingPoint']);
 
 // ==========================================
 // 8. PORTAL CMS & DIAGNOSTIK ADMIN (/admin)
 // ==========================================
 Route::prefix('admin')->group(function () {
+    // Dedicated Re-Auth Admin CMS (/admin)
+    Route::post('/cms-login', [AdminCmsController::class, 'cmsLogin']);
+    Route::post('/cms-logout', [AdminCmsController::class, 'cmsLogout']);
+
     // 3 Fitur Pembersihan Database & Manajemen Terpusat
     Route::post('/cms/clear-trays', [AdminCmsController::class, 'clearTrays']);
     Route::post('/cms/clear-downtimes', [AdminCmsController::class, 'clearDowntimes']);
@@ -158,4 +214,9 @@ Route::prefix('admin')->group(function () {
     // Data Anomaly Scanner & 1-Click Auto Repair
     Route::get('/anomalies/scan', [DiagnosticController::class, 'scanAnomalies']);
     Route::post('/anomalies/repair', [DiagnosticController::class, 'autoRepairAnomalies']);
+
+    // Konfigurasi Kredensial Cloudinary (Terpusat di Admin CMS)
+    Route::get('/cloudinary/settings', [AdminCmsController::class, 'getCloudinarySettings']);
+    Route::post('/cloudinary/settings', [AdminCmsController::class, 'updateCloudinarySettings']);
+    Route::post('/cloudinary/test', [AdminCmsController::class, 'testCloudinary']);
 });

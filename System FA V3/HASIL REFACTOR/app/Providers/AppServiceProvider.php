@@ -21,6 +21,16 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Dynamic Database Selector (Live Production vs Testing Environment)
+        $activeDbPath = storage_path('app/active_database.json');
+        if (file_exists($activeDbPath)) {
+            $dbConfig = json_decode(@file_get_contents($activeDbPath), true);
+            $activeDb = $dbConfig['active_db'] ?? null;
+            if ($activeDb && in_array($activeDb, ['db_final_assembly', 'db_final_assembly_testing'])) {
+                config(['database.connections.mysql.database' => $activeDb]);
+            }
+        }
+
         // Realtime Slow Query & Lag Monitor (Threshold: 500ms)
         // Automatically logs any query that causes server lag to the database
         DB::listen(function ($query) {

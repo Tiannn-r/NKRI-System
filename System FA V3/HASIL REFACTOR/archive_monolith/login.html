@@ -270,18 +270,20 @@
         });
         const json = await res.json();
         if (json.ok) {
-          localStorage.setItem("token", json.token);
-          localStorage.setItem("role", json.role);
-          localStorage.setItem("username", json.username);
-          localStorage.setItem("full_name", json.full_name || json.username);
-          localStorage.setItem("nik", json.nik || "");
-          localStorage.setItem("department", json.department || "assembly");
-          localStorage.setItem("permissions", typeof json.permissions === 'string' ? json.permissions : JSON.stringify(json.permissions || {}));
+          const uData = json.data?.user || {};
+          const tok = json.token || json.data?.token;
+          localStorage.setItem("token", tok);
+          localStorage.setItem("role", json.role || uData.role || "");
+          localStorage.setItem("username", json.username || uData.username || "");
+          localStorage.setItem("full_name", json.full_name || uData.full_name || json.username || uData.username || "");
+          localStorage.setItem("nik", json.nik || uData.nik || "");
+          localStorage.setItem("department", json.department || uData.department || "assembly");
+          localStorage.setItem("permissions", typeof (json.permissions || uData.permissions) === 'string' ? (json.permissions || uData.permissions) : JSON.stringify(json.permissions || uData.permissions || {}));
           localStorage.removeItem("activeTab");
           localStorage.removeItem("activeAdminSubTab");
           localStorage.removeItem("activeReportSubTab");
           localStorage.removeItem("selectedTrayCode");
-          window.location.replace("index.html");
+          window.location.replace("/");
         } else {
           if (json.is_active_elsewhere || res.status === 409) {
             errEl.innerHTML = `

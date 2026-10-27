@@ -19,6 +19,7 @@ class User extends Authenticatable
         'role',
         'department',
         'permissions',
+        'can_access_cms',
     ];
 
     protected $hidden = [
@@ -29,6 +30,7 @@ class User extends Authenticatable
     protected $casts = [
         'password' => 'hashed',
         'permissions' => 'array',
+        'can_access_cms' => 'boolean',
     ];
 
     public function isAdmin(): bool

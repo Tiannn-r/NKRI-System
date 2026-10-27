@@ -1,0 +1,344 @@
+[
+  {
+    "module": "Kelola Pengguna",
+    "name": "Get Operators",
+    "endpoint": "GET /api/operators",
+    "status": 200,
+    "elapsed_ms": 209,
+    "result": "PASS",
+    "sample": "{'ok': True, 'message': 'Success', 'data': [{'id': 10, 'nik': '262048', 'full_na"
+  },
+  {
+    "module": "Kelola Pengguna",
+    "name": "Lookup Users",
+    "endpoint": "GET /api/users/lookup",
+    "status": 200,
+    "elapsed_ms": 74,
+    "result": "PASS",
+    "sample": "{'ok': True, 'message': 'Success', 'data': [{'id': 3, 'nik': 'ADM-001', 'full_na"
+  },
+  {
+    "module": "Kelola Pengguna",
+    "name": "Get Users (Admin)",
+    "endpoint": "GET /api/admin/users",
+    "status": 200,
+    "elapsed_ms": 41,
+    "result": "PASS",
+    "sample": "{'ok': True, 'message': 'Success', 'data': [{'id': 3, 'nik': 'ADM-001', 'full_na"
+  },
+  {
+    "module": "Gudang",
+    "name": "Get Trays",
+    "endpoint": "GET /api/assembly/trays",
+    "status": 200,
+    "elapsed_ms": 323,
+    "result": "PASS",
+    "sample": "{'ok': True, 'message': 'Success', 'data': [{'id': 653, 'tray_code': 'WH/ASSY/00"
+  },
+  {
+    "module": "Gudang",
+    "name": "Get Tray Detail",
+    "endpoint": "GET /api/assembly/tray",
+    "status": 200,
+    "elapsed_ms": 54,
+    "result": "PASS",
+    "sample": "{'ok': True, 'message': 'Success', 'data': {'tray': {'id': 653, 'tray_code': 'WH"
+  },
+  {
+    "module": "Gudang",
+    "name": "Get Returned Trays",
+    "endpoint": "GET /api/gudang/returned-trays",
+    "status": 200,
+    "elapsed_ms": 90,
+    "result": "PASS",
+    "sample": "{'ok': True, 'message': 'Success', 'data': [{'id': 632, 'tray_code': 'WH/ASSY-PU"
+  },
+  {
+    "module": "Assembly",
+    "name": "Get Pending Reassembly",
+    "endpoint": "GET /api/assembly/pending-reassembly",
+    "status": 200,
+    "elapsed_ms": 63,
+    "result": "PASS",
+    "sample": "{'ok': True, 'message': 'Success', 'data': []}"
+  },
+  {
+    "module": "Assembly",
+    "name": "Get Production Products",
+    "endpoint": "GET /api/production/products",
+    "status": 200,
+    "elapsed_ms": 55,
+    "result": "PASS",
+    "sample": "{'ok': True, 'data': ['Nanggala P9']}"
+  },
+  {
+    "module": "Assembly",
+    "name": "Get Assembly Results",
+    "endpoint": "GET /api/production/assembly-results",
+    "status": 200,
+    "elapsed_ms": 214,
+    "result": "PASS",
+    "sample": "{'ok': True, 'data': [{'tray_id': 652, 'tray_code': 'WH/ASSY/000494', 'source_do"
+  },
+  {
+    "module": "Assembly",
+    "name": "Audit Downtime Logs",
+    "endpoint": "GET /api/admin/downtime-logs",
+    "status": 200,
+    "elapsed_ms": 54,
+    "result": "PASS",
+    "sample": "{'ok': True, 'message': 'Success', 'data': [{'id': 81, 'tray_id': 649, 'tray_cod"
+  },
+  {
+    "module": "TF 1",
+    "name": "Get Testing Points (Public)",
+    "endpoint": "GET /api/testing-points",
+    "status": 200,
+    "elapsed_ms": 66,
+    "result": "PASS",
+    "sample": "{'ok': True, 'message': 'Success', 'data': [{'id': 1, 'test_num': 1, 'category':"
+  },
+  {
+    "module": "TF 1",
+    "name": "Get Testing Points (Admin)",
+    "endpoint": "GET /api/admin/testing-points",
+    "status": 200,
+    "elapsed_ms": 68,
+    "result": "PASS",
+    "sample": "{'ok': True, 'message': 'Success', 'data': [{'id': 1, 'test_num': 1, 'category':"
+  },
+  {
+    "module": "TF 2",
+    "name": "Get QC Items",
+    "endpoint": "GET /api/qc/items",
+    "status": 200,
+    "elapsed_ms": 908,
+    "result": "PASS",
+    "sample": "{'ok': True, 'message': 'Success', 'data': [{'id': 4249, 'tray_id': 596, 'tray_c"
+  },
+  {
+    "module": "TF 2",
+    "name": "Get QC Pending Items",
+    "endpoint": "GET /api/qc/pending-items",
+    "status": 200,
+    "elapsed_ms": 964,
+    "result": "PASS",
+    "sample": "{'ok': True, 'message': 'Success', 'data': [{'id': 4249, 'tray_id': 596, 'tray_c"
+  },
+  {
+    "module": "TF 2",
+    "name": "Get Production Hold Items",
+    "endpoint": "GET /api/production/hold-items",
+    "status": 200,
+    "elapsed_ms": 91,
+    "result": "PASS",
+    "sample": "{'ok': True, 'message': 'Success', 'data': [{'assembly_id': 4622, 'tray_id': 652"
+  },
+  {
+    "module": "Penerimaan",
+    "name": "Laporan Penerimaan Fisik",
+    "endpoint": "GET /api/reports/warehouse-receipts",
+    "status": 200,
+    "elapsed_ms": 927,
+    "result": "PASS",
+    "sample": "{'ok': True, 'message': 'Success', 'data': [{'assembly_id': 4616, 'tray_id': 652"
+  },
+  {
+    "module": "Laporan",
+    "name": "Laporan WO Traveler",
+    "endpoint": "GET /api/laporan",
+    "status": 200,
+    "elapsed_ms": 1201,
+    "result": "PASS",
+    "sample": "{'ok': True, 'message': 'Success', 'data': [{'id': 4622, 'tray_id': 652, 'set_nu"
+  },
+  {
+    "module": "Laporan",
+    "name": "Laporan Uji Fungsional 1",
+    "endpoint": "GET /api/reports/assy-tests",
+    "status": 200,
+    "elapsed_ms": 606,
+    "result": "PASS",
+    "sample": "{'ok': True, 'message': 'Success', 'data': [{'id': 7939, 'stage': 'ASSY', 'doc_n"
+  },
+  {
+    "module": "Laporan",
+    "name": "Laporan Uji Mutu QC",
+    "endpoint": "GET /api/reports/qc-tests",
+    "status": 200,
+    "elapsed_ms": 1815,
+    "result": "PASS",
+    "sample": "{'ok': True, 'message': 'Success', 'data': [{'id': 7994, 'stage': 'QC', 'doc_num"
+  },
+  {
+    "module": "Verifikasi",
+    "name": "Pending Verifications",
+    "endpoint": "GET /api/admin/pending-verifications",
+    "status": 200,
+    "elapsed_ms": 96,
+    "result": "PASS",
+    "sample": "{'ok': True, 'data': []}"
+  },
+  {
+    "module": "Verifikasi",
+    "name": "Pending Assemblies",
+    "endpoint": "GET /api/admin/pending-assemblies",
+    "status": 200,
+    "elapsed_ms": 93,
+    "result": "PASS",
+    "sample": "{'ok': True, 'data': [{'id': 4622, 'tray_id': 652, 'set_number': 8, 'pic_assembl"
+  },
+  {
+    "module": "Verifikasi",
+    "name": "Pending Replacements",
+    "endpoint": "GET /api/admin/pending-replacements",
+    "status": 200,
+    "elapsed_ms": 63,
+    "result": "PASS",
+    "sample": "{'ok': True, 'data': [{'replacement_id': 173, 'assembly_id': 4475, 'tray_id': 63"
+  },
+  {
+    "module": "Riwayat Audit",
+    "name": "Part Audit Logs",
+    "endpoint": "GET /api/admin/audit-logs",
+    "status": 200,
+    "elapsed_ms": 38,
+    "result": "PASS",
+    "sample": "{'ok': True, 'data': [{'id': 3710, 'part_type': 'ALL', 'sn': 'TR-20261027-001', "
+  },
+  {
+    "module": "Master Stok",
+    "name": "Stocks Summary",
+    "endpoint": "GET /api/master/stocks_summary",
+    "status": 200,
+    "elapsed_ms": 645,
+    "result": "PASS",
+    "sample": "{'ok': True, 'message': 'Success', 'data': [{'part_type': '1', 'total': 6022, 'a"
+  },
+  {
+    "module": "Master Stok",
+    "name": "Stocks List P15",
+    "endpoint": "GET /api/master/stocks_list?part_type=15&page=1&limit=5",
+    "status": 200,
+    "elapsed_ms": 2219,
+    "result": "PASS",
+    "sample": "{'ok': True, 'total': 16991, 'page': 1, 'limit': 5, 'total_pages': 3399, 'data':"
+  },
+  {
+    "module": "Master Stok",
+    "name": "Available Parts",
+    "endpoint": "GET /api/master/available?part_type=15",
+    "status": 200,
+    "elapsed_ms": 114,
+    "result": "PASS",
+    "sample": "{'ok': True, 'message': 'Success', 'data': [{'sn': 'B1100135', 'cs': 'B', 'part_"
+  },
+  {
+    "module": "Master Stok",
+    "name": "Recent Added Parts",
+    "endpoint": "GET /api/master/recent-added?limit=5",
+    "status": 200,
+    "elapsed_ms": 68,
+    "result": "PASS",
+    "sample": "{'ok': True, 'data': [{'id': 44470, 'sn': '63793', 'cs': None, 'part_type': '12'"
+  },
+  {
+    "module": "Delivery Order",
+    "name": "List Delivery Orders",
+    "endpoint": "GET /api/delivery-orders",
+    "status": 200,
+    "elapsed_ms": 1044,
+    "result": "PASS",
+    "sample": "{'ok': True, 'total': 11, 'data': [{'id': 18, 'do_number': '001/SJ/PPIC/09/2026'"
+  },
+  {
+    "module": "Delivery Order",
+    "name": "Next Meta DO/PL",
+    "endpoint": "GET /api/delivery-orders/next-meta",
+    "status": 200,
+    "elapsed_ms": 89,
+    "result": "PASS",
+    "sample": "{'ok': True, 'message': 'Success', 'data': {'next_number': '012/SJ/PPIC/10/2026'"
+  },
+  {
+    "module": "Delivery Order",
+    "name": "DO Settings",
+    "endpoint": "GET /api/delivery-orders/settings",
+    "status": 200,
+    "elapsed_ms": 91,
+    "result": "PASS",
+    "sample": "{'ok': True, 'message': 'Success', 'data': {'id': 1, 'company_name': 'PT Nanggal"
+  },
+  {
+    "module": "Delivery Order",
+    "name": "Available Serial Numbers",
+    "endpoint": "GET /api/available-serial-numbers",
+    "status": 200,
+    "elapsed_ms": 134,
+    "result": "PASS",
+    "sample": "{'ok': True, 'message': 'Success', 'data': [{'serial_number': 'B1100510', 'part1"
+  },
+  {
+    "module": "Delivery Order",
+    "name": "Customers List",
+    "endpoint": "GET /api/customers",
+    "status": 200,
+    "elapsed_ms": 56,
+    "result": "PASS",
+    "sample": "{'ok': True, 'message': 'Success', 'data': [{'id': 1, 'name': 'KEMHAN RI', 'addr"
+  },
+  {
+    "module": "Delivery Order",
+    "name": "Packing Labels",
+    "endpoint": "GET /api/packing-labels",
+    "status": 200,
+    "elapsed_ms": 50,
+    "result": "PASS",
+    "sample": "{'ok': True, 'data': [{'id': 14, 'label_batch_id': 'LBL-20260915-001', 'pl_numbe"
+  },
+  {
+    "module": "Delivery Order",
+    "name": "Cloudinary Settings",
+    "endpoint": "GET /api/cloudinary/settings",
+    "status": 200,
+    "elapsed_ms": 65,
+    "result": "PASS",
+    "sample": "{'ok': True, 'message': 'Success', 'data': {'configured': True, 'cloud_name': 't"
+  },
+  {
+    "module": "Delivery Order",
+    "name": "Cloudinary Test",
+    "endpoint": "GET /api/cloudinary/test",
+    "status": 200,
+    "elapsed_ms": 54,
+    "result": "PASS",
+    "sample": "{'ok': True, 'message': 'Layanan Cloudinary siap.', 'configured': False}"
+  },
+  {
+    "module": "CMS Portal",
+    "name": "Slow Queries Log",
+    "endpoint": "GET /api/admin/slow-queries",
+    "status": 200,
+    "elapsed_ms": 81,
+    "result": "PASS",
+    "sample": "{'ok': True, 'message': 'Success', 'data': [{'id': 451, 'sql_query': 'select `m`"
+  },
+  {
+    "module": "CMS Portal",
+    "name": "Backend Error Logs",
+    "endpoint": "GET /api/admin/error-logs",
+    "status": 200,
+    "elapsed_ms": 74,
+    "result": "PASS",
+    "sample": "{'ok': True, 'message': 'Success', 'data': [{'id': 37, 'level': 'ERROR', 'messag"
+  },
+  {
+    "module": "CMS Portal",
+    "name": "Anomaly Scanner",
+    "endpoint": "GET /api/admin/anomalies/scan",
+    "status": 200,
+    "elapsed_ms": 240,
+    "result": "PASS",
+    "sample": "{'ok': True, 'message': 'Success', 'data': {'total_anomalies': 406, 'orphan_part"
+  }
+]

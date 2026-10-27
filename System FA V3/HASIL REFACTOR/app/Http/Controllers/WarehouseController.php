@@ -32,12 +32,32 @@ class WarehouseController extends Controller
             $query->where('assigned_operator', $operator);
         }
 
-        $trays = $query->get()->map(function ($tray) {
-            $finishedCount = $tray->assemblies()->whereNotNull('finished_at')->count();
-            $goodCount = $tray->assemblies()->where('status', 'Good')->count();
-            $holdCount = $tray->assemblies()->where('status', 'Hold')->count();
-            $scrapCount = $tray->assemblies()->where('status', 'Scrap')->count();
-            $reworkCount = $tray->assemblies()->where('status', 'Rework')->count();
+        $trayList = $query->get();
+        if ($trayList->isEmpty()) {
+            return $this->successResponse([]);
+        }
+
+        $trayIds = $trayList->pluck('id')->all();
+        $stats = DB::table('assemblies')
+            ->whereIn('tray_id', $trayIds)
+            ->select('tray_id',
+                DB::raw('COUNT(CASE WHEN finished_at IS NOT NULL THEN 1 END) as finished_count'),
+                DB::raw('COUNT(CASE WHEN status = "Good" THEN 1 END) as good_count'),
+                DB::raw('COUNT(CASE WHEN status = "Hold" THEN 1 END) as hold_count'),
+                DB::raw('COUNT(CASE WHEN status = "Scrap" THEN 1 END) as scrap_count'),
+                DB::raw('COUNT(CASE WHEN status = "Rework" THEN 1 END) as rework_count')
+            )
+            ->groupBy('tray_id')
+            ->get()
+            ->keyBy('tray_id');
+
+        $trays = $trayList->map(function ($tray) use ($stats) {
+            $stat = $stats->get($tray->id);
+            $finishedCount = $stat ? (int)$stat->finished_count : 0;
+            $goodCount = $stat ? (int)$stat->good_count : 0;
+            $holdCount = $stat ? (int)$stat->hold_count : 0;
+            $scrapCount = $stat ? (int)$stat->scrap_count : 0;
+            $reworkCount = $stat ? (int)$stat->rework_count : 0;
 
             return [
                 'id' => $tray->id,
@@ -70,6 +90,42 @@ class WarehouseController extends Controller
      */
     public function createTray(Request $request)
     {
+        if (!$request->filled('tray_code')) {
+            $isPU = $request->boolean('is_pu') || str_contains((string)$request->input('source_document_mo'), 'PU');
+            if ($isPU) {
+                $lastPu = Tray::where(function ($q) {
+                    $q->where('tray_code', 'LIKE', 'WH/ASSY-PU/%')
+                      ->orWhere('tray_code', 'LIKE', 'WH/ASSY/PU/%');
+                })->orderBy('id', 'desc')->first();
+
+                $nextPuNum = 1;
+                if ($lastPu && preg_match('/(\d+)$/', $lastPu->tray_code, $m)) {
+                    $nextPuNum = (int)$m[1] + 1;
+                }
+                $trayCode = 'WH/ASSY-PU/' . str_pad($nextPuNum, 6, '0', STR_PAD_LEFT);
+                while (Tray::where('tray_code', $trayCode)->exists()) {
+                    $nextPuNum++;
+                    $trayCode = 'WH/ASSY-PU/' . str_pad($nextPuNum, 6, '0', STR_PAD_LEFT);
+                }
+            } else {
+                $lastTray = Tray::where('tray_code', 'LIKE', 'WH/ASSY/%')
+                    ->where('tray_code', 'NOT LIKE', '%PU%')
+                    ->orderBy('id', 'desc')
+                    ->first();
+
+                $nextNum = 1;
+                if ($lastTray && preg_match('/(\d+)$/', $lastTray->tray_code, $m)) {
+                    $nextNum = (int)$m[1] + 1;
+                }
+                $trayCode = 'WH/ASSY/' . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
+                while (Tray::where('tray_code', $trayCode)->exists()) {
+                    $nextNum++;
+                    $trayCode = 'WH/ASSY/' . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
+                }
+            }
+            $request->merge(['tray_code' => $trayCode]);
+        }
+
         $request->validate([
             'tray_code' => 'required|string|unique:trays,tray_code',
             'pic_warehouse' => 'required|string',
@@ -90,6 +146,16 @@ class WarehouseController extends Controller
                 'session_status' => 'active',
             ]);
 
+            // 1. Validasi anti-duplikasi di payload permintaan supply
+            $seenInPayload = [];
+            foreach ($request->parts as $p) {
+                $pKey = (string)$p['part_type'] . ':' . trim((string)$p['sn']);
+                if (isset($seenInPayload[$pKey])) {
+                    return $this->errorResponse("Nomor seri {$p['sn']} (Tipe {$p['part_type']}) duplikat di dalam daftar supply tray!", 400);
+                }
+                $seenInPayload[$pKey] = true;
+            }
+
             $partsData = [];
             $now = now();
             $actor = auth()->user()?->username ?: $request->pic_warehouse;
@@ -98,7 +164,7 @@ class WarehouseController extends Controller
                 $ptype = (string)$p['part_type'];
                 $sn = trim((string)$p['sn']);
 
-                // Validasi dan update status master stock menjadi 'Supplied'
+                // Validasi dan lock row master stock
                 $stock = MasterStock::where('part_type', $ptype)
                     ->where(function ($w) use ($sn) {
                         $w->where('sn', $sn)
@@ -107,13 +173,20 @@ class WarehouseController extends Controller
                     ->lockForUpdate() // InnoDB row-level locking
                     ->first();
 
-                if ($stock) {
-                    $stock->update([
-                        'status' => 'Supplied',
-                        'allocated_tray_id' => $tray->id,
-                        'allocated_at' => $now,
-                    ]);
+                if (!$stock) {
+                    return $this->errorResponse("Part {$ptype} SN {$sn} tidak terdaftar di Master Stok!", 400);
                 }
+
+                // VALIDASI MUTLAK: Part wajib berstatus 'Tersedia' dan belum teralokasi ke tray manapun
+                if ($stock->status !== 'Tersedia' || !empty($stock->allocated_tray_id)) {
+                    return $this->errorResponse("Part {$ptype} SN {$sn} tidak dapat dialokasikan karena status saat ini adalah '{$stock->status}' atau sedang terikat pada baki lain!", 400);
+                }
+
+                $stock->update([
+                    'status' => 'Supplied',
+                    'allocated_tray_id' => $tray->id,
+                    'allocated_at' => $now,
+                ]);
 
                 $partsData[] = [
                     'tray_id' => $tray->id,
@@ -149,24 +222,53 @@ class WarehouseController extends Controller
     public function getTrayDetail(Request $request)
     {
         $trayId = $request->input('id');
-        $trayCode = $request->input('tray_code');
+        $trayCode = $request->input('code') ?: $request->input('tray_code');
 
-        $tray = Tray::where(function ($w) use ($trayId, $trayCode) {
-            if ($trayId) $w->where('id', $trayId);
-            if ($trayCode) $w->orWhere('tray_code', $trayCode);
-        })->first();
+        if (!$trayId && !$trayCode) {
+            $tray = Tray::orderBy('id', 'desc')->first();
+        } else {
+            $tray = Tray::where(function ($w) use ($trayId, $trayCode) {
+                if ($trayId) $w->where('id', $trayId);
+                if ($trayCode) $w->orWhere('tray_code', $trayCode);
+            })->first();
+        }
 
         if (!$tray) {
             return $this->errorResponse('Tray tidak ditemukan', 404);
         }
 
-        $parts = $tray->parts()->get();
+        $parts = $tray->parts()->orderBy('id', 'asc')->get();
         $assemblies = $tray->assemblies()->orderBy('set_number', 'asc')->get();
+
+        // Active downtime (pause)
+        $activeDt = \App\Models\AssemblyDowntime::where('tray_id', $tray->id)
+            ->whereNull('resumed_at')
+            ->orderBy('id', 'desc')
+            ->first();
+        $activeDowntime = null;
+        if ($activeDt) {
+            $elapsedSeconds = max(0, now()->diffInSeconds($activeDt->paused_at));
+            $activeDowntime = [
+                'is_paused' => true,
+                'downtime_id' => $activeDt->id,
+                'reason' => $activeDt->reason,
+                'operator' => $activeDt->operator,
+                'paused_at' => $activeDt->paused_at,
+                'elapsed_seconds' => $elapsedSeconds,
+            ];
+        }
+
+        // Active in-progress set
+        $inProgress = \Illuminate\Support\Facades\DB::table('assembly_in_progress')
+            ->where('tray_id', $tray->id)
+            ->first();
 
         return $this->successResponse([
             'tray' => $tray,
             'parts' => $parts,
             'assemblies' => $assemblies,
+            'active_downtime' => $activeDowntime,
+            'in_progress' => $inProgress,
         ]);
     }
 
@@ -231,7 +333,16 @@ class WarehouseController extends Controller
             }
 
             if ($action === 'ACCEPT') {
-                $grDoc = "WH/GR/" . str_pad($assembly->tray_id, 6, '0', STR_PAD_LEFT);
+                $tray = Tray::find($assembly->tray_id);
+                $isPU = $tray && (str_contains($tray->tray_code, 'PU') || str_contains($tray->tray_code, '-PU'));
+                if ($isPU) {
+                    preg_match('/PU[^\d]*(\d+)/i', $tray->tray_code, $m);
+                    $puNum = !empty($m[1]) ? (int)$m[1] : 1;
+                    $grDoc = "WH/GR/PU/{$puNum}";
+                } else {
+                    $docSeq = ($tray && preg_match('/(\d+)$/', $tray->tray_code, $m)) ? str_pad($m[1], 6, '0', STR_PAD_LEFT) : str_pad($assembly->tray_id, 6, '0', STR_PAD_LEFT);
+                    $grDoc = "WH/GR/{$docSeq}";
+                }
                 $assembly->update([
                     'warehouse_receipt_status' => 'ACCEPTED',
                     'warehouse_receipt_at' => now(),
@@ -320,4 +431,244 @@ class WarehouseController extends Controller
 
         return $this->successResponse($trays);
     }
+
+    /**
+     * Override Status Part Langsung dari Gudang
+     * Endpoint: POST /api/gudang/override-status
+     */
+    public function overrideStatus(Request $request)
+    {
+        $partType = (string)$request->input('part_type', '');
+        $sn = trim((string)$request->input('sn', ''));
+        $newStatus = $request->input('new_status', 'Tersedia');
+        $reason = $request->input('reason', '');
+        $user = auth()->user()?->username ?: 'Gudang';
+
+        if (!$sn) {
+            return response()->json(['ok' => false, 'error' => 'SN part wajib diisi.'], 400);
+        }
+
+        return DB::transaction(function () use ($partType, $sn, $newStatus, $reason, $user) {
+            $stock = MasterStock::where('part_type', $partType)
+                ->where(function ($w) use ($sn) {
+                    $w->where('sn', $sn)
+                      ->orWhere(DB::raw("REPLACE(sn, '.', '')"), str_replace('.', '', $sn));
+                })
+                ->first();
+
+            if ($stock) {
+                $oldStatus = $stock->status;
+                $isTersedia = ($newStatus === 'Tersedia');
+                $stock->update([
+                    'status' => $newStatus,
+                    'allocated_tray_id' => $isTersedia ? null : $stock->allocated_tray_id,
+                    'allocated_at' => $isTersedia ? null : $stock->allocated_at,
+                    'used_at' => $isTersedia ? null : $stock->used_at,
+                    'last_tray_id' => $isTersedia ? null : $stock->last_tray_id,
+                    'is_replaced_from_assy' => $isTersedia ? 0 : $stock->is_replaced_from_assy,
+                    'last_reason' => $reason,
+                ]);
+
+                PartAuditLog::create([
+                    'part_type' => $partType,
+                    'sn' => $sn,
+                    'old_status' => $oldStatus,
+                    'new_status' => $newStatus,
+                    'action_type' => 'WAREHOUSE_OVERRIDE_STATUS',
+                    'actor_username' => $user,
+                    'actor_role' => 'gudang',
+                    'reason' => $reason ?: 'Override status oleh Gudang',
+                ]);
+            }
+
+            return response()->json([
+                'ok' => true,
+                'message' => "Status part {$sn} berhasil diubah menjadi {$newStatus}!"
+            ]);
+        });
+    }
+
+    /**
+     * Gudang ACC / Verifikasi Individual Set Perakitan
+     * Endpoint: POST /api/gudang/verify-set
+     */
+    public function verifySet(Request $request)
+    {
+        $trayId = $request->input('tray_id');
+        $setNum = $request->input('set_number');
+        $action = $request->input('action', 'ACC');
+        $status = $request->input('status', 'Good');
+        $defectiveParts = $request->input('defective_parts', []);
+        $reason = $request->input('reason', '');
+
+        $assembly = Assembly::where('tray_id', $trayId)->where('set_number', $setNum)->first();
+        if ($assembly) {
+            $assembly->update([
+                'verified_status' => 'ACC',
+                'status' => $status,
+                'defective_parts' => json_encode($defectiveParts),
+                'reason' => $reason,
+                'is_declined' => false,
+            ]);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'message' => "Set #{$setNum} berhasil di-ACC ({$status})."
+        ]);
+    }
+
+    /**
+     * Verifikasi Fisik 1-Set Pengembalian Tray
+     * Endpoint: POST /api/gudang/verify-return-set
+     */
+    public function verifyReturnSet(Request $request)
+    {
+        $trayId = $request->input('tray_id');
+        $setNum = $request->input('set_number');
+        $p15Sn = trim((string)$request->input('p15_sn', ''));
+        $p1Sn = trim((string)$request->input('p1_sn', ''));
+        $p12Sn = trim((string)$request->input('p12_sn', ''));
+        $user = auth()->user()?->username ?: 'Gudang';
+
+        return DB::transaction(function () use ($trayId, $setNum, $p15Sn, $p1Sn, $p12Sn, $user) {
+            foreach ([['15', $p15Sn], ['1', $p1Sn], ['12', $p12Sn]] as [$pType, $sn]) {
+                if ($sn && $sn !== '-') {
+                    MasterStock::where('part_type', $pType)
+                        ->where(function ($w) use ($sn) {
+                            $w->where('sn', $sn)
+                              ->orWhere(DB::raw("REPLACE(sn, '.', '')"), str_replace('.', '', $sn));
+                        })
+                        ->update([
+                            'status' => 'Tersedia',
+                            'allocated_tray_id' => null,
+                            'allocated_at' => null,
+                            'used_at' => null,
+                            'last_tray_id' => null,
+                            'is_replaced_from_assy' => 0,
+                            'last_reason' => 'Pengembalian tray diverifikasi Gudang (kembali Tersedia)',
+                        ]);
+
+                    PartAuditLog::create([
+                        'part_type' => $pType,
+                        'sn' => $sn,
+                        'old_status' => 'Supplied/Return',
+                        'new_status' => 'Tersedia',
+                        'action_type' => 'RETURN_VERIFY_SET',
+                        'actor_username' => $user,
+                        'actor_role' => 'gudang',
+                        'reason' => 'Verifikasi pengembalian part oleh Gudang',
+                    ]);
+                }
+            }
+
+            Assembly::where('tray_id', $trayId)->where('set_number', $setNum)->update([
+                'verified_status' => 'RETURN_VERIFIED'
+            ]);
+
+            $totalSets = Assembly::where('tray_id', $trayId)->count();
+            $verifiedSets = Assembly::where('tray_id', $trayId)->where('verified_status', 'RETURN_VERIFIED')->count();
+            $isFullyVerified = ($totalSets > 0 && $totalSets === $verifiedSets);
+
+            if ($isFullyVerified) {
+                Tray::where('id', $trayId)->update([
+                    'return_verified' => true,
+                    'return_verified_by' => $user,
+                    'return_verified_at' => now(),
+                    'status' => 'returned',
+                ]);
+            }
+
+            return response()->json([
+                'ok' => true,
+                'message' => "Set #{$setNum} berhasil diverifikasi.",
+                'is_fully_verified' => $isFullyVerified
+            ]);
+        });
+    }
+
+    /**
+     * Decline 1-Set Pengembalian Tray
+     * Endpoint: POST /api/gudang/decline-return-set
+     */
+    public function declineReturnSet(Request $request)
+    {
+        $trayId = $request->input('tray_id');
+        $setNum = $request->input('set_number');
+        $declinedParts = $request->input('declined_parts', ['15', '1', '12']);
+        $p15Sn = trim((string)$request->input('p15_sn', ''));
+        $p1Sn = trim((string)$request->input('p1_sn', ''));
+        $p12Sn = trim((string)$request->input('p12_sn', ''));
+        $reason = $request->input('reason', 'Ditolak/Decline saat verifikasi pengembalian');
+        $user = auth()->user()?->username ?: 'Gudang';
+
+        return DB::transaction(function () use ($trayId, $setNum, $declinedParts, $p15Sn, $p1Sn, $p12Sn, $reason, $user) {
+            Assembly::where('tray_id', $trayId)->where('set_number', $setNum)->update([
+                'is_declined' => true,
+                'declined_reason' => $reason,
+                'status' => 'Decline',
+                'verified_status' => 'DECLINED',
+            ]);
+
+            $partMap = ['15' => $p15Sn, '1' => $p1Sn, '12' => $p12Sn];
+            foreach ($declinedParts as $pType) {
+                $sn = $partMap[$pType] ?? null;
+                if ($sn && $sn !== '-') {
+                    MasterStock::where('part_type', $pType)
+                        ->where(function ($w) use ($sn) {
+                            $w->where('sn', $sn)
+                              ->orWhere(DB::raw("REPLACE(sn, '.', '')"), str_replace('.', '', $sn));
+                        })
+                        ->update([
+                            'status' => 'Decline',
+                            'last_reason' => $reason,
+                        ]);
+
+                    PartAuditLog::create([
+                        'part_type' => $pType,
+                        'sn' => $sn,
+                        'old_status' => 'Supplied/Return',
+                        'new_status' => 'Decline',
+                        'action_type' => 'DECLINE_RETURN_SET',
+                        'actor_username' => $user,
+                        'actor_role' => 'gudang',
+                        'reason' => $reason,
+                    ]);
+                }
+            }
+
+            return response()->json([
+                'ok' => true,
+                'message' => 'Set berhasil di-decline dan masuk antrean Verifikasi Admin.'
+            ]);
+        });
+    }
+
+    /**
+     * Arsipkan Notifikasi Pengembalian Tray
+     * Endpoint: POST /api/gudang/acknowledge-return
+     */
+    public function acknowledgeReturn(Request $request)
+    {
+        $trayId = $request->input('tray_id');
+        Tray::where('id', $trayId)->update([
+            'status' => 'returned',
+            'session_status' => 'ARCHIVED',
+        ]);
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Tray pengembalian telah diarsipkan.'
+        ]);
+    }
+
+    /**
+     * Alias Simpan Tray Baru (Gudang Save)
+     * Endpoint: POST /api/gudang/save
+     */
+    public function saveGudang(Request $request)
+    {
+        return $this->createTray($request);
+    }
 }
+
