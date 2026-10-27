@@ -47,6 +47,18 @@ class AssemblyController extends Controller
     }
 
     /**
+     * Bersihkan status sedang dirakit (in-progress) untuk tray tertentu
+     */
+    public function clearInProgress(Request $request)
+    {
+        $trayId = $request->input('tray_id');
+        if ($trayId) {
+            DB::table('assembly_in_progress')->where('tray_id', $trayId)->delete();
+        }
+        return response()->json(['ok' => true]);
+    }
+
+    /**
      * Menyimpan Hasil Perakitan Set
      */
     public function saveSet(Request $request)

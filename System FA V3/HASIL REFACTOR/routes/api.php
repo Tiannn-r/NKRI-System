@@ -108,6 +108,7 @@ Route::get('/gudang/returned-tray-detail', [WarehouseController::class, 'getRetu
 // ==========================================
 Route::prefix('assembly')->group(function () {
     Route::post('/start-set', [AssemblyController::class, 'startSet']);
+    Route::post('/clear-in-progress', [AssemblyController::class, 'clearInProgress']);
     Route::post('/save', [AssemblyController::class, 'saveAssembly']);
     Route::post('/submit-test', [AssemblyController::class, 'submitTest']); // TF 1: 17 Checklist Points
     Route::post('/submit-single-retest', [AssemblyController::class, 'submitSingleRetest']);
@@ -163,6 +164,7 @@ Route::prefix('delivery-orders')->group(function () {
 });
 Route::get('/available-serial-numbers', [DeliveryOrderController::class, 'availableSerialNumbers']);
 Route::get('/cloudinary/settings', [DeliveryOrderController::class, 'cloudinarySettings']);
+Route::post('/cloudinary/settings', [AdminCmsController::class, 'updateCloudinarySettings']);
 Route::get('/cloudinary/test', [DeliveryOrderController::class, 'cloudinaryTest']);
 Route::post('/cloudinary/test', [DeliveryOrderController::class, 'cloudinaryTest']);
 
