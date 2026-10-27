@@ -8435,6 +8435,61 @@
           }
         });
 
+        const prefetchBackgroundData = () => {
+          const tasks = [
+            async () => {
+              if (!traysList.value || !traysList.value.length) {
+                await loadTrays();
+              }
+            },
+            async () => {
+              if (typeof loadAssemblyResults === 'function' && (!assemblyResults.value || !assemblyResults.value.length)) {
+                await loadAssemblyResults(true);
+              }
+            },
+            async () => {
+              if (typeof loadProductionHoldItems === 'function' && (!productionHoldList.value || !productionHoldList.value.length)) {
+                await loadProductionHoldItems(true);
+              }
+            },
+            async () => {
+              if (typeof loadQCPendingItems === 'function' && (!qcPendingList.value || !qcPendingList.value.length)) {
+                await loadQCPendingItems();
+              }
+            },
+            async () => {
+              if (typeof loadLaporan === 'function' && (!laporanList.value || !laporanList.value.length)) {
+                await loadLaporan();
+              }
+            },
+            async () => {
+              if (typeof loadPendingVerifications === 'function' && (!adminPendingSetsTotalCount.value)) {
+                await loadPendingVerifications();
+              }
+            },
+            async () => {
+              if (typeof loadDOList === 'function' && (!doList.value || !doList.value.length)) {
+                await loadDOList();
+              }
+            },
+            async () => {
+              if (typeof loadTestingPoints === 'function' && (!testingPointsList.value || !testingPointsList.value.length)) {
+                await loadTestingPoints();
+              }
+            }
+          ];
+
+          let delay = 350;
+          tasks.forEach(task => {
+            setTimeout(async () => {
+              try {
+                await task();
+              } catch (_) { }
+            }, delay);
+            delay += 400;
+          });
+        };
+
         onMounted(() => {
           const token = localStorage.getItem('token');
           if (!token) {
@@ -10318,8 +10373,10 @@
         const previousPendingAssemblyItemIds = ref(new Set());
         const isAssemblyResultsInitialLoaded = ref(false);
 
-        const loadAssemblyResults = async () => {
-          isLoadingAssemblyResults.value = true;
+        const loadAssemblyResults = async (isSilent = false) => {
+          if (!isSilent && (!assemblyResults.value || !assemblyResults.value.length)) {
+            isLoadingAssemblyResults.value = true;
+          }
           try {
             const res = await fetchAPI('/production/assembly-results');
             if (res.ok && res.data) {
@@ -11261,8 +11318,10 @@
         const previousPendingHoldItemMap = ref(new Map());
         const isHoldItemsInitialLoaded = ref(false);
 
-        const loadProductionHoldItems = async () => {
-          isLoadingProductionHold.value = true;
+        const loadProductionHoldItems = async (isSilent = false) => {
+          if (!isSilent && (!productionHoldList.value || !productionHoldList.value.length)) {
+            isLoadingProductionHold.value = true;
+          }
           try {
             const res = await fetchAPI('/production/hold-items');
             if (res.ok && res.data) {
@@ -16405,7 +16464,8 @@
 
             setTimeout(() => {
               startGlobalBadgePolling();
-            }, 1200);
+              prefetchBackgroundData();
+            }, 600);
           } catch (err) {
             console.error('Error during onMounted initialization:', err);
           } finally {
