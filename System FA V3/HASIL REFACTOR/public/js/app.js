@@ -10318,7 +10318,32 @@
           try {
             const res = await fetchAPI('/production/assembly-results');
             if (res.ok && res.data) {
-              const rawTrays = Array.isArray(res.data) ? res.data : (res.data?.trays || []);
+              const rawData = Array.isArray(res.data) ? res.data : (res.data?.trays || res.data?.data || []);
+              let rawTrays = [];
+              if (rawData.length > 0 && !rawData[0].items && rawData[0].tray_code) {
+                const gMap = {};
+                rawData.forEach(item => {
+                  const tKey = item.tray_id || item.tray_code;
+                  if (!gMap[tKey]) {
+                    gMap[tKey] = {
+                      tray_id: item.tray_id,
+                      tray_code: item.tray_code,
+                      source_document_mo: item.source_document_mo,
+                      product_type: item.product_type || 'Nanggala P9',
+                      tray_status: item.tray_status || 'active',
+                      tray_created_at: item.tray_created_at,
+                      pic_assembly: item.pic_assembly,
+                      pic_warehouse: item.pic_warehouse,
+                      items: []
+                    };
+                  }
+                  gMap[tKey].items.push(item);
+                });
+                rawTrays = Object.values(gMap);
+              } else {
+                rawTrays = rawData;
+              }
+
               assemblyResults.value = rawTrays.map(t => {
                 let good_count = 0;
                 let hold_count = 0;
@@ -10346,20 +10371,6 @@
                 };
               });
 
-              // Deteksi perubahan status setelah verifikasi admin (tanpa perlu refresh halaman)
-              const currentPendingIds = new Set();
-              (assemblyResults.value || []).forEach(t => {
-                (t.items || []).forEach(it => {
-                  const aid = it.assembly_id || it.id;
-                  if (isItemPendingAdmin(it)) {
-                    currentPendingIds.add(aid);
-                  } else if (isAssemblyResultsInitialLoaded.value && previousPendingAssemblyItemIds.value.has(aid)) {
-                    const newStatus = getAssemblyStageStatus(it);
-                    triggerToast('Verifikasi Selesai', `Set #${it.set_number} (${t.tray_code}) telah diverifikasi oleh Admin. Status langsung diperbarui ke ${newStatus}.`, 'success');
-                  }
-                });
-              });
-              previousPendingAssemblyItemIds.value = currentPendingIds;
               isAssemblyResultsInitialLoaded.value = true;
 
               if (selectedAssemblyItem.value && selectedAssemblyItem.value.assembly_id) {
@@ -11267,30 +11278,6 @@
               productionHoldList.value = newItems;
 
               // Deteksi card / transaksi yang diverifikasi admin dan/atau hilang dari log kendala
-              const currentPendingMap = new Map();
-              const newItemIds = new Set(newItems.map(i => i.assembly_id || i.id));
-
-              newItems.forEach(it => {
-                const aid = it.assembly_id || it.id;
-                const vStat = String(it.verified_status || '').trim().toUpperCase();
-                const isPending = isItemPendingAdmin(it) || vStat.startsWith('PENDING_ADMIN') || vStat === 'PENDING_REPLACEMENT';
-                if (isPending) {
-                  currentPendingMap.set(aid, { set_number: it.set_number, tray_code: it.tray_code });
-                } else if (isHoldItemsInitialLoaded.value && previousPendingHoldItemMap.value.has(aid)) {
-                  const prev = previousPendingHoldItemMap.value.get(aid);
-                  previousPendingHoldItemMap.value.delete(aid);
-                  triggerToast('Verifikasi Selesai', `Unit Set #${prev.set_number} (${prev.tray_code}) telah selesai diverifikasi oleh Admin.`, 'success');
-                }
-              });
-
-              if (isHoldItemsInitialLoaded.value) {
-                previousPendingHoldItemMap.value.forEach((val, aid) => {
-                  if (!newItemIds.has(aid)) {
-                    triggerToast('Verifikasi Selesai', `Unit Set #${val.set_number} (${val.tray_code}) telah selesai diverifikasi oleh Admin dan dialihkan dari daftar kendala.`, 'info');
-                  }
-                });
-              }
-              previousPendingHoldItemMap.value = currentPendingMap;
               isHoldItemsInitialLoaded.value = true;
 
               if (selectedHoldItem.value && selectedHoldItem.value.assembly_id) {

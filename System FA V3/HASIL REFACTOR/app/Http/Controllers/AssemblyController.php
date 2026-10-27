@@ -638,19 +638,29 @@ class AssemblyController extends Controller
                 $join->on('a.pic_assembly', '=', 'u_assy.username')
                      ->orOn('a.pic_assembly', '=', 'u_assy.full_name');
             })
+            ->leftJoin('users as u_wh', function ($join) {
+                $join->on('t.pic_warehouse', '=', 'u_wh.username')
+                     ->orOn('t.pic_warehouse', '=', 'u_wh.full_name');
+            })
             ->select([
                 't.id as tray_id',
                 't.tray_code',
                 't.source_document_mo',
-                't.product_type',
+                DB::raw("COALESCE(t.product_type, 'Nanggala P9') as product_type"),
+                't.status as tray_status',
+                't.created_at as tray_created_at',
+                DB::raw("COALESCE(u_wh.full_name, t.pic_warehouse) as pic_warehouse"),
+                DB::raw("COALESCE(u_assy.full_name, a.pic_assembly, t.assigned_operator) as pic_assembly"),
                 'a.id as assembly_id',
                 'a.set_number',
                 'a.part15_sn',
                 'a.part12_sn',
                 'a.part1_sn',
                 DB::raw("COALESCE(a.status, 'Good') as status"),
+                DB::raw("COALESCE(a.status, 'Good') as assembly_status"),
                 'a.original_assembly_status',
                 'a.reason',
+                DB::raw("COALESCE(a.reason, '') as assembly_reason"),
                 'a.defective_parts',
                 'a.rework_reason',
                 'a.verified_status',
@@ -665,8 +675,6 @@ class AssemblyController extends Controller
                 'a.qc_notes',
                 'a.lifecycle_path',
                 'a.warehouse_receipt_status',
-                DB::raw("COALESCE(u_assy.full_name, a.pic_assembly) as pic_assembly"),
-                't.created_at as tray_created_at'
             ]);
 
         if ($productType && $productType !== 'ALL') {
@@ -704,8 +712,71 @@ class AssemblyController extends Controller
             });
         }
 
-        $results = $query->orderBy('a.id', 'desc')->limit(1000)->get();
-        return response()->json(['ok' => true, 'data' => $results]);
+        $results = $query->orderBy('t.tray_code', 'asc')->orderBy('a.set_number', 'asc')->get();
+
+        $traysDict = [];
+        $uniqueRows = [];
+        $seenAssemblyIds = [];
+
+        foreach ($results as $row) {
+            $aid = $row->assembly_id;
+            if ($aid && isset($seenAssemblyIds[$aid])) {
+                continue;
+            }
+            if ($aid) {
+                $seenAssemblyIds[$aid] = true;
+            }
+            $r = (array)$row;
+            $r['tray_code'] = $row->tray_code;
+            $r['source_document_mo'] = $row->source_document_mo;
+            $r['pic_assembly'] = $row->pic_assembly;
+            $r['pic_warehouse'] = $row->pic_warehouse;
+            $r['product_type'] = $row->product_type;
+            $uniqueRows[] = $r;
+
+            $tid = $row->tray_id;
+            if (!isset($traysDict[$tid])) {
+                $traysDict[$tid] = [
+                    'tray_id' => $tid,
+                    'tray_code' => $row->tray_code,
+                    'source_document_mo' => $row->source_document_mo,
+                    'product_type' => $row->product_type,
+                    'tray_status' => $row->tray_status ?? 'active',
+                    'tray_created_at' => $row->tray_created_at,
+                    'pic_assembly' => $row->pic_assembly,
+                    'pic_warehouse' => $row->pic_warehouse,
+                    'sets_count' => 0,
+                    'good_count' => 0,
+                    'hold_count' => 0,
+                    'rework_count' => 0,
+                    'scrap_count' => 0,
+                    'declined_count' => 0,
+                    'items' => [],
+                ];
+            }
+            $traysDict[$tid]['items'][] = $r;
+            $traysDict[$tid]['sets_count']++;
+            $st = strtoupper(trim((string)($row->status ?? 'Good')));
+            if ($st === 'HOLD') {
+                $traysDict[$tid]['hold_count']++;
+            } elseif ($st === 'REWORK') {
+                $traysDict[$tid]['rework_count']++;
+            } elseif ($st === 'SCRAP') {
+                $traysDict[$tid]['scrap_count']++;
+            } elseif ($st === 'DECLINED' || !empty($row->is_declined)) {
+                $traysDict[$tid]['declined_count']++;
+            } else {
+                $traysDict[$tid]['good_count']++;
+            }
+        }
+
+        $grouped = array_values($traysDict);
+        return response()->json([
+            'ok' => true,
+            'data' => $grouped,
+            'total_trays' => count($grouped),
+            'total_items' => count($uniqueRows),
+        ]);
     }
 
     /**
