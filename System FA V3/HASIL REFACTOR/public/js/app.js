@@ -11168,8 +11168,10 @@
         const isLoadingPendingReassembly = ref(false);
         const isSubmittingReassemblyDispatch = ref(false);
 
-        const loadPendingReassembly = async () => {
-          isLoadingPendingReassembly.value = true;
+        const loadPendingReassembly = async (isSilent = false) => {
+          if (!isSilent && (!pendingReassemblyList.value || !pendingReassemblyList.value.length)) {
+            isLoadingPendingReassembly.value = true;
+          }
           try {
             const res = await fetchAPI('/assembly/pending-reassembly');
             if (res && res.ok && Array.isArray(res.data)) {
@@ -11184,6 +11186,8 @@
             isLoadingPendingReassembly.value = false;
           }
         };
+
+        const pendingReassemblyCount = computed(() => (pendingReassemblyList.value || []).length);
 
         const toggleSelectReassembly = (id) => {
           const idx = selectedReassemblyIds.value.indexOf(id);
@@ -11402,6 +11406,14 @@
             declined,
             total: list.length
           };
+        });
+
+        const gudangTotalBadgeCount = computed(() => {
+          return (warehouseReceiptCounts.value?.pending || 0) +
+                 (pendingReturnsCount.value || 0) +
+                 (productionHoldCounts.value?.active_hold || 0) +
+                 (assemblyResultsSummary.value?.notifCount || 0) +
+                 (pendingReassemblyCount.value || 0);
         });
 
         const filteredWarehouseReceiptList = computed(() => {
@@ -12941,37 +12953,51 @@
           triggerToast('Ekspor Excel Berhasil', `File ${filename} berhasil diunduh dengan highlight warna dan kolom rapi.`, 'success');
         };
 
+        const refreshAllMenuBadges = async (isInitial = false) => {
+          if (!localStorage.getItem('token')) return;
+          if (!isInitial && document.hidden) return;
+          if (!isInitial && document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) return;
+          if (!isInitial && inputDropdown && inputDropdown.value && inputDropdown.value.isOpen) return;
+          if (!isInitial && ((showStatusDrillModal && showStatusDrillModal.value) || (showMasterPartTrackingModal && showMasterPartTrackingModal.value))) return;
+
+          try {
+            await Promise.allSettled([
+              loadProductionHoldItems(true),
+              loadPendingVerifications(),
+              loadQCPendingItems(),
+              loadWarehouseReceiptReports(),
+              loadReturnedTrays(),
+              loadPendingReassembly(true),
+              loadAssemblyResults(true)
+            ]);
+          } catch (e) {
+            console.error('Error in refreshAllMenuBadges:', e);
+          }
+        };
+
         let globalBadgePollTimer = null;
         const startGlobalBadgePolling = () => {
           if (globalBadgePollTimer) clearInterval(globalBadgePollTimer);
+          // Langsung jalankan saat inisialisasi agar seluruh notifikasi badge menu langsung muncul tanpa menunggu jeda!
+          refreshAllMenuBadges(true);
+
           globalBadgePollTimer = setInterval(() => {
-            if (showStatusDrillModal && showStatusDrillModal.value) return;
-            if (showMasterPartTrackingModal && showMasterPartTrackingModal.value) return;
-            if (inputDropdown && inputDropdown.value && inputDropdown.value.isOpen) return;
-            if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) return;
-            if (localStorage.getItem('token') && !document.hidden) {
-              loadProductionHoldItems();
-              loadPendingVerifications();
-              loadQCPendingItems();
-              loadWarehouseReceiptReports();
+            refreshAllMenuBadges(false);
+
+            if (!document.hidden && localStorage.getItem('token')) {
               if (currentTab.value === 'production_hold' || currentTab.value === 'functional_hold') {
-                if (currentTab.value === 'production_hold') loadAssemblyResults();
                 loadProductionProducts();
               }
               if ((currentTab.value === 'assembly' || currentTab.value === 'assy_testing') && selectedTrayCode.value) {
-                loadAssemblyTray();
-              }
-              if (currentTab.value === 'qc') {
-                loadQCPendingItems();
+                if (!document.activeElement || (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA')) {
+                  loadAssemblyTray();
+                }
               }
               if (currentTab.value === 'warehouse' || currentTab.value === 'traveler') {
                 loadTrays();
               }
-              if (currentTab.value === 'reassembly') {
-                loadPendingReassembly();
-              }
             }
-          }, 12000);
+          }, 10000);
         };
 
         // -------------------------------------------------------------------
@@ -16387,9 +16413,8 @@
               });
             }
 
-            setTimeout(() => {
-              startGlobalBadgePolling();
-            }, 1000);
+            // Mulai polling dan muat notifikasi badge menu secara instan tanpa jeda
+            startGlobalBadgePolling();
           } catch (err) {
             console.error('Error during onMounted initialization:', err);
           } finally {
@@ -16956,7 +16981,8 @@
           formatIndoDate, formatNumericDate, currentRealtimePrintDate, updateRealtimePrintDate, getDOSerialNumbers, getDOCrateCount, getDOBoxCount,
           unitDropdown, onUnitInputFocus, onUnitInputBlur, onUnitInputChange, getFilteredUnitSuggestions, selectUnitSN, addUnitRowAutomatically, handleUnitInputKeyDown, removeUnitRowDirectly, autofillAllUnits,
           showMasterPartTrackingModal, selectedMasterPartRow, masterPartTrackingData, isLoadingMasterPartDetail, openMasterPartTrackingModal,
-          pendingReassemblyList, selectedReassemblyIds, selectedReassemblyOperator, isLoadingPendingReassembly, isSubmittingReassemblyDispatch, loadPendingReassembly, toggleSelectReassembly, isReassemblySelected, selectAllReassembly, clearSelectedReassembly, submitReassemblyDispatch, openReplaceForHoldItem,
+          pendingReassemblyList, pendingReassemblyCount, selectedReassemblyIds, selectedReassemblyOperator, isLoadingPendingReassembly, isSubmittingReassemblyDispatch, loadPendingReassembly, toggleSelectReassembly, isReassemblySelected, selectAllReassembly, clearSelectedReassembly, submitReassemblyDispatch, openReplaceForHoldItem,
+          gudangTotalBadgeCount, refreshAllMenuBadges,
           syncCurrentUserPermissions,
           defaultCrateIdForNow,
           onDODateChanged, getYearMonthFromDate, getNowWIBDateString,

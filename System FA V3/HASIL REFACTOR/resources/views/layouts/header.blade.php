@@ -97,14 +97,10 @@
                     <span class="text-xs font-black uppercase tracking-wider text-slate-800">Gudang</span>
                   </div>
                   <div class="flex items-center space-x-1.5">
-                    <span v-if="warehouseReceiptCounts.pending > 0"
+                    <span v-if="gudangTotalBadgeCount > 0"
                       class="px-1.5 py-0.5 bg-amber-400 text-slate-950 font-black text-[9px] rounded-full"
-                      title="Menunggu Verifikasi Fisik">
-                      {{ warehouseReceiptCounts.pending }}
-                    </span>
-                    <span v-else-if="pendingReturnsCount > 0"
-                      class="px-1.5 py-0.5 bg-amber-400 text-slate-950 font-black text-[9px] rounded-full">
-                      {{ pendingReturnsCount }}
+                      :title="'Total Notifikasi Gudang: ' + gudangTotalBadgeCount">
+                      {{ gudangTotalBadgeCount }}
                     </span>
                     <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform duration-200"
                       :class="{ 'rotate-180': sidebarOpen.gudang }"></i>
