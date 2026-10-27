@@ -3656,50 +3656,8 @@
 
         
         // -------------------------------------------------------------------------
-        // OPSI: LANGSUNG LANJUT (DIRECT RESUME) & 1-CLICK PEMULIHAN DECLINED SET
+        // 1-CLICK PEMULIHAN DECLINED SET
         // -------------------------------------------------------------------------
-        const isExecutingDirectResume = ref(false);
-        const executeDirectResume = async (item) => {
-          if (!item) return;
-          const assyId = item.assembly_id || item.id;
-          if (!assyId) {
-            triggerToast('Perhatian', 'ID rakitan tidak valid.', 'warning');
-            return;
-          }
-
-          const confirmed = confirm(`Konfirmasi Langsung Lanjut:\nSet #${item.set_number || ''} (${item.part15_sn || '-'})\n\nApakah Anda yakin barang fisik in-aktual telah diperiksa dan TIDAK ada masalah?\nStatus akan langsung diloloskan ke tahap berikutnya.`);
-          if (!confirmed) return;
-
-          isExecutingDirectResume.value = true;
-          try {
-            const res = await fetchAPI('/assembly/direct-resume', {
-              method: 'POST',
-              body: JSON.stringify({
-                assembly_id: assyId,
-                notes: 'Pemeriksaan fisik in-aktual OK: Langsung Lanjut Good tanpa ganti part'
-              })
-            });
-
-            if (res.ok) {
-              triggerToast('Berhasil Dilanjutkan', res.message || 'Set berhasil dilanjutkan ke tahap berikutnya.', 'success');
-              if (typeof showAssemblyDetailModal !== 'undefined') showAssemblyDetailModal.value = false;
-              if (typeof showHoldDetailModal !== 'undefined') showHoldDetailModal.value = false;
-              if (typeof showAdminSetDetailModal !== 'undefined') showAdminSetDetailModal.value = false;
-              if (typeof loadAssemblyResults === 'function') await loadAssemblyResults();
-              if (typeof loadProductionHoldItems === 'function') await loadProductionHoldItems();
-              if (typeof loadPendingVerifications === 'function') await loadPendingVerifications();
-              if (typeof loadQCPendingItems === 'function') await loadQCPendingItems();
-              if (typeof loadTesterAssemblyPendingItems === 'function') await loadTesterAssemblyPendingItems();
-            } else {
-              triggerToast('Gagal', res.error || 'Gagal melanjutkan set', 'error');
-            }
-          } catch (err) {
-            triggerToast('Error', err.message || 'Terjadi kesalahan sistem', 'error');
-          } finally {
-            isExecutingDirectResume.value = false;
-          }
-        };
-
         const isSubmittingDeclinedRestore = ref(false);
         const restoreDeclinedSetToAvailable = async (set) => {
           if (!set) return;
@@ -16884,7 +16842,7 @@
           totalPgQCList, totalPgGudangVerif, totalPgWOReport, totalPgAssyReport, totalPgAssyTestReport, totalPgQCReport, totalPgWarehouseReport,
           totalPgProductionHold, totalPgQcTraySummary,
           pagedReturnsList, pagedWarehouseReceiptTraySummaryList, totalPgReturns, totalPgReceiptTray,
-          openAdminVerifySetModal, verifyAdminSinglePart, verifyAllPartsInActiveSet, isExecutingDirectResume, executeDirectResume, isSubmittingDeclinedRestore, restoreDeclinedSetToAvailable,
+          openAdminVerifySetModal, verifyAdminSinglePart, verifyAllPartsInActiveSet, isSubmittingDeclinedRestore, restoreDeclinedSetToAvailable,
           deleteAdminVerifyRequest, deleteAdminSetPart, deleteAdminDeclinedSet,
           showAdminVerifyModal, adminVerifyForm, openAdminVerifyModal, submitAdminVerify,
           selectedOperatorFilter, onOperatorFilterChange,

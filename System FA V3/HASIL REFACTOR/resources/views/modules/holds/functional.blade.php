@@ -328,13 +328,6 @@
                           title="Ganti Part Bermasalah dengan Stok Gudang">
                           <i class="fa-solid fa-wrench text-xs"></i>
                         </button>
-                        <button @click="executeDirectResume(item)"
-                          :disabled="isExecutingDirectResume"
-                          class="h-8 px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold flex items-center justify-center gap-1 shadow-xs transition cursor-pointer active:scale-95 shrink-0 text-xs"
-                          title="Jika pemeriksaan in-aktual fisik OK, langsung loloskan ke tahap selanjutnya">
-                          <i class="fa-solid fa-forward text-xs"></i>
-                          <span>Langsung Lanjut</span>
-                        </button>
                       </template>
                     </div>
                   </td>
@@ -585,13 +578,6 @@
                     title="Ganti part bermasalah dengan stok gudang">
                     <i class="fa-solid fa-wrench text-xs shrink-0"></i>
                     <span class="truncate">Ganti Part</span>
-                  </button>
-                  <button @click="executeDirectResume(item)"
-                    :disabled="isExecutingDirectResume"
-                    class="h-9 w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold px-2 rounded-xl text-xs shadow-2xs flex items-center justify-center space-x-1.5 transition cursor-pointer active:scale-95 whitespace-nowrap truncate"
-                    title="Jika pemeriksaan in-aktual fisik OK, langsung loloskan ke tahap selanjutnya">
-                    <i class="fa-solid fa-forward text-xs shrink-0"></i>
-                    <span class="truncate">Langsung Lanjut</span>
                   </button>
                 </template>
               </div>

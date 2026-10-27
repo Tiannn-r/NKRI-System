@@ -455,14 +455,6 @@
                   <i class="fa-solid fa-wrench text-[11px]"></i>
                   <span>Ganti Part</span>
                 </button>
-                <!-- Tombol LANGSUNG LANJUT (Kondisi fisik in-aktual OK) -->
-                <button type="button" @click="executeDirectResume(selectedHoldItem || selectedAssemblyItem)"
-                  :disabled="isExecutingDirectResume"
-                  class="h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition flex items-center gap-1.5 cursor-pointer active:scale-95 whitespace-nowrap"
-                  title="Jika saat pengecekan fisik in-aktual ternyata barang tidak ada masalah, langsung loloskan ke tahap berikutnya">
-                  <i class="fa-solid fa-forward text-[11px]" :class="isExecutingDirectResume ? 'fa-spinner fa-spin' : ''"></i>
-                  <span>Langsung Lanjut</span>
-                </button>
               </template>
 
               <!-- KONDISI B: DARI HASIL PERAKITAN (ASSEMBLY MURNI) -> PERAKITAN ULANG & GANTI PART -->
@@ -488,14 +480,6 @@
                   class="h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-600/20 transition flex items-center gap-1.5 cursor-pointer active:scale-95 whitespace-nowrap">
                   <i class="fa-solid fa-wrench text-[11px]"></i>
                   <span>Ganti Part</span>
-                </button>
-                <!-- Tombol LANGSUNG LANJUT (Kondisi fisik in-aktual OK) -->
-                <button type="button" @click="executeDirectResume(selectedAssemblyItem || selectedHoldItem)"
-                  :disabled="isExecutingDirectResume"
-                  class="h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition flex items-center gap-1.5 cursor-pointer active:scale-95 whitespace-nowrap"
-                  title="Jika saat pengecekan fisik in-aktual ternyata barang tidak ada masalah, langsung loloskan ke Good">
-                  <i class="fa-solid fa-forward text-[11px]" :class="isExecutingDirectResume ? 'fa-spinner fa-spin' : ''"></i>
-                  <span>Langsung Lanjut</span>
                 </button>
               </template>
             </div>
