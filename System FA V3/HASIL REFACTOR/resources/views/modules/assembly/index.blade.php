@@ -431,9 +431,9 @@
                       'function' && isReassemblySet(slot))) ? getFormattedDocCode(currentTray.tray_code, 'assy_rework')
                       : slot.assy_doc_number }}
                     </span>
-                    <span :class="getStatusBadgeClass(slot.status)"
+                    <span :class="getStatusBadgeClass(slot.original_assembly_status || slot.status)"
                       class="text-[10px] font-black uppercase px-2 py-0.5 rounded-lg border">
-                      {{ slot.status }}
+                      {{ slot.original_assembly_status || slot.status }}
                     </span>
                   </template>
                 </div>
@@ -466,9 +466,9 @@
                       15:</span>
                     <span v-if="isPartDefective(slot, '15')" :class="getDefectiveBadgeClass(slot)"
                       class="text-[9px] font-sans font-black px-1.5 py-0.5 rounded leading-none uppercase">
-                      {{ slot.status }}
+                      {{ slot.original_assembly_status || slot.status }}
                     </span>
-                    <span v-else-if="slot.status && slot.status !== 'Good'"
+                    <span v-else-if="(slot.original_assembly_status || slot.status) && (slot.original_assembly_status || slot.status) !== 'Good'"
                       class="text-[9px] font-sans font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 leading-none">
                       <i class="fa-solid fa-check text-[8px]"></i> Aman
                     </span>
@@ -484,9 +484,9 @@
                       1:</span>
                     <span v-if="isPartDefective(slot, '1')" :class="getDefectiveBadgeClass(slot)"
                       class="text-[9px] font-sans font-black px-1.5 py-0.5 rounded leading-none uppercase">
-                      {{ slot.status }}
+                      {{ slot.original_assembly_status || slot.status }}
                     </span>
-                    <span v-else-if="slot.status && slot.status !== 'Good'"
+                    <span v-else-if="(slot.original_assembly_status || slot.status) && (slot.original_assembly_status || slot.status) !== 'Good'"
                       class="text-[9px] font-sans font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 leading-none">
                       <i class="fa-solid fa-check text-[8px]"></i> Aman
                     </span>
@@ -502,9 +502,9 @@
                       12:</span>
                     <span v-if="isPartDefective(slot, '12')" :class="getDefectiveBadgeClass(slot)"
                       class="text-[9px] font-sans font-black px-1.5 py-0.5 rounded leading-none uppercase">
-                      {{ slot.status }}
+                      {{ slot.original_assembly_status || slot.status }}
                     </span>
-                    <span v-else-if="slot.status && slot.status !== 'Good'"
+                    <span v-else-if="(slot.original_assembly_status || slot.status) && (slot.original_assembly_status || slot.status) !== 'Good'"
                       class="text-[9px] font-sans font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 leading-none">
                       <i class="fa-solid fa-check text-[8px]"></i> Aman
                     </span>

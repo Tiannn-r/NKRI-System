@@ -19,6 +19,7 @@ class Assembly extends Model
         'part12_sn',
         'part1_sn',
         'status',
+        'original_assembly_status',
         'reason',
         'rework_reason',
         'defective_parts',

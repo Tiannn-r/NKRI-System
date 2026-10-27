@@ -775,12 +775,7 @@
             } else if (targetSub === 'warehouse_receipt') {
               loadWarehouseReceiptReports();
             }
-            // Pre-load background pipeline counts if empty
-            if (!laporanList.value || !laporanList.value.length) loadLaporan();
-            if (targetSub !== 'assembly' && (!assemblyResults.value || !assemblyResults.value.length)) loadAssemblyResults();
-            if (targetSub !== 'assy_test' && (!assyTestReports.value || !assyTestReports.value.length)) loadAssyTestReports();
-            if (targetSub !== 'qc_test' && (!qcTestReports.value || !qcTestReports.value.length)) loadQCTestReports();
-            if (targetSub !== 'warehouse_receipt' && (!warehouseReceiptReports.value || !warehouseReceiptReports.value.length)) loadWarehouseReceiptReports();
+            // Load active subtab only (lazy on-demand)
           } else {
             targetHash = '#' + tab;
             targetKey = tab;
@@ -808,9 +803,6 @@
             } else if (tab === 'warehouse') {
               loadTrays();
               loadOperatorsList();
-              if (typeof fetchInputSuggestions === 'function') {
-                fetchInputSuggestions(0, 'p1', 0, false);
-              }
             } else if (tab === 'returns') {
               loadReturnedTrays();
               loadOperatorsList();
@@ -6261,7 +6253,7 @@
           }
 
           let slotStatus = (context === 'assembly')
-            ? (slot.assembly_status || slot.status || 'Good')
+            ? (slot.original_assembly_status || slot.assembly_status || slot.status || 'Good')
             : (slot.status || slot.assembly_status || slot.warehouse_receipt_status || 'Good');
           // Untuk history & dokumen: jika status adalah 'Dirakit Ulang', tampilkan hasil aktual perakitan ulang
           // Hasil aktual ada di assy_status_history (last real status setelah RU selesai)
@@ -8435,60 +8427,6 @@
           }
         });
 
-        const prefetchBackgroundData = () => {
-          const tasks = [
-            async () => {
-              if (!traysList.value || !traysList.value.length) {
-                await loadTrays();
-              }
-            },
-            async () => {
-              if (typeof loadAssemblyResults === 'function' && (!assemblyResults.value || !assemblyResults.value.length)) {
-                await loadAssemblyResults(true);
-              }
-            },
-            async () => {
-              if (typeof loadProductionHoldItems === 'function' && (!productionHoldList.value || !productionHoldList.value.length)) {
-                await loadProductionHoldItems(true);
-              }
-            },
-            async () => {
-              if (typeof loadQCPendingItems === 'function' && (!qcPendingList.value || !qcPendingList.value.length)) {
-                await loadQCPendingItems();
-              }
-            },
-            async () => {
-              if (typeof loadLaporan === 'function' && (!laporanList.value || !laporanList.value.length)) {
-                await loadLaporan();
-              }
-            },
-            async () => {
-              if (typeof loadPendingVerifications === 'function' && (!adminPendingSetsTotalCount.value)) {
-                await loadPendingVerifications();
-              }
-            },
-            async () => {
-              if (typeof loadDOList === 'function' && (!doList.value || !doList.value.length)) {
-                await loadDOList();
-              }
-            },
-            async () => {
-              if (typeof loadTestingPoints === 'function' && (!testingPointsList.value || !testingPointsList.value.length)) {
-                await loadTestingPoints();
-              }
-            }
-          ];
-
-          let delay = 350;
-          tasks.forEach(task => {
-            setTimeout(async () => {
-              try {
-                await task();
-              } catch (_) { }
-            }, delay);
-            delay += 400;
-          });
-        };
 
         onMounted(() => {
           const token = localStorage.getItem('token');
@@ -13023,6 +12961,7 @@
             if (showStatusDrillModal && showStatusDrillModal.value) return;
             if (showMasterPartTrackingModal && showMasterPartTrackingModal.value) return;
             if (inputDropdown && inputDropdown.value && inputDropdown.value.isOpen) return;
+            if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) return;
             if (localStorage.getItem('token') && !document.hidden) {
               loadProductionHoldItems();
               loadPendingVerifications();
@@ -16453,9 +16392,8 @@
             }
 
             if (currentTab.value === 'warehouse') {
-              if (typeof fetchInputSuggestions === 'function') {
-                fetchInputSuggestions(0, 'p1', 0, false);
-              }
+              loadTrays();
+              loadOperatorsList();
             } else if (currentTab.value === 'assembly' || currentTab.value === 'assy_testing') {
               loadTrays().then(() => {
                 if (selectedTrayCode.value) loadAssemblyTray();
@@ -16464,8 +16402,7 @@
 
             setTimeout(() => {
               startGlobalBadgePolling();
-              prefetchBackgroundData();
-            }, 600);
+            }, 1000);
           } catch (err) {
             console.error('Error during onMounted initialization:', err);
           } finally {
