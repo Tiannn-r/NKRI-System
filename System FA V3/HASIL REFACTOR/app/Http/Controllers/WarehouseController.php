@@ -429,7 +429,34 @@ class WarehouseController extends Controller
             ->orderBy('id', 'desc')
             ->get();
 
-        return $this->successResponse($trays);
+        $result = $trays->map(function ($tray) {
+            $assemblies = Assembly::where('tray_id', $tray->id)->get();
+            $parts = DB::table('parts')->where('tray_id', $tray->id)->get();
+
+            $p15Count = $parts->where('part_type', '15')->count();
+            $assyCount = $assemblies->count();
+            $totalSets = max($p15Count, $assyCount, 0);
+
+            $finishedCount = $assemblies->whereNotNull('finished_at')->whereNotNull('status')->count();
+            $returnedSetsCount = max(0, $totalSets - $finishedCount);
+
+            if ($totalSets === 0) {
+                $msCount = DB::table('master_stocks')->where('allocated_tray_id', $tray->id)->where('part_type', '15')->count();
+                if ($msCount > 0) {
+                    $totalSets = $msCount;
+                    $returnedSetsCount = $msCount;
+                }
+            }
+
+            $trayArr = $tray->toArray();
+            $trayArr['total_sets'] = $returnedSetsCount > 0 ? $returnedSetsCount : ($totalSets ?: 1);
+            $trayArr['all_total_sets'] = $totalSets;
+            $trayArr['finished_count'] = $finishedCount;
+            $trayArr['uncompleted_count'] = $returnedSetsCount;
+            return $trayArr;
+        });
+
+        return $this->successResponse($result);
     }
 
     /**
@@ -453,31 +480,133 @@ class WarehouseController extends Controller
         $assemblies = Assembly::where('tray_id', $tray->id)->orderBy('set_number', 'asc')->get();
         $parts = DB::table('parts')->where('tray_id', $tray->id)->get();
 
+        $p15List = $parts->where('part_type', '15')->values();
+        $p1List = $parts->where('part_type', '1')->values();
+        $p12List = $parts->where('part_type', '12')->values();
+
+        $numSets = max($p15List->count(), $assemblies->count());
+        if ($numSets === 0) {
+            $ms15 = DB::table('master_stocks')->where('allocated_tray_id', $tray->id)->where('part_type', '15')->get();
+            $numSets = max(1, $ms15->count());
+        }
+
         $sets = [];
-        for ($i = 1; $i <= 22; $i++) {
-            $assy = $assemblies->firstWhere('set_number', $i);
-            $p15 = $assy?->part15_sn ?: ($parts->where('part_type', '15')->slice($i - 1, 1)->first()?->sn ?? '-');
-            $p1 = $assy?->part1_sn ?: ($parts->where('part_type', '1')->slice($i - 1, 1)->first()?->sn ?? '-');
-            $p12 = $assy?->part12_sn ?: ($parts->where('part_type', '12')->slice($i - 1, 1)->first()?->sn ?? '-');
+        for ($i = 0; $i < $numSets; $i++) {
+            $setNum = $i + 1;
+            $assy = $assemblies->firstWhere('set_number', $setNum);
+            $p15 = $assy?->part15_sn ?: ($p15List->get($i)?->sn ?? '-');
+            $p1 = $assy?->part1_sn ?: ($p1List->get($i)?->sn ?? '-');
+            $p12 = $assy?->part12_sn ?: ($p12List->get($i)?->sn ?? '-');
+
+            $st15 = MasterStock::where('sn', $p15)->value('status');
+            $st1 = MasterStock::where('sn', $p1)->value('status');
+            $st12 = MasterStock::where('sn', $p12)->value('status');
+
+            $isVerified = ($tray->return_verified || $st15 === 'Tersedia' || ($assy && in_array($assy->verified_status, ['ACC', 'RETURN_VERIFIED'])));
+            $isDeclined = ($assy && $assy->is_declined) || $st15 === 'Declined' || $st1 === 'Declined' || $st12 === 'Declined';
 
             $sets[] = [
-                'set_number' => $i,
+                'set_number' => $setNum,
                 'p15_sn' => $p15,
                 'p1_sn' => $p1,
                 'p12_sn' => $p12,
-                'status' => $assy?->status ?: 'Tersedia',
-                'is_verified' => $assy ? in_array($assy->verified_status, ['ACC', 'RETURN_VERIFIED']) : false,
-                'is_declined' => $assy ? (bool)$assy->is_declined : false,
+                'p15_status' => $st15,
+                'p1_status' => $st1,
+                'p12_status' => $st12,
+                'status' => $isVerified ? 'Tersedia' : ($isDeclined ? 'Declined' : ($assy?->status ?: 'Dikembalikan')),
+                'is_verified' => $isVerified,
+                'is_declined' => $isDeclined,
                 'declined_reason' => $assy?->declined_reason,
             ];
         }
 
+        $finishedCount = $assemblies->whereNotNull('finished_at')->whereNotNull('status')->count();
+
+        $trayArr = $tray->toArray();
+        $trayArr['finished_count'] = $finishedCount;
+        $trayArr['total_sets'] = count($sets);
+
         return response()->json([
             'ok' => true,
-            'tray' => $tray,
-            'finished_count' => $assemblies->whereNotNull('finished_at')->count(),
+            'tray' => $trayArr,
+            'finished_count' => $finishedCount,
             'sets' => $sets,
         ]);
+    }
+
+    /**
+     * Verifikasi Seluruh Part Pengembalian Tray (Verifikasi Semua)
+     * Endpoint: POST /api/gudang/verify-return-tray
+     */
+    public function verifyReturnTray(Request $request)
+    {
+        $trayId = $request->input('tray_id');
+        $trayCode = $request->input('tray_code');
+        $user = auth()->user()?->username ?: 'Gudang';
+
+        $tray = Tray::where(function ($w) use ($trayId, $trayCode) {
+            if ($trayId) $w->where('id', $trayId);
+            if ($trayCode) $w->orWhere('tray_code', $trayCode);
+        })->first();
+
+        if (!$tray) {
+            return $this->errorResponse('Tray tidak ditemukan', 404);
+        }
+
+        return DB::transaction(function () use ($tray, $user) {
+            $parts = DB::table('parts')->where('tray_id', $tray->id)->get();
+            $sns = $parts->pluck('sn')->filter()->unique()->toArray();
+
+            $msSns = DB::table('master_stocks')
+                ->where('allocated_tray_id', $tray->id)
+                ->pluck('sn')
+                ->filter()
+                ->unique()
+                ->toArray();
+            $allSns = array_unique(array_merge($sns, $msSns));
+
+            if (!empty($allSns)) {
+                MasterStock::whereIn('sn', $allSns)->update([
+                    'status' => 'Tersedia',
+                    'allocated_tray_id' => null,
+                    'allocated_at' => null,
+                    'used_at' => null,
+                    'last_tray_id' => null,
+                    'is_replaced_from_assy' => 0,
+                    'last_reason' => 'Pengembalian tray diverifikasi Gudang (seluruh part kembali Tersedia)',
+                ]);
+
+                foreach ($allSns as $sn) {
+                    $p = DB::table('master_stocks')->where('sn', $sn)->first();
+                    PartAuditLog::create([
+                        'part_type' => $p?->part_type ?: '15',
+                        'sn' => $sn,
+                        'old_status' => 'Supplied/Return',
+                        'new_status' => 'Tersedia',
+                        'action_type' => 'RETURN_VERIFY_TRAY_ALL',
+                        'actor_username' => $user,
+                        'actor_role' => 'gudang',
+                        'reason' => "Verifikasi keseluruhan pengembalian tray {$tray->tray_code}",
+                    ]);
+                }
+            }
+
+            Assembly::where('tray_id', $tray->id)->update([
+                'verified_status' => 'RETURN_VERIFIED'
+            ]);
+
+            $tray->update([
+                'return_verified' => true,
+                'return_verified_by' => $user,
+                'return_verified_at' => now(),
+                'status' => 'returned',
+            ]);
+
+            return response()->json([
+                'ok' => true,
+                'message' => "Pengembalian barang untuk Tray {$tray->tray_code} berhasil diverifikasi. Status seluruh part otomatis kembali Tersedia."
+            ]);
+        });
     }
 
     /**
@@ -614,12 +743,19 @@ class WarehouseController extends Controller
                 'verified_status' => 'RETURN_VERIFIED'
             ]);
 
+            $tray = Tray::find($trayId);
             $totalSets = Assembly::where('tray_id', $trayId)->count();
             $verifiedSets = Assembly::where('tray_id', $trayId)->where('verified_status', 'RETURN_VERIFIED')->count();
-            $isFullyVerified = ($totalSets > 0 && $totalSets === $verifiedSets);
 
-            if ($isFullyVerified) {
-                Tray::where('id', $trayId)->update([
+            $unreturnedInMaster = DB::table('master_stocks')
+                ->where('allocated_tray_id', $trayId)
+                ->where('status', '!=', 'Tersedia')
+                ->count();
+
+            $isFullyVerified = ($totalSets > 0 && $totalSets === $verifiedSets) || ($totalSets === 0 && $unreturnedInMaster === 0);
+
+            if ($isFullyVerified && $tray) {
+                $tray->update([
                     'return_verified' => true,
                     'return_verified_by' => $user,
                     'return_verified_at' => now(),

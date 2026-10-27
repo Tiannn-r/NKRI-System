@@ -51,6 +51,16 @@ class AssemblyController extends Controller
      */
     public function saveSet(Request $request)
     {
+        $p15 = trim((string)($request->input('part15_sn') ?: $request->input('part15', '')));
+        $p1 = trim((string)($request->input('part1_sn') ?: $request->input('part1', '')));
+        $p12 = trim((string)($request->input('part12_sn') ?: $request->input('part12', '')));
+
+        $request->merge([
+            'part15_sn' => $p15,
+            'part1_sn' => $p1,
+            'part12_sn' => $p12,
+        ]);
+
         $request->validate([
             'tray_id' => 'required|integer',
             'set_number' => 'required|integer',
@@ -60,7 +70,7 @@ class AssemblyController extends Controller
             'status' => 'required|string', // Good, Hold, Scrap, Rework
         ]);
 
-        return DB::transaction(function () use ($request) {
+        return DB::transaction(function () use ($request, $p15, $p1, $p12) {
             $tray = Tray::findOrFail($request->tray_id);
             if ($tray->status !== 'active') {
                 return response()->json(['ok' => false, 'error' => "Tray {$tray->tray_code} sudah tidak aktif (status: {$tray->status}) dan tidak dapat dimodifikasi."], 400);
@@ -77,10 +87,6 @@ class AssemblyController extends Controller
                     'error' => "Set #{$request->set_number} sudah selesai dirakit dengan status '{$existing->status}' dan terkunci permanen! Proses yang sudah selesai tidak dapat diulang kembali."
                 ], 400);
             }
-
-            $p15 = trim($request->part15_sn);
-            $p1 = trim($request->part1_sn);
-            $p12 = trim($request->part12_sn);
 
             // 1. Anti-duplikasi di tray yang sama (slot lain)
             $dupSameTray = Assembly::where('tray_id', $request->tray_id)
@@ -102,7 +108,7 @@ class AssemblyController extends Controller
                 ], 400);
             }
 
-            // 2. Validasi kepemilikan part: Part wajib terdaftar di baki ini
+            // 2. Validasi kepemilikan part: Part wajib terdaftar di baki ini (tabel parts atau master_stocks)
             foreach ([['15', $p15], ['1', $p1], ['12', $p12]] as [$pType, $sn]) {
                 $existsInTray = DB::table('parts')
                     ->where('tray_id', $request->tray_id)
@@ -110,12 +116,21 @@ class AssemblyController extends Controller
                     ->where('sn', $sn)
                     ->exists();
                 if (!$existsInTray) {
-                    return response()->json([
-                        'ok' => false, 
-                        'error' => "Part {$pType} SN {$sn} tidak terdaftar pada alokasi baki {$tray->tray_code}!"
-                    ], 400);
+                    $existsInMaster = DB::table('master_stocks')
+                        ->where('allocated_tray_id', $request->tray_id)
+                        ->where('part_type', $pType)
+                        ->where('sn', $sn)
+                        ->exists();
+                    if (!$existsInMaster) {
+                        return response()->json([
+                            'ok' => false, 
+                            'error' => "Part {$pType} SN {$sn} tidak terdaftar pada alokasi baki {$tray->tray_code}!"
+                        ], 400);
+                    }
                 }
             }
+
+            $operator = $request->input('operator') ?: (auth()->user()?->username ?: $request->input('pic_assembly', 'assembly'));
 
             $assembly = Assembly::updateOrCreate(
                 [
@@ -123,7 +138,7 @@ class AssemblyController extends Controller
                     'set_number' => $request->set_number,
                 ],
                 [
-                    'pic_assembly' => auth()->user()?->username ?: $request->input('pic_assembly', 'assembly'),
+                    'pic_assembly' => $operator,
                     'part15_sn' => $p15,
                     'part12_sn' => $p12,
                     'part1_sn' => $p1,

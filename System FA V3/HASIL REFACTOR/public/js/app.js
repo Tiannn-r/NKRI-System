@@ -982,6 +982,7 @@
           const token = localStorage.getItem('token');
           if (!options.headers) options.headers = {};
           options.headers['Content-Type'] = 'application/json';
+          options.headers['Accept'] = 'application/json';
           options.headers['ngrok-skip-browser-warning'] = 'true';
           if (token) options.headers['Authorization'] = 'Bearer ' + token;
 
@@ -1013,7 +1014,7 @@
           if (!contentType.includes('application/json')) {
             let text = '';
             try { text = await res.text(); } catch (_) { }
-            if (!res.ok) {
+            if (!res.ok || res.redirected) {
               if (res.status === 502 || res.status === 503 || res.status === 504) {
                 throw new Error(`Server Gateway Offline (${res.status}): Server backend sedang tidak merespons atau sedang restart.`);
               }
@@ -1021,6 +1022,9 @@
                 throw new Error(`Endpoint API tidak ditemukan (404): ${path}`);
               }
               throw new Error(`Koneksi server bermasalah (${res.status}): Respon non-JSON diterima.`);
+            }
+            if (options.method && options.method !== 'GET') {
+              throw new Error(`Format respon tidak valid: Server merespons non-JSON untuk ${path}`);
             }
             return { ok: true, data: text };
           }
@@ -5286,6 +5290,7 @@
         };
 
         const submitAddSinglePart = async () => {
+          if (addPartLoading.value) return;
           const form = addPartForm.value;
           if (!form.sn || !form.sn.trim()) {
             triggerToast('Validasi Gagal', 'Serial Number (SN) wajib diisi!', 'warn');
@@ -5911,8 +5916,11 @@
             set_number: setNum,
             operator: userFullName.value || operatorName.value,
             part15: assyForm.value.part15.trim(),
+            part15_sn: assyForm.value.part15.trim(),
             part12: assyForm.value.part12.trim(),
+            part12_sn: assyForm.value.part12.trim(),
             part1: assyForm.value.part1.trim(),
+            part1_sn: assyForm.value.part1.trim(),
             status: assyForm.value.status,
             defective_parts: assyForm.value.status !== 'Good' ? assyForm.value.defective_parts : [],
             reason: assyForm.value.reason ? assyForm.value.reason.trim() : null,
@@ -6080,8 +6088,11 @@
             set_number: setNum,
             operator: userFullName.value || operatorName.value,
             part15: p15.trim(),
+            part15_sn: p15.trim(),
             part12: p12.trim(),
+            part12_sn: p12.trim(),
             part1: p1.trim(),
+            part1_sn: p1.trim(),
             status: statusVal,
             defective_parts: statusVal !== 'Good' ? defectivePartsVal : [],
             reason: reasonVal ? reasonVal.trim() : null,

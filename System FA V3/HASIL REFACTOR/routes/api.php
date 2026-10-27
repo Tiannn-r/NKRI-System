@@ -97,7 +97,7 @@ Route::post('/gudang/override-status', [WarehouseController::class, 'overrideSta
 Route::post('/gudang/verify-set', [WarehouseController::class, 'verifySet']);
 Route::post('/gudang/verify-return-set', [WarehouseController::class, 'verifyReturnSet']);
 Route::post('/gudang/decline-return-set', [WarehouseController::class, 'declineReturnSet']);
-Route::post('/gudang/verify-return-tray', [WarehouseController::class, 'verifyTray']);
+Route::post('/gudang/verify-return-tray', [WarehouseController::class, 'verifyReturnTray']);
 Route::post('/gudang/acknowledge-return', [WarehouseController::class, 'acknowledgeReturn']);
 Route::post('/warehouse/verify-qc-receipt', [WarehouseController::class, 'verifyQcReceipt']);
 Route::get('/gudang/returned-trays', [WarehouseController::class, 'getReturnedTrays']);

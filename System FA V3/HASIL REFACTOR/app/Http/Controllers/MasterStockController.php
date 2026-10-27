@@ -715,6 +715,11 @@ class MasterStockController extends Controller
         $limit = is_numeric($limitParam) ? min(100, max(1, (int)$limitParam)) : 20;
         $partType = trim((string)$request->input('part_type', '')) ?: trim((string)$request->input('type', ''));
 
+        $latestAudit = DB::table('part_audit_logs')
+            ->select('sn', 'part_type', DB::raw('MAX(id) as max_audit_id'))
+            ->where('action_type', 'ADD_PART_NUMBER')
+            ->groupBy('sn', 'part_type');
+
         $query = DB::table('master_stocks as m')
             ->select([
                 'm.id',
@@ -727,10 +732,11 @@ class MasterStockController extends Controller
                 'pal.actor_role',
                 'pal.reason'
             ])
-            ->leftJoin('part_audit_logs as pal', function ($join) {
-                $join->on('pal.sn', '=', 'm.sn')
-                     ->where('pal.action_type', '=', 'ADD_PART_NUMBER');
-            });
+            ->leftJoinSub($latestAudit, 'la', function ($join) {
+                $join->on('m.sn', '=', 'la.sn')
+                     ->on('m.part_type', '=', 'la.part_type');
+            })
+            ->leftJoin('part_audit_logs as pal', 'la.max_audit_id', '=', 'pal.id');
 
         if ($partType) {
             $query->where('m.part_type', $partType);
