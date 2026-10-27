@@ -45,7 +45,10 @@ class WarehouseController extends Controller
                 DB::raw('COUNT(CASE WHEN status = "Good" THEN 1 END) as good_count'),
                 DB::raw('COUNT(CASE WHEN status = "Hold" THEN 1 END) as hold_count'),
                 DB::raw('COUNT(CASE WHEN status = "Scrap" THEN 1 END) as scrap_count'),
-                DB::raw('COUNT(CASE WHEN status = "Rework" THEN 1 END) as rework_count')
+                DB::raw('COUNT(CASE WHEN status = "Rework" THEN 1 END) as rework_count'),
+                DB::raw('COUNT(CASE WHEN status = "Good" AND (assy_doc_number IS NOT NULL OR (assy_test_status IS NOT NULL AND assy_test_status NOT IN ("PENDING", "")) OR qc_status IN ("HOLD_ASSY", "REWORK_ASSY", "PENDING_QC", "GOOD", "HOLD_QC")) THEN 1 END) as tested_count'),
+                DB::raw('COUNT(CASE WHEN status = "Good" AND assy_doc_number IS NOT NULL AND qc_status != "HOLD_ASSY" THEN 1 END) as good_assy_test_count'),
+                DB::raw('COUNT(CASE WHEN is_reregistered = 1 OR status = "Dirakit Ulang" OR qc_status = "RU" OR rereg_wo_suffix IS NOT NULL THEN 1 END) as ru_count')
             )
             ->groupBy('tray_id')
             ->get()
@@ -58,6 +61,9 @@ class WarehouseController extends Controller
             $holdCount = $stat ? (int)$stat->hold_count : 0;
             $scrapCount = $stat ? (int)$stat->scrap_count : 0;
             $reworkCount = $stat ? (int)$stat->rework_count : 0;
+            $testedCount = $stat ? (int)$stat->tested_count : 0;
+            $goodAssyTestCount = $stat ? (int)$stat->good_assy_test_count : 0;
+            $ruCount = $stat ? (int)$stat->ru_count : 0;
 
             return [
                 'id' => $tray->id,
@@ -74,9 +80,13 @@ class WarehouseController extends Controller
                 'total_sets' => 22,
                 'finished_count' => $finishedCount,
                 'good_count' => $goodCount,
+                'good_assembly_count' => $goodCount,
                 'hold_count' => $holdCount,
                 'scrap_count' => $scrapCount,
                 'rework_count' => $reworkCount,
+                'tested_count' => $testedCount,
+                'good_assy_test_count' => $goodAssyTestCount,
+                'ru_count' => $ruCount,
                 'created_at' => $tray->created_at,
             ];
         });

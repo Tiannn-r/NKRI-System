@@ -1216,7 +1216,7 @@
         const filteredTraysList = computed(() => {
           let list = (traysList.value || []).filter(t => t.session_status !== 'RETURNED_TO_WAREHOUSE' || (t.finished_count && t.finished_count > 0));
           if (currentTab.value === 'assy_testing') {
-            list = list.filter(t => (t.good_assembly_count || 0) > 0);
+            list = list.filter(t => (t.good_assembly_count || t.good_count || 0) > 0);
           }
           if (selectedOperatorFilter.value && selectedOperatorFilter.value !== '' && selectedOperatorFilter.value !== 'Semua Operator Assembly') {
             const op = selectedOperatorFilter.value.toLowerCase().trim();
@@ -1251,7 +1251,7 @@
           }
           let good = 0, hold = 0, scrap = 0, total = 0;
           list.forEach(t => {
-            good += (t.good_assembly_count || 0);
+            good += (t.good_assembly_count || t.good_count || 0);
             hold += (t.hold_count || 0);
             scrap += (t.scrap_count || 0);
             total += (t.finished_count || 0);
@@ -1271,7 +1271,7 @@
           }
           let passed = 0, hold = 0, pending = 0, total = 0;
           list.forEach(t => {
-            const tGoodAssy = t.good_assembly_count || 0;
+            const tGoodAssy = t.good_assembly_count || t.good_count || 0;
             const tTested = t.tested_count || 0;
             const tPassed = t.good_assy_test_count || tTested;
             passed += tPassed;

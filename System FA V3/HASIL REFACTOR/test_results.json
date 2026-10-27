@@ -4,7 +4,7 @@
     "name": "Get Operators",
     "endpoint": "GET /api/operators",
     "status": 200,
-    "elapsed_ms": 111,
+    "elapsed_ms": 71,
     "result": "PASS",
     "sample": "{'ok': True, 'message': 'Success', 'data': [{'id': 10, 'nik': '262048', 'full_na"
   },
@@ -13,7 +13,7 @@
     "name": "Lookup Users",
     "endpoint": "GET /api/users/lookup",
     "status": 200,
-    "elapsed_ms": 32,
+    "elapsed_ms": 26,
     "result": "PASS",
     "sample": "{'ok': True, 'message': 'Success', 'data': [{'id': 3, 'nik': 'ADM-001', 'full_na"
   },
@@ -22,7 +22,7 @@
     "name": "Get Users (Admin)",
     "endpoint": "GET /api/admin/users",
     "status": 200,
-    "elapsed_ms": 48,
+    "elapsed_ms": 29,
     "result": "PASS",
     "sample": "{'ok': True, 'message': 'Success', 'data': [{'id': 3, 'nik': 'ADM-001', 'full_na"
   },
@@ -31,7 +31,7 @@
     "name": "Get Trays",
     "endpoint": "GET /api/assembly/trays",
     "status": 200,
-    "elapsed_ms": 252,
+    "elapsed_ms": 219,
     "result": "PASS",
     "sample": "{'ok': True, 'message': 'Success', 'data': [{'id': 655, 'tray_code': 'WH/ASSY/00"
   },
@@ -40,7 +40,7 @@
     "name": "Get Tray Detail",
     "endpoint": "GET /api/assembly/tray",
     "status": 200,
-    "elapsed_ms": 60,
+    "elapsed_ms": 70,
     "result": "PASS",
     "sample": "{'ok': True, 'message': 'Success', 'data': {'tray': {'id': 655, 'tray_code': 'WH"
   },
@@ -49,7 +49,7 @@
     "name": "Get Returned Trays",
     "endpoint": "GET /api/gudang/returned-trays",
     "status": 200,
-    "elapsed_ms": 140,
+    "elapsed_ms": 215,
     "result": "PASS",
     "sample": "{'ok': True, 'message': 'Success', 'data': [{'id': 655, 'tray_code': 'WH/ASSY/00"
   },
@@ -58,7 +58,7 @@
     "name": "Get Pending Reassembly",
     "endpoint": "GET /api/assembly/pending-reassembly",
     "status": 200,
-    "elapsed_ms": 29,
+    "elapsed_ms": 53,
     "result": "PASS",
     "sample": "{'ok': True, 'message': 'Success', 'data': [{'id': 4626, 'tray_id': 653, 'set_nu"
   },
@@ -67,7 +67,7 @@
     "name": "Get Production Products",
     "endpoint": "GET /api/production/products",
     "status": 200,
-    "elapsed_ms": 39,
+    "elapsed_ms": 51,
     "result": "PASS",
     "sample": "{'ok': True, 'data': ['Nanggala P9']}"
   },
@@ -76,7 +76,7 @@
     "name": "Get Assembly Results",
     "endpoint": "GET /api/production/assembly-results",
     "status": 200,
-    "elapsed_ms": 203,
+    "elapsed_ms": 241,
     "result": "PASS",
     "sample": "{'ok': True, 'data': [{'tray_id': 169, 'tray_code': 'WH/ASSY-PU/000001', 'source"
   },
@@ -85,7 +85,7 @@
     "name": "Audit Downtime Logs",
     "endpoint": "GET /api/admin/downtime-logs",
     "status": 200,
-    "elapsed_ms": 55,
+    "elapsed_ms": 41,
     "result": "PASS",
     "sample": "{'ok': True, 'message': 'Success', 'data': [{'id': 55, 'tray_id': 249, 'tray_cod"
   },
@@ -103,7 +103,7 @@
     "name": "Get Testing Points (Admin)",
     "endpoint": "GET /api/admin/testing-points",
     "status": 200,
-    "elapsed_ms": 23,
+    "elapsed_ms": 31,
     "result": "PASS",
     "sample": "{'ok': True, 'message': 'Success', 'data': [{'id': 1, 'test_num': 1, 'category':"
   },
@@ -112,7 +112,7 @@
     "name": "Get QC Items",
     "endpoint": "GET /api/qc/items",
     "status": 200,
-    "elapsed_ms": 529,
+    "elapsed_ms": 550,
     "result": "PASS",
     "sample": "{'ok': True, 'message': 'Success', 'data': [{'id': 4249, 'tray_id': 596, 'tray_c"
   },
@@ -121,7 +121,7 @@
     "name": "Get QC Pending Items",
     "endpoint": "GET /api/qc/pending-items",
     "status": 200,
-    "elapsed_ms": 609,
+    "elapsed_ms": 522,
     "result": "PASS",
     "sample": "{'ok': True, 'message': 'Success', 'data': [{'id': 4249, 'tray_id': 596, 'tray_c"
   },
@@ -130,7 +130,7 @@
     "name": "Get Production Hold Items",
     "endpoint": "GET /api/production/hold-items",
     "status": 200,
-    "elapsed_ms": 112,
+    "elapsed_ms": 119,
     "result": "PASS",
     "sample": "{'ok': True, 'message': 'Success', 'data': [{'assembly_id': 4627, 'tray_id': 653"
   },
@@ -139,7 +139,7 @@
     "name": "Laporan Penerimaan Fisik",
     "endpoint": "GET /api/reports/warehouse-receipts",
     "status": 200,
-    "elapsed_ms": 466,
+    "elapsed_ms": 524,
     "result": "PASS",
     "sample": "{'ok': True, 'message': 'Success', 'data': [{'assembly_id': 4616, 'tray_id': 652"
   },
@@ -148,7 +148,7 @@
     "name": "Laporan WO Traveler",
     "endpoint": "GET /api/laporan",
     "status": 200,
-    "elapsed_ms": 653,
+    "elapsed_ms": 708,
     "result": "PASS",
     "sample": "{'ok': True, 'message': 'Success', 'data': [{'id': 4627, 'tray_id': 653, 'set_nu"
   },
@@ -166,7 +166,7 @@
     "name": "Laporan Uji Mutu QC",
     "endpoint": "GET /api/reports/qc-tests",
     "status": 200,
-    "elapsed_ms": 906,
+    "elapsed_ms": 1080,
     "result": "PASS",
     "sample": "{'ok': True, 'message': 'Success', 'data': [{'id': 7994, 'stage': 'QC', 'doc_num"
   },
@@ -175,7 +175,7 @@
     "name": "Pending Verifications",
     "endpoint": "GET /api/admin/pending-verifications",
     "status": 200,
-    "elapsed_ms": 58,
+    "elapsed_ms": 38,
     "result": "PASS",
     "sample": "{'ok': True, 'data': []}"
   },
@@ -184,7 +184,7 @@
     "name": "Pending Assemblies",
     "endpoint": "GET /api/admin/pending-assemblies",
     "status": 200,
-    "elapsed_ms": 78,
+    "elapsed_ms": 56,
     "result": "PASS",
     "sample": "{'ok': True, 'data': [{'id': 4626, 'tray_id': 653, 'set_number': 4, 'pic_assembl"
   },
@@ -193,7 +193,7 @@
     "name": "Pending Replacements",
     "endpoint": "GET /api/admin/pending-replacements",
     "status": 200,
-    "elapsed_ms": 83,
+    "elapsed_ms": 38,
     "result": "PASS",
     "sample": "{'ok': True, 'data': [{'replacement_id': 175, 'assembly_id': 4626, 'tray_id': 65"
   },
@@ -202,7 +202,7 @@
     "name": "Part Audit Logs",
     "endpoint": "GET /api/admin/audit-logs",
     "status": 200,
-    "elapsed_ms": 36,
+    "elapsed_ms": 47,
     "result": "PASS",
     "sample": "{'ok': True, 'data': [{'id': 3726, 'part_type': 'ALL', 'sn': 'Tray#653_Set#5', '"
   },
@@ -211,7 +211,7 @@
     "name": "Stocks Summary",
     "endpoint": "GET /api/master/stocks_summary",
     "status": 200,
-    "elapsed_ms": 360,
+    "elapsed_ms": 335,
     "result": "PASS",
     "sample": "{'ok': True, 'message': 'Success', 'data': [{'part_type': '1', 'total': 6023, 'a"
   },
@@ -220,7 +220,7 @@
     "name": "Stocks List P15",
     "endpoint": "GET /api/master/stocks_list?part_type=15&page=1&limit=5",
     "status": 200,
-    "elapsed_ms": 971,
+    "elapsed_ms": 1032,
     "result": "PASS",
     "sample": "{'ok': True, 'total': 16993, 'page': 1, 'limit': 5, 'total_pages': 3399, 'data':"
   },
@@ -229,7 +229,7 @@
     "name": "Available Parts",
     "endpoint": "GET /api/master/available?part_type=15",
     "status": 200,
-    "elapsed_ms": 30,
+    "elapsed_ms": 66,
     "result": "PASS",
     "sample": "{'ok': True, 'message': 'Success', 'data': [{'sn': 'B1100085', 'cs': 'B', 'part_"
   },
@@ -238,7 +238,7 @@
     "name": "Recent Added Parts",
     "endpoint": "GET /api/master/recent-added?limit=5",
     "status": 200,
-    "elapsed_ms": 25,
+    "elapsed_ms": 52,
     "result": "PASS",
     "sample": "{'ok': True, 'data': [{'id': 44476, 'sn': '11111', 'cs': None, 'part_type': '1',"
   },
@@ -247,7 +247,7 @@
     "name": "List Delivery Orders",
     "endpoint": "GET /api/delivery-orders",
     "status": 200,
-    "elapsed_ms": 505,
+    "elapsed_ms": 638,
     "result": "PASS",
     "sample": "{'ok': True, 'total': 11, 'data': [{'id': 18, 'do_number': '001/SJ/PPIC/09/2026'"
   },
@@ -256,7 +256,7 @@
     "name": "Next Meta DO/PL",
     "endpoint": "GET /api/delivery-orders/next-meta",
     "status": 200,
-    "elapsed_ms": 33,
+    "elapsed_ms": 39,
     "result": "PASS",
     "sample": "{'ok': True, 'message': 'Success', 'data': {'next_number': '012/SJ/PPIC/10/2026'"
   },
@@ -265,7 +265,7 @@
     "name": "DO Settings",
     "endpoint": "GET /api/delivery-orders/settings",
     "status": 200,
-    "elapsed_ms": 41,
+    "elapsed_ms": 23,
     "result": "PASS",
     "sample": "{'ok': True, 'message': 'Success', 'data': {'id': 1, 'company_name': 'PT Nanggal"
   },
@@ -274,7 +274,7 @@
     "name": "Available Serial Numbers",
     "endpoint": "GET /api/available-serial-numbers",
     "status": 200,
-    "elapsed_ms": 87,
+    "elapsed_ms": 66,
     "result": "PASS",
     "sample": "{'ok': True, 'message': 'Success', 'data': [{'serial_number': 'B1100510', 'part1"
   },
@@ -283,7 +283,7 @@
     "name": "Customers List",
     "endpoint": "GET /api/customers",
     "status": 200,
-    "elapsed_ms": 47,
+    "elapsed_ms": 75,
     "result": "PASS",
     "sample": "{'ok': True, 'message': 'Success', 'data': [{'id': 1, 'name': 'KEMHAN RI', 'addr"
   },
@@ -292,7 +292,7 @@
     "name": "Packing Labels",
     "endpoint": "GET /api/packing-labels",
     "status": 200,
-    "elapsed_ms": 55,
+    "elapsed_ms": 29,
     "result": "PASS",
     "sample": "{'ok': True, 'data': [{'id': 14, 'label_batch_id': 'LBL-20260915-001', 'pl_numbe"
   },
@@ -301,7 +301,7 @@
     "name": "Cloudinary Settings",
     "endpoint": "GET /api/cloudinary/settings",
     "status": 200,
-    "elapsed_ms": 77,
+    "elapsed_ms": 21,
     "result": "PASS",
     "sample": "{'ok': True, 'message': 'Success', 'data': {'configured': True, 'cloud_name': 't"
   },
@@ -310,7 +310,7 @@
     "name": "Cloudinary Test",
     "endpoint": "GET /api/cloudinary/test",
     "status": 200,
-    "elapsed_ms": 22,
+    "elapsed_ms": 41,
     "result": "PASS",
     "sample": "{'ok': True, 'message': 'Layanan Cloudinary siap.', 'configured': False}"
   },
@@ -319,25 +319,25 @@
     "name": "Slow Queries Log",
     "endpoint": "GET /api/admin/slow-queries",
     "status": 200,
-    "elapsed_ms": 57,
+    "elapsed_ms": 62,
     "result": "PASS",
-    "sample": "{'ok': True, 'message': 'Success', 'data': [{'id': 660, 'sql_query': 'select `m`"
+    "sample": "{'ok': True, 'message': 'Success', 'data': [{'id': 663, 'sql_query': 'select `m`"
   },
   {
     "module": "CMS Portal",
     "name": "Backend Error Logs",
     "endpoint": "GET /api/admin/error-logs",
     "status": 200,
-    "elapsed_ms": 54,
+    "elapsed_ms": 75,
     "result": "PASS",
-    "sample": "{'ok': True, 'message': 'Success', 'data': [{'id': 60, 'level': 'ERROR', 'messag"
+    "sample": "{'ok': True, 'message': 'Success', 'data': [{'id': 61, 'level': 'ERROR', 'messag"
   },
   {
     "module": "CMS Portal",
     "name": "Anomaly Scanner",
     "endpoint": "GET /api/admin/anomalies/scan",
     "status": 200,
-    "elapsed_ms": 127,
+    "elapsed_ms": 131,
     "result": "PASS",
     "sample": "{'ok': True, 'message': 'Success', 'data': {'total_anomalies': 410, 'orphan_part"
   }
