@@ -201,6 +201,7 @@ class AdminCmsController extends Controller
             })
             ->select([
                 'a.*',
+                'a.id as assembly_id',
                 't.tray_code',
                 't.source_document_mo',
                 't.product_type',
@@ -503,27 +504,45 @@ class AdminCmsController extends Controller
 
         if ($action === 'APPROVE') {
             $assembly->update([
-                'verified_status' => 'APPROVED_REASSEMBLY',
+                'verified_status' => 'WAITING_REASSEMBLY',
                 'status' => 'Dirakit Ulang',
                 'rereg_pending_operator' => $approvedOperator ?: $assembly->pic_assembly,
                 'is_reregistered' => 1,
-                'notes' => $notes ?: 'Persetujuan perakitan ulang oleh Admin',
+                'notes' => $notes ?: 'Disetujui Admin untuk Perakitan Ulang',
             ]);
 
+            // Bersihkan re_register_requests jika ada
+            DB::table('re_register_requests')
+                ->whereIn('sn', array_filter([$assembly->part15_sn, $assembly->part1_sn, $assembly->part12_sn]))
+                ->where('status', 'PENDING')
+                ->update([
+                    'status' => 'APPROVED',
+                    'admin_username' => $admin,
+                    'admin_notes' => $notes ?: 'Disetujui Admin',
+                    'approved_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+            // Pastikan part di master stock statusnya used
+            DB::table('master_stocks')
+                ->whereIn('sn', array_filter([$assembly->part15_sn, $assembly->part1_sn, $assembly->part12_sn]))
+                ->where('status', 'Pending Verif Admin')
+                ->update(['status' => 'Used']);
+
             PartAuditLog::create([
-                'part_type' => '15',
-                'sn' => $assembly->part15_sn ?: $assembly->id,
-                'old_status' => $assembly->status,
-                'new_status' => 'Dirakit Ulang',
+                'part_type' => 'ALL',
+                'sn' => "Tray#{$assembly->tray_id}_Set#{$assembly->set_number}",
+                'old_status' => 'PENDING_ADMIN_ASSY_REREG',
+                'new_status' => 'WAITING_REASSEMBLY',
                 'action_type' => 'APPROVE_ASSY_REREG',
                 'actor_username' => $admin,
                 'actor_role' => 'admin',
-                'reason' => "Perakitan ulang disetujui: {$notes}",
+                'reason' => "Disetujui Admin untuk masuk ke Perakitan Ulang (RU). {$notes}",
             ]);
 
             return response()->json([
                 'ok' => true,
-                'message' => 'Perakitan ulang disetujui!',
+                'message' => "Perakitan ulang Set #{$assembly->set_number} disetujui Admin dan berhasil dialihkan ke antrean Perakitan Ulang (RU)!",
                 'new_tray_code' => $newTrayCode
             ]);
         } else {

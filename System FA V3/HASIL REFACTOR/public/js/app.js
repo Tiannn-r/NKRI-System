@@ -2959,7 +2959,7 @@
           if (!set) return false;
           // Sets genuinely pending admin verification are NOT verified
           if (set.verified_status === 'PENDING_ADMIN' || set.verified_status === 'PENDING_ADMIN_ASSY_REREG' || set.verified_status === 'PENDING_ADMIN_QC') return false;
-          if (set.verified_status === 'ACC' || set.verified_status === 'APPROVED' || set.verified_status === 'APPROVED_QC' || set.verified_status === 'APPROVED_REREG' || set.verified_status === 'WAITING_REASSEMBLY' || set.verified_status === 'COMPLETED_PU') return true;
+          if (set.verified_status === 'ACC' || set.verified_status === 'APPROVED' || set.verified_status === 'APPROVED_QC' || set.verified_status === 'APPROVED_REREG' || set.verified_status === 'WAITING_REASSEMBLY' || set.verified_status === 'APPROVED_REASSEMBLY' || set.verified_status === 'COMPLETED_PU') return true;
           if (set.status === 'Dirakit Ulang' || set.status === 'Selesai') return true;
           if (set.is_declined && (set.verified_status === 'ACC' || set.verified_status === 'APPROVED')) return true;
           const p15Ok = !set.part15_sn || set.part15_sn === '-' || set.p15_status === 'Tersedia' || getStockStatusBySN('15', set.part15_sn) === 'Tersedia';
@@ -3860,7 +3860,7 @@
           try {
             const json = await fetchAPI('/admin/delete-declined-set', {
               method: 'POST',
-              body: JSON.stringify({ assembly_id: set.assembly_id, tray_id: set.tray_id, set_number: set.set_number })
+              body: JSON.stringify({ assembly_id: set.assembly_id || set.id, tray_id: set.tray_id, set_number: set.set_number })
             });
             if (json.ok) {
               triggerToast('Barang Dihapus', json.message || 'Barang rakitan berhasil dihapus dari verifikasi Admin.', 'info');
@@ -4005,40 +4005,40 @@
         const adminReregNotes = ref('');
 
         const adminApproveAssyRereg = async (set, action) => {
-          if (!set || !set.assembly_id) return;
+          const assyId = set?.assembly_id || set?.id;
+          if (!set || !assyId) {
+            triggerToast('Validasi', 'Data rakitan tidak valid!', 'warn');
+            return;
+          }
           try {
             const res = await fetchAPI('/admin/approve-assy-rereg', {
               method: 'POST',
               body: JSON.stringify({
-                assembly_id: set.assembly_id,
+                assembly_id: assyId,
                 action: action,
                 approved_operator: adminReregApprovedOperator.value || set.rereg_pending_operator || set.pic_assembly,
                 notes: adminReregNotes.value
               })
             });
             if (res.ok) {
-              const newTrayCode = res.new_tray_code || getNextPUTrayCode(set.tray_code);
-              const chosenOp = adminReregApprovedOperator.value || set.rereg_pending_operator || set.pic_assembly;
               const msg = action === 'APPROVE'
-                ? `Perakitan ulang disetujui! Dokumen WO: ${getPUWODocNumber(newTrayCode)}. Berhasil ditugaskan ke operator ${chosenOp} dan masuk ke antrean perakitan!`
+                ? `Perakitan ulang Set #${set.set_number || ''} disetujui! Berhasil dialihkan ke antrean Menu Perakitan Ulang (RU).`
                 : 'Pengajuan perakitan ulang ditolak.';
-              triggerToast(action === 'APPROVE' ? 'Disetujui' : 'Ditolak', msg, action === 'APPROVE' ? 'success' : 'warning');
+              triggerToast(action === 'APPROVE' ? 'Disetujui' : 'Ditolak', res.message || msg, action === 'APPROVE' ? 'success' : 'warning');
               adminReregApprovedOperator.value = '';
               adminReregNotes.value = '';
               showAdminSetDetailModal.value = false;
               showAdminVerifySetModal.value = false;
               await loadPendingVerifications();
+              if (typeof loadPendingReassembly === 'function') await loadPendingReassembly();
               if (typeof loadAssemblyResults === 'function') await loadAssemblyResults();
               if (typeof loadProductionHoldItems === 'function') await loadProductionHoldItems();
               await loadTrays();
-              if (action === 'APPROVE' && newTrayCode) {
-                await openTravelerPUDoc(newTrayCode);
-              }
             } else {
-              triggerToast('Gagal', res.error || 'Terjadi kesalahan', 'error');
+              triggerToast('Gagal', res.error || 'Terjadi kesalahan saat memproses perakitan ulang', 'error');
             }
           } catch (err) {
-            triggerToast('Error', err.message, 'error');
+            triggerToast('Error', err.message || 'Terjadi kesalahan sistem', 'error');
           }
         };
 
