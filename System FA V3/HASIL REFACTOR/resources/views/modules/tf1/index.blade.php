@@ -24,7 +24,7 @@
             <!-- Tray Selection & Operator Filter Grid -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 items-end">
               <!-- Filter Operator (If Admin / Gudang / QC) -->
-              <div v-if="userRole === 'admin' || userRole === 'gudang' || userRole === 'qc'">
+              <div v-if="['admin', 'super admin', 'gudang', 'qc'].includes(String(userRole || '').toLowerCase().trim()) || String(userRole || '').toLowerCase().includes('admin')">
                 <label class="block text-[10px] font-bold text-slate-500 mb-1">
                   <i class="fa-solid fa-user-gear mr-1"></i> Filter operator:
                 </label>
@@ -39,7 +39,7 @@
 
               <!-- Select Tray Dropdown -->
               <div
-                :class="(userRole === 'admin' || userRole === 'gudang' || userRole === 'qc') ? 'col-span-1 sm:col-span-2' : 'col-span-3'"
+                :class="(['admin', 'super admin', 'gudang', 'qc'].includes(String(userRole || '').toLowerCase().trim()) || String(userRole || '').toLowerCase().includes('admin')) ? 'col-span-1 sm:col-span-2' : 'col-span-3'"
                 class="relative" ref="trayDropdownRef">
                 <label class="block text-[10px] font-bold text-slate-500 mb-1">
                   <i class="fa-solid fa-boxes-stacked mr-1"></i> Pilih nomor tray:

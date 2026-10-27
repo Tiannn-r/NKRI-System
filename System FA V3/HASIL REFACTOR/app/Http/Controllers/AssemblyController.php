@@ -21,6 +21,17 @@ class AssemblyController extends Controller
         $setNumber = (int)$request->input('set_number');
         $operator = auth()->user()?->username ?: $request->input('operator', 'assembly');
 
+        $existing = Assembly::where('tray_id', $trayId)
+            ->where('set_number', $setNumber)
+            ->first();
+
+        if ($existing && !empty($existing->finished_at) && !empty($existing->status)) {
+            return response()->json([
+                'ok' => false,
+                'error' => "Set #{$setNumber} sudah selesai dirakit ({$existing->status}) dan terkunci permanen! Proses yang sudah selesai tidak dapat diulang."
+            ], 400);
+        }
+
         $assembly = Assembly::firstOrNew([
             'tray_id' => $trayId,
             'set_number' => $setNumber,
@@ -53,6 +64,18 @@ class AssemblyController extends Controller
             $tray = Tray::findOrFail($request->tray_id);
             if ($tray->status !== 'active') {
                 return response()->json(['ok' => false, 'error' => "Tray {$tray->tray_code} sudah tidak aktif (status: {$tray->status}) dan tidak dapat dimodifikasi."], 400);
+            }
+
+            // Kunci mutlak: Jika set sudah selesai dirakit, dilarang diulang kembali
+            $existing = Assembly::where('tray_id', $request->tray_id)
+                ->where('set_number', $request->set_number)
+                ->first();
+
+            if ($existing && !empty($existing->finished_at) && !empty($existing->status)) {
+                return response()->json([
+                    'ok' => false,
+                    'error' => "Set #{$request->set_number} sudah selesai dirakit dengan status '{$existing->status}' dan terkunci permanen! Proses yang sudah selesai tidak dapat diulang kembali."
+                ], 400);
             }
 
             $p15 = trim($request->part15_sn);
@@ -137,6 +160,15 @@ class AssemblyController extends Controller
                 'finished_at' => $assembly->finished_at,
                 'source' => 'ASSEMBLY',
             ]);
+
+            // Cek apakah seluruh 22 set telah selesai dirakit
+            $totalFinished = Assembly::where('tray_id', $tray->id)
+                ->whereNotNull('finished_at')
+                ->whereNotNull('status')
+                ->count();
+            if ($totalFinished >= 22) {
+                $tray->update(['session_status' => 'COMPLETED']);
+            }
 
             return $this->successResponse($assembly, "Set #{$assembly->set_number} berhasil disimpan.");
         });
@@ -225,20 +257,39 @@ class AssemblyController extends Controller
      */
     public function resume(Request $request)
     {
+        $downtimeId = $request->input('downtime_id');
+        $trayId = $request->input('tray_id');
         $trayCode = $request->input('tray_code');
         $operator = auth()->user()?->username ?: $request->input('operator');
 
-        $downtime = AssemblyDowntime::where('tray_code', $trayCode)
-            ->whereNull('resumed_at')
-            ->latest()
-            ->first();
+        $downtime = null;
+        if ($downtimeId) {
+            $downtime = AssemblyDowntime::where('id', $downtimeId)->whereNull('resumed_at')->first();
+        }
+        if (!$downtime && $trayId) {
+            $downtime = AssemblyDowntime::where('tray_id', $trayId)->whereNull('resumed_at')->latest('id')->first();
+        }
+        if (!$downtime && $trayCode) {
+            $downtime = AssemblyDowntime::where('tray_code', $trayCode)->whereNull('resumed_at')->latest('id')->first();
+        }
 
         if ($downtime) {
             $resumedAt = now();
-            $duration = $downtime->paused_at->diffInSeconds($resumedAt);
+            $duration = $downtime->paused_at ? $downtime->paused_at->diffInSeconds($resumedAt) : 0;
             $downtime->update([
                 'resumed_at' => $resumedAt,
                 'duration_seconds' => $duration,
+            ]);
+        }
+
+        // Tutup seluruh downtime yang masih menggantung pada tray ini agar tidak memicu jeda berulang
+        if ($trayId || $trayCode) {
+            AssemblyDowntime::where(function ($w) use ($trayId, $trayCode) {
+                if ($trayId) $w->where('tray_id', $trayId);
+                if ($trayCode) $w->orWhere('tray_code', $trayCode);
+            })->whereNull('resumed_at')->update([
+                'resumed_at' => now(),
+                'duration_seconds' => 0
             ]);
         }
 

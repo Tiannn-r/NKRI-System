@@ -41,7 +41,7 @@ class WarehouseController extends Controller
         $stats = DB::table('assemblies')
             ->whereIn('tray_id', $trayIds)
             ->select('tray_id',
-                DB::raw('COUNT(CASE WHEN finished_at IS NOT NULL THEN 1 END) as finished_count'),
+                DB::raw('COUNT(CASE WHEN finished_at IS NOT NULL OR (status IS NOT NULL AND status != "") THEN 1 END) as finished_count'),
                 DB::raw('COUNT(CASE WHEN status = "Good" THEN 1 END) as good_count'),
                 DB::raw('COUNT(CASE WHEN status = "Hold" THEN 1 END) as hold_count'),
                 DB::raw('COUNT(CASE WHEN status = "Scrap" THEN 1 END) as scrap_count'),
@@ -67,7 +67,7 @@ class WarehouseController extends Controller
                 'source_document_mo' => $tray->source_document_mo,
                 'product_type' => $tray->product_type,
                 'status' => $tray->status,
-                'session_status' => $tray->session_status,
+                'session_status' => ($finishedCount >= 22 && !in_array($tray->session_status, ['COMPLETED_SHIFT', 'RETURNED_TO_WAREHOUSE'])) ? 'COMPLETED' : $tray->session_status,
                 'verified_by_gudang' => (bool)$tray->verified_by_gudang,
                 'verified_at' => $tray->verified_at,
                 'verified_by_user' => $tray->verified_by_user,
@@ -430,6 +430,54 @@ class WarehouseController extends Controller
             ->get();
 
         return $this->successResponse($trays);
+    }
+
+    /**
+     * Detail Pengembalian Tray & Daftar Part
+     * Endpoint: GET /api/gudang/returned-tray-detail
+     */
+    public function getReturnedTrayDetail(Request $request)
+    {
+        $trayId = $request->input('tray_id') ?: $request->input('id');
+        $trayCode = $request->input('code') ?: $request->input('tray_code');
+
+        $tray = Tray::where(function ($w) use ($trayId, $trayCode) {
+            if ($trayId) $w->where('id', $trayId);
+            if ($trayCode) $w->orWhere('tray_code', $trayCode);
+        })->first();
+
+        if (!$tray) {
+            return $this->errorResponse('Tray tidak ditemukan', 404);
+        }
+
+        $assemblies = Assembly::where('tray_id', $tray->id)->orderBy('set_number', 'asc')->get();
+        $parts = DB::table('parts')->where('tray_id', $tray->id)->get();
+
+        $sets = [];
+        for ($i = 1; $i <= 22; $i++) {
+            $assy = $assemblies->firstWhere('set_number', $i);
+            $p15 = $assy?->part15_sn ?: ($parts->where('part_type', '15')->slice($i - 1, 1)->first()?->sn ?? '-');
+            $p1 = $assy?->part1_sn ?: ($parts->where('part_type', '1')->slice($i - 1, 1)->first()?->sn ?? '-');
+            $p12 = $assy?->part12_sn ?: ($parts->where('part_type', '12')->slice($i - 1, 1)->first()?->sn ?? '-');
+
+            $sets[] = [
+                'set_number' => $i,
+                'p15_sn' => $p15,
+                'p1_sn' => $p1,
+                'p12_sn' => $p12,
+                'status' => $assy?->status ?: 'Tersedia',
+                'is_verified' => $assy ? in_array($assy->verified_status, ['ACC', 'RETURN_VERIFIED']) : false,
+                'is_declined' => $assy ? (bool)$assy->is_declined : false,
+                'declined_reason' => $assy?->declined_reason,
+            ];
+        }
+
+        return response()->json([
+            'ok' => true,
+            'tray' => $tray,
+            'finished_count' => $assemblies->whereNotNull('finished_at')->count(),
+            'sets' => $sets,
+        ]);
     }
 
     /**

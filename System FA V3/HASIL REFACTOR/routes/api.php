@@ -101,6 +101,7 @@ Route::post('/gudang/verify-return-tray', [WarehouseController::class, 'verifyTr
 Route::post('/gudang/acknowledge-return', [WarehouseController::class, 'acknowledgeReturn']);
 Route::post('/warehouse/verify-qc-receipt', [WarehouseController::class, 'verifyQcReceipt']);
 Route::get('/gudang/returned-trays', [WarehouseController::class, 'getReturnedTrays']);
+Route::get('/gudang/returned-tray-detail', [WarehouseController::class, 'getReturnedTrayDetail']);
 
 // ==========================================
 // 4. ASSEMBLY WORKSTATION (MEJA PERAKITAN)

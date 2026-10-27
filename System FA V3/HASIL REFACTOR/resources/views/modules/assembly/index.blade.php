@@ -77,7 +77,7 @@
             <div class="flex flex-wrap items-center gap-2 sm:gap-3">
 
               <!-- Filter per Operator untuk Akses Gudang, QC & Admin -->
-              <div v-if="userRole === 'gudang' || userRole === 'admin' || userRole === 'qc'" class="w-full sm:w-60">
+              <div v-if="['admin', 'super admin', 'gudang', 'qc'].includes(String(userRole || '').toLowerCase().trim()) || String(userRole || '').toLowerCase().includes('admin')" class="w-full sm:w-60">
                 <label class="text-[10px] font-bold text-slate-500 block mb-1">
                   <i class="fa-solid fa-user-gear mr-1 text-slate-400"></i>Filter operator:
                 </label>
@@ -149,9 +149,9 @@
                             class="text-[9px] bg-purple-100 text-purple-800 border border-purple-300 px-1.5 py-0.5 rounded font-sans font-bold flex items-center gap-1">
                             <i class="fa-solid fa-rotate-left text-[8px]"></i> Rework ({{ t.rework_count }})
                           </span>
-                          <span v-if="t.finished_count === t.total_sets && t.total_sets > 0 && !t.hold_count"
+                          <span v-if="t.session_status === 'COMPLETED' || (t.finished_count >= (t.total_sets || 22) && (t.total_sets || 22) > 0)"
                             class="text-[10px] bg-emerald-100 text-emerald-800 border border-emerald-300 px-1.5 py-0.5 rounded font-sans font-bold">
-                            Lengkap
+                            Selesai
                           </span>
                           <span v-else-if="!t.hold_count && !t.scrap_count && !t.rework_count && t.finished_count === 0"
                             class="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-sans">
@@ -159,7 +159,7 @@
                           </span>
                           <span v-else-if="!t.hold_count && !t.scrap_count && !t.rework_count"
                             class="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-sans">
-                            Proses
+                            Proses ({{ t.finished_count || 0 }}/{{ t.total_sets || 22 }})
                           </span>
                         </div>
                       </button>
@@ -308,16 +308,7 @@
                     }}</strong></p>
               </div>
             </div>
-            <button v-if="userRole !== 'gudang' && userRole !== 'qc'" @click="resumeAssemblyWork"
-              class="w-full sm:w-auto bg-slate-950 hover:bg-slate-900 text-white font-black px-5 py-2.5 rounded-xl text-xs shadow-lg transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
-              <i class="fa-solid fa-play text-emerald-400"></i>
-              <span>Lanjutkan Sekarang</span>
-            </button>
-            <div v-else
-              class="bg-slate-950 text-amber-300 px-4 py-2 rounded-xl text-xs font-bold border border-amber-400/40 flex items-center gap-2">
-              <i class="fa-solid fa-eye text-amber-400"></i>
-              <span>Monitoring {{ userRole === 'qc' ? 'QC' : 'Gudang' }}: Sedang Dijeda</span>
-            </div>
+
           </div>
 
           <!-- Tray Metadata & Progress Bar -->
@@ -333,8 +324,8 @@
                 class="text-amber-800 font-bold flex items-center gap-1 mt-0.5">
                 <i class="fa-solid fa-boxes-packing text-amber-600"></i> Selesai (Sisa Kembali)
               </span>
-              <span v-else-if="isTrayLocked" class="text-red-700 font-bold flex items-center gap-1 mt-0.5">
-                <i class="fa-solid fa-lock"></i> Terkunci 100% Selesai
+              <span v-else-if="currentTray.session_status === 'COMPLETED' || isTrayFullyFinished" class="text-emerald-800 font-bold flex items-center gap-1 mt-0.5">
+                <i class="fa-solid fa-circle-check text-emerald-600"></i> Selesai Dirakit
               </span>
               <span v-else-if="hasHoldItem" class="text-amber-700 font-bold flex items-center gap-1 mt-0.5">
                 <i class="fa-solid fa-triangle-exclamation"></i> Ada Item HOLD
@@ -534,7 +525,7 @@
               </div>
 
               <!-- 2. JIKA SUDAH SELESAI (Status Ada) -> HANYA ADA TOMBOL DETAIL -->
-              <div v-else-if="slot.status" class="mt-auto">
+              <div v-else-if="slot.status || slot.finished_at" class="mt-auto">
                 <button @click="openDetailModal(slot, index)"
                   class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 border border-slate-300 min-h-[38px] active:scale-95 shadow-xs cursor-pointer">
                   <i class="fa-solid fa-eye text-slate-500"></i>

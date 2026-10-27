@@ -2581,7 +2581,8 @@
               method: 'POST',
               body: JSON.stringify({
                 downtime_id: activeDowntimeId.value,
-                tray_id: currentTray.value ? currentTray.value.id : null
+                tray_id: currentTray.value ? currentTray.value.id : null,
+                tray_code: selectedTrayCode.value || (currentTray.value ? currentTray.value.tray_code : '')
               })
             });
 
@@ -5800,6 +5801,11 @@
             return;
           }
           const slot = traySlots.value[index];
+          if (slot && (slot.status || slot.finished_at)) {
+            triggerToast('Set Terkunci', `Set #${index + 1} sudah selesai dirakit (${slot.status || 'Selesai'}) dan terkunci permanen. Proses tidak dapat diulang.`, 'warn');
+            openDetailModal(slot, index);
+            return;
+          }
           if (slot && slot.status === 'RETURNED') {
             triggerToast('Selesai Dikembalikan', 'Set ini telah dikembalikan ke Gudang dan tidak dapat dirakit.', 'warn');
             return;
@@ -5818,20 +5824,7 @@
           const setNum = index + 1;
           const prog = inProgressMap.value[setNum];
 
-          if (slot && slot.id) {
-            // Edit Mode
-            assyForm.value = {
-              part15: slot.part15_sn || '',
-              part1: slot.part1_sn || '',
-              part12: slot.part12_sn || '',
-              startTime: slot.started_at ? formatTimeInput(slot.started_at) : nowStr,
-              endTime: slot.finished_at ? formatTimeInput(slot.finished_at) : nowStr,
-              started_at: slot.started_at || null,
-              status: slot.status || '',
-              defective_parts: slot.defective_parts ? (Array.isArray(slot.defective_parts) ? slot.defective_parts : [slot.defective_parts]) : [],
-              reason: slot.reason || ''
-            };
-          } else if (prog) {
+          if (prog) {
             // In Progress (Sedang Dikerjakan)
             assyForm.value = {
               part15: prog.part15 || '',
@@ -5943,6 +5936,29 @@
               const savedSN = { ...assyForm.value, set_number: setNum, pic_assembly: userFullName.value || operatorName.value, finished_at: new Date() };
               const activeAssemblyCode = selectedTrayCode.value;
               closeModal();
+
+              // Update local assembly collection realtime
+              if (json.data) {
+                const updatedAssy = json.data;
+                const existingIdx = (currentTrayAssemblies.value || []).findIndex(a => a.set_number === setNum);
+                if (existingIdx >= 0) {
+                  currentTrayAssemblies.value[existingIdx] = updatedAssy;
+                } else {
+                  currentTrayAssemblies.value.push(updatedAssy);
+                }
+              }
+
+              // Update traysList in realtime immediately
+              const currentTrayItem = (traysList.value || []).find(t => t.tray_code === activeAssemblyCode);
+              if (currentTrayItem) {
+                const totalFin = (currentTrayAssemblies.value || []).filter(a => a.finished_at || a.status).length;
+                currentTrayItem.finished_count = totalFin;
+                if (totalFin >= (currentTrayItem.total_sets || 22)) {
+                  currentTrayItem.session_status = 'COMPLETED';
+                  if (currentTray.value) currentTray.value.session_status = 'COMPLETED';
+                }
+              }
+
               await loadAssemblyTray();
               await loadTrays();
               if (activeAssemblyCode && selectedTrayCode.value !== activeAssemblyCode) {
@@ -5971,6 +5987,10 @@
           }
           const slot = traySlots.value[index];
           if (!slot) return;
+          if (slot.status || slot.finished_at) {
+            triggerToast('Set Terkunci', `Set #${index + 1} sudah selesai dirakit (${slot.status || 'Selesai'}) dan terkunci permanen.`, 'warn');
+            return;
+          }
 
           const setNum = index + 1;
           const prog = inProgressMap.value[setNum] || {};
@@ -6083,6 +6103,29 @@
               saveProgress(selectedTrayCode.value);
               triggerToast('Selesai', `Set #${setNum} berhasil diselesaikan (Status: ${statusVal})!`, 'success');
               const activeAssemblyCode = selectedTrayCode.value;
+
+              // Update local assembly collection realtime
+              if (json.data) {
+                const updatedAssy = json.data;
+                const existingIdx = (currentTrayAssemblies.value || []).findIndex(a => a.set_number === setNum);
+                if (existingIdx >= 0) {
+                  currentTrayAssemblies.value[existingIdx] = updatedAssy;
+                } else {
+                  currentTrayAssemblies.value.push(updatedAssy);
+                }
+              }
+
+              // Update traysList in realtime immediately
+              const currentTrayItem = (traysList.value || []).find(t => t.tray_code === activeAssemblyCode);
+              if (currentTrayItem) {
+                const totalFin = (currentTrayAssemblies.value || []).filter(a => a.finished_at || a.status).length;
+                currentTrayItem.finished_count = totalFin;
+                if (totalFin >= (currentTrayItem.total_sets || 22)) {
+                  currentTrayItem.session_status = 'COMPLETED';
+                  if (currentTray.value) currentTray.value.session_status = 'COMPLETED';
+                }
+              }
+
               await loadAssemblyTray();
               await loadTrays();
               if (activeAssemblyCode && selectedTrayCode.value !== activeAssemblyCode) {
