@@ -47,6 +47,7 @@
   <script src="{{ asset('js/modules/tf1.js') }}?v={{ filemtime(public_path('js/modules/tf1.js')) }}"></script>
   <script src="{{ asset('js/modules/qc.js') }}?v={{ filemtime(public_path('js/modules/qc.js')) }}"></script>
   <script src="{{ asset('js/modules/holds.js') }}?v={{ filemtime(public_path('js/modules/holds.js')) }}"></script>
+  <script src="{{ asset('js/modules/warehouse.js') }}?v={{ filemtime(public_path('js/modules/warehouse.js')) }}"></script>
 
   <!-- VUE 3 APPLICATION SCRIPT -->
   <script src="{{ asset('js/app.js') }}?v={{ filemtime(public_path('js/app.js')) }}"></script>
