@@ -1420,7 +1420,7 @@
       }
     };
 
-    const selectedReceiptTrayCode = ref(null);
+    const selectedReceiptTrayCode = ctx.selectedReceiptTrayCode || ref(null);
     const isSubmittingBatchReceipt = ref(false);
 
     const warehouseReceiptTraySummaryList = computed(() => {

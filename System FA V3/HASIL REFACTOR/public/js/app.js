@@ -1258,6 +1258,198 @@
         });
 
 
+                // ===================================================================
+        // SHARED UTILITIES & HOISTED CROSS-MODULE REFS
+        // ===================================================================
+        const showToast = (message, type = 'info') => {
+          triggerToast('', message, type);
+        };
+
+        const isStatusGood = (status) => {
+          const s = String(status || '').toUpperCase().trim();
+          return ['GOOD', 'GOOD_QC', 'PASS', 'PASSED', 'ACC', 'ACCEPTED', 'APPROVED', 'APPROVED_QC'].includes(s);
+        };
+
+        const getEffectiveFinishedAt = (start, finish) => {
+          if (!finish) return finish;
+          if (!start) return finish;
+          try {
+            const d1 = parseWIBDate(start);
+            let d2 = parseWIBDate(finish);
+            if (d1 && d2 && !isNaN(d1.getTime()) && !isNaN(d2.getTime()) && d2 < d1) {
+              const diff = d1.getTime() - d2.getTime();
+              if (diff >= 18000 * 1000 && diff <= 32400 * 1000) {
+                d2 = new Date(d2.getTime() + 7 * 3600 * 1000);
+                const pad = (n) => String(n).padStart(2, '0');
+                return `${d2.getFullYear()}-${pad(d2.getMonth() + 1)}-${pad(d2.getDate())} ${pad(d2.getHours())}:${pad(d2.getMinutes())}:${pad(d2.getSeconds())}`;
+              }
+            }
+          } catch (_) { }
+          return finish;
+        };
+
+        const formatDuration = (start, finish) => {
+          if (start === null || start === undefined || start === '') return '-';
+          try {
+            let diffSec = 0;
+            if (finish !== undefined && finish !== null && finish !== '') {
+              const d1 = parseWIBDate(start);
+              let d2 = parseWIBDate(finish);
+              if (d1 && d2 && !isNaN(d1.getTime()) && !isNaN(d2.getTime())) {
+                if (d2 < d1) {
+                  const diff = d1.getTime() - d2.getTime();
+                  if (diff >= 18000 * 1000 && diff <= 32400 * 1000) {
+                    d2 = new Date(d2.getTime() + 7 * 3600 * 1000);
+                  }
+                }
+                diffSec = Math.max(0, Math.floor((d2 - d1) / 1000));
+              }
+            } else if (typeof start === 'number') {
+              diffSec = Math.max(0, Math.floor(start));
+            } else if (!isNaN(Number(start))) {
+              diffSec = Math.max(0, Math.floor(Number(start)));
+            } else {
+              return '-';
+            }
+
+            const h = Math.floor(diffSec / 3600);
+            const m = Math.floor((diffSec % 3600) / 60);
+            const s = diffSec % 60;
+
+            if (h > 0) return `${h} jam ${m} mnt ${s} dtk`;
+            if (m > 0) return `${m} mnt ${s} dtk`;
+            return `${s} dtk`;
+          } catch (_) {
+            return '-';
+          }
+        };
+
+        const formatDateTime = (dtStr, refStartStr = null) => {
+          if (!dtStr) return '-';
+          try {
+            let effective = dtStr;
+            if (refStartStr) {
+              effective = getEffectiveFinishedAt(refStartStr, dtStr);
+            }
+            const d = parseWIBDate(effective);
+            if (!d || isNaN(d.getTime())) return String(dtStr);
+            const datePart = d.toLocaleDateString('id-ID', {
+              timeZone: 'Asia/Jakarta',
+              day: 'numeric', month: 'short', year: 'numeric'
+            });
+            const timePart = new Intl.DateTimeFormat('id-ID', {
+              timeZone: 'Asia/Jakarta',
+              hour: '2-digit', minute: '2-digit',
+              hour12: false
+            }).format(d).replace(':', '.');
+            return `${datePart}, ${timePart}`;
+          } catch (_) {
+            return dtStr;
+          }
+        };
+
+        const formatDateOnly = (dt) => {
+          if (!dt) return '-';
+          try {
+            const d = parseWIBDate(dt);
+            if (!d || isNaN(d.getTime())) return String(dt);
+            return d.toLocaleDateString('id-ID', {
+              timeZone: 'Asia/Jakarta',
+              day: '2-digit', month: '2-digit', year: 'numeric'
+            });
+          } catch (_) {
+            return String(dt);
+          }
+        };
+
+        const formatTimeOnly = (dtStr, refStartStr = null) => {
+          if (!dtStr) return '-';
+          try {
+            let effective = dtStr;
+            if (refStartStr) {
+              effective = getEffectiveFinishedAt(refStartStr, dtStr);
+            }
+            const d = parseWIBDate(effective);
+            if (!d || isNaN(d.getTime())) return String(dtStr);
+            const parts = new Intl.DateTimeFormat('id-ID', {
+              timeZone: 'Asia/Jakarta',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false
+            }).format(d);
+            return parts.replace(':', '.');
+          } catch (_) {
+            return dtStr;
+          }
+        };
+
+        const formatLifecycleHistory = (rawHistory, currentStatus = '') => {
+          let hist = String(rawHistory || '').trim();
+          if (!hist) {
+            if (!currentStatus) return '-';
+            const s = String(currentStatus).trim();
+            const sl = s.toLowerCase();
+            if (sl === 'good') return 'Good';
+            if (sl.includes('rework')) return 'Hold -> Rework';
+            if (sl.includes('hold')) return 'Hold';
+            if (sl.includes('scrap')) return 'Scrap';
+            if (sl === 'ru' || sl === 'dirakit ulang') return 'Dirakit Ulang';
+            return s;
+          }
+          hist = hist.replace(/\bQC\b/gi, '').replace(/\s+/g, ' ').trim();
+          let parts = hist.split('->').map(p => p.trim()).filter(Boolean);
+          if (parts.length > 1 && parts[0].toLowerCase() === 'good' && parts.some(p => p.toLowerCase() === 'hold')) {
+            const holdIdx = parts.findIndex(p => p.toLowerCase() === 'hold');
+            if (holdIdx !== -1) {
+              parts = parts.slice(holdIdx);
+            }
+          }
+          parts = parts.map(p => {
+            const low = p.toLowerCase();
+            if (low === 'good') return 'Good';
+            if (low === 'hold') return 'Hold';
+            if (low === 'rework') return 'Rework';
+            if (low === 'scrap') return 'Scrap';
+            if (low === 'ru' || low === 'dirakit ulang') return 'Dirakit Ulang';
+            return p.charAt(0).toUpperCase() + p.slice(1).toLowerCase();
+          });
+          const deduped = [];
+          for (let i = 0; i < parts.length; i++) {
+            if (i === 0 || parts[i] !== parts[i - 1]) {
+              deduped.push(parts[i]);
+            }
+          }
+          return deduped.join(' -> ') || (currentStatus || '-');
+        };
+
+        const getStatusHistoryBadgeClass = (history, fallbackStatus = '') => {
+          const formatted = formatLifecycleHistory(history, fallbackStatus);
+          const low = formatted.toLowerCase();
+          if (low.endsWith('good') || low === 'good') {
+            return 'bg-emerald-50 text-emerald-800 border-emerald-300';
+          }
+          if (low.includes('dirakit ulang')) {
+            return 'bg-indigo-50 text-indigo-800 border-indigo-300';
+          }
+          if (low.endsWith('rework') || low.includes('rework')) {
+            return 'bg-amber-50 text-amber-800 border-amber-300';
+          }
+          if (low.endsWith('hold') || low.includes('hold')) {
+            return 'bg-rose-50 text-rose-800 border-rose-300';
+          }
+          if (low === 'scrap') {
+            return 'bg-slate-100 text-slate-800 border-slate-300';
+          }
+          return 'bg-slate-50 text-slate-600 border-slate-200';
+        };
+
+        // Shared cross-module reactive state refs
+        const activeAssyQCDocSlot = ref(null);
+        const warehouseReceiptReports = ref([]);
+        const selectedReceiptTrayCode = ref('');
+        const selectedTravelerTrayCode = ref('');
+        const currentLaporanSubTab = ref('dokumen');
+
         // ===================================================================
         // INITIALIZE DELIVERY ORDER & PACKING LIST MODULE (FASE 2)
         // ===================================================================
@@ -1485,7 +1677,6 @@
           traySlots,
           isSlotLocked,
           canEditSlot,
-          isStatusGood,
           availablePartsByType,
           loadTrays,
           loadAssemblyTray,
@@ -1686,10 +1877,10 @@
             traySlots,
             activeAssyQCDocSlot,
             warehouseReceiptReports,
-            isCurrentTravelerWHQCVerified,
-            isCurrentTravelerQCDone,
+            isCurrentTravelerWHQCVerified: computed(() => warehouseModule?.isCurrentTravelerWHQCVerified?.value ?? true),
+            isCurrentTravelerQCDone: computed(() => warehouseModule?.isCurrentTravelerQCDone?.value ?? true),
             selectedReceiptTrayCode,
-            activeReceiptTraySummary,
+            activeReceiptTraySummary: computed(() => warehouseModule?.activeReceiptTraySummary?.value ?? null),
             getOperatorFullName,
             getTodayDateStr,
             formatDateOnly,
@@ -2088,65 +2279,7 @@
 
         // renderQRCodeDetail moved to public/js/modules/traveler.js (Fase 2I)
 
-        const getEffectiveFinishedAt = (start, finish) => {
-          if (!finish) return finish;
-          if (!start) return finish;
-          try {
-            const d1 = parseWIBDate(start);
-            let d2 = parseWIBDate(finish);
-            if (d1 && d2 && !isNaN(d1.getTime()) && !isNaN(d2.getTime()) && d2 < d1) {
-              const diff = d1.getTime() - d2.getTime();
-              // If difference is between 5 hours and 9 hours (UTC vs WIB ~7h skew)
-              if (diff >= 18000 * 1000 && diff <= 32400 * 1000) {
-                d2 = new Date(d2.getTime() + 7 * 3600 * 1000);
-                const pad = (n) => String(n).padStart(2, '0');
-                return `${d2.getFullYear()}-${pad(d2.getMonth() + 1)}-${pad(d2.getDate())} ${pad(d2.getHours())}:${pad(d2.getMinutes())}:${pad(d2.getSeconds())}`;
-              }
-            }
-          } catch (_) { }
-          return finish;
-        };
-
-        const formatDuration = (start, finish) => {
-          if (start === null || start === undefined || start === '') return '-';
-          try {
-            let diffSec = 0;
-            if (finish !== undefined && finish !== null && finish !== '') {
-              const d1 = parseWIBDate(start);
-              let d2 = parseWIBDate(finish);
-              if (d1 && d2 && !isNaN(d1.getTime()) && !isNaN(d2.getTime())) {
-                if (d2 < d1) {
-                  const diff = d1.getTime() - d2.getTime();
-                  if (diff >= 18000 * 1000 && diff <= 32400 * 1000) {
-                    d2 = new Date(d2.getTime() + 7 * 3600 * 1000);
-                  }
-                }
-                diffSec = Math.max(0, Math.floor((d2 - d1) / 1000));
-              }
-            } else if (typeof start === 'number') {
-              diffSec = Math.max(0, Math.floor(start));
-            } else if (!isNaN(Number(start))) {
-              diffSec = Math.max(0, Math.floor(Number(start)));
-            } else {
-              return '-';
-            }
-
-            const h = Math.floor(diffSec / 3600);
-            const m = Math.floor((diffSec % 3600) / 60);
-            const s = diffSec % 60;
-
-            if (h > 0) return `${h} jam ${m} mnt ${s} dtk`;
-            if (m > 0) return `${m} mnt ${s} dtk`;
-            return `${s} dtk`;
-          } catch (_) {
-            return '-';
-          }
-        };
-
-        // Admin reset database moved to public/js/modules/admin.js (Fase 2J)
-
-        // Single & Batch label preview, PDF & direct print moved to public/js/modules/traveler.js (Fase 2I)
-
+        // getEffectiveFinishedAt & formatDuration hoisted above
         const formatExcelDateTime = (dt) => {
           if (!dt) return '-';
           const d = new Date(dt);
@@ -2382,30 +2515,7 @@
           return getStatusTextClass(status);
         };
 
-        const formatDateTime = (dtStr, refStartStr = null) => {
-          if (!dtStr) return '-';
-          try {
-            let effective = dtStr;
-            if (refStartStr) {
-              effective = getEffectiveFinishedAt(refStartStr, dtStr);
-            }
-            const d = parseWIBDate(effective);
-            if (!d || isNaN(d.getTime())) return String(dtStr);
-            const datePart = d.toLocaleDateString('id-ID', {
-              timeZone: 'Asia/Jakarta',
-              day: 'numeric', month: 'short', year: 'numeric'
-            });
-            const timePart = new Intl.DateTimeFormat('id-ID', {
-              timeZone: 'Asia/Jakarta',
-              hour: '2-digit', minute: '2-digit',
-              hour12: false
-            }).format(d).replace(':', '.');
-            return `${datePart}, ${timePart}`;
-          } catch (_) {
-            return dtStr;
-          }
-        };
-
+        // formatDateTime hoisted above
 
         // ================= FUNCTIONAL TESTING STATE & METHODS (ASSY & QC) =================
 
@@ -2433,6 +2543,7 @@
             currentTray,
             traySlots,
             testingPointsList,
+            activeAssyQCDocSlot,
             showDetailModal,
             openDetailModal: (...args) => (typeof openDetailModal === 'function' ? openDetailModal(...args) : null),
             loadAssemblyTray: (...args) => (typeof loadAssemblyTray === 'function' ? loadAssemblyTray(...args) : null),
@@ -2496,7 +2607,6 @@
           assyTestCalculatedFailures,
           assyTestGeneratedFailureReason,
           submitAssyTest,
-          activeAssyQCDocSlot,
           testedGoodSlots,
           countTestedGoodInTray,
           countTestedHoldInTray,
@@ -2757,6 +2867,7 @@
             triggerToast,
             currentTab,
             pgState,
+            warehouseReceiptReports,
             operatorUsersList,
             traysList,
             assemblyResults,
@@ -2787,7 +2898,6 @@
           distinctLaporanOperators,
           assyTestReports,
           qcTestReports,
-          warehouseReceiptReports,
           resetLaporanFilter,
           loadLaporan,
           loadAssyTestReports,
@@ -2855,6 +2965,7 @@
             travelerTray,
             currentTrayAssemblies,
             selectedTravelerTrayCode,
+            selectedReceiptTrayCode,
             currentLaporanSubTab,
             travelerItems,
             whQCQualifiedItems,
@@ -2983,7 +3094,6 @@
           warehouseQCForm,
           openWarehouseQCVerifyModal,
           submitWarehouseQCVerify,
-          selectedReceiptTrayCode,
           isSubmittingBatchReceipt,
           warehouseReceiptTraySummaryList,
           pagedWarehouseReceiptTraySummaryList,

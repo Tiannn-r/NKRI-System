@@ -815,7 +815,7 @@
           }
         };
 
-        const activeAssyQCDocSlot = ref(null);
+        const activeAssyQCDocSlot = ctx.activeAssyQCDocSlot || ref(null);
 
         const testedGoodSlots = computed(() => {
           // ATURAN BAKU: HANYA BARANG BERKONDISI GOOD DI PERAKITAN YANG MASUK KE TF 1!
