@@ -50,6 +50,7 @@
   <script src="{{ asset('js/modules/warehouse.js') }}?v={{ filemtime(public_path('js/modules/warehouse.js')) }}"></script>
   <script src="{{ asset('js/modules/reports.js') }}?v={{ filemtime(public_path('js/modules/reports.js')) }}"></script>
   <script src="{{ asset('js/modules/traveler.js') }}?v={{ filemtime(public_path('js/modules/traveler.js')) }}"></script>
+  <script src="{{ asset('js/modules/admin.js') }}?v={{ filemtime(public_path('js/modules/admin.js')) }}"></script>
 
   <!-- VUE 3 APPLICATION SCRIPT -->
   <script src="{{ asset('js/app.js') }}?v={{ filemtime(public_path('js/app.js')) }}"></script>
