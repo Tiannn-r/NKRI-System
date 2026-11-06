@@ -38,6 +38,7 @@ Route::prefix('admin')->group(function () {
     Route::post('/users/toggle-cms', [AuthController::class, 'toggleCmsAccess']);
     Route::post('/add-part', [MasterStockController::class, 'addPart']);
     Route::post('/add-part-bulk', [MasterStockController::class, 'addPartBulk']);
+    Route::post('/check-bulk', [MasterStockController::class, 'checkBulk']);
     Route::post('/delete-part', [MasterStockController::class, 'deletePart']);
     Route::get('/recent-added', [MasterStockController::class, 'recentAdded']);
     Route::get('/audit-logs', [AdminCmsController::class, 'getAuditLogs']);
@@ -49,9 +50,11 @@ Route::prefix('admin')->group(function () {
     Route::post('/approve-replacement', [AdminCmsController::class, 'approveReplacement']);
     Route::post('/reject-replacement', [AdminCmsController::class, 'rejectReplacement']);
     Route::post('/approve-assy-rereg', [AdminCmsController::class, 'approveAssyRereg']);
+    Route::post('/approve-proceed', [AdminCmsController::class, 'approveProceed']);
     Route::post('/approve-re-register', [AdminCmsController::class, 'approveReRegister']);
     Route::post('/approve-part-direct', [AdminCmsController::class, 'approvePartDirect']);
     Route::post('/approve-declined-set-restore', [AdminCmsController::class, 'approveDeclinedSetRestore']);
+    Route::post('/lock-verified-set', [AdminCmsController::class, 'lockVerifiedSet']);
     Route::post('/delete-re-register', [AdminCmsController::class, 'deleteReRegister']);
     Route::post('/delete-declined-set', [AdminCmsController::class, 'deleteDeclinedSet']);
     Route::post('/clear_trays', [AdminCmsController::class, 'clearTrays']);
@@ -78,6 +81,7 @@ Route::prefix('master')->group(function () {
     Route::post('/re-register', [MasterStockController::class, 'reRegister']);
     Route::post('/add-part', [MasterStockController::class, 'addPart']);
     Route::post('/add-part-bulk', [MasterStockController::class, 'addPartBulk']);
+    Route::post('/check-bulk', [MasterStockController::class, 'checkBulk']);
     Route::post('/delete-part', [MasterStockController::class, 'deletePart']);
     Route::get('/recent-added', [MasterStockController::class, 'recentAdded']);
 });
@@ -121,6 +125,7 @@ Route::prefix('assembly')->group(function () {
     Route::post('/transfer-to-warehouse', [AssemblyController::class, 'transferToWarehouse']);
     Route::post('/reregister-set', [AssemblyController::class, 'reregisterSet']);
     Route::post('/direct-resume', [AssemblyController::class, 'directResume']);
+    Route::post('/request-proceed', [AssemblyController::class, 'requestProceed']);
 });
 Route::get('/admin/downtime-logs', [AssemblyController::class, 'getDowntimeLogs']);
 
@@ -152,6 +157,7 @@ Route::prefix('reports')->group(function () {
 // ==========================================
 Route::prefix('delivery-orders')->group(function () {
     Route::get('/', [DeliveryOrderController::class, 'index']);
+    Route::get('/track-sn', [DeliveryOrderController::class, 'trackSerialNumber']);
     Route::post('/', [DeliveryOrderController::class, 'store']);
     Route::get('/detail', [DeliveryOrderController::class, 'detail']);
     Route::post('/delete', [DeliveryOrderController::class, 'destroy']);

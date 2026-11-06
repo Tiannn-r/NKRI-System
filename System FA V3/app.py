@@ -716,122 +716,36 @@ def get_next_batch_number(cur):
     highest = max_do
     return highest + 1
 
-def get_next_crate_id(cur, batch_number=1, crate_index=None, target_date=None):
+def get_next_crate_id(cur, batch_number=1, crate_index=None, target_date=None, delivery_seq=1):
     now = parse_target_date(target_date)
     yymm = now.strftime("%y%m")
-    prefix = f"{yymm}-{batch_number}"
+    b_str = f"{int(batch_number or 1):02d}"
+    p_str = f"{int(delivery_seq or 1):02d}"
+    prefix = f"{yymm}-{b_str}-{p_str}"
     
-    max_crate_seq = 0
-    # 1. Cek semua crate_id di packing_lists untuk prefix ini
-    try:
-        cur.execute("SELECT crate_id FROM packing_lists WHERE crate_id LIKE ?", (f"{prefix}%",))
-        rows = cur.fetchall()
-        for r in rows:
-            cid = str(r[0] if isinstance(r, (tuple, list)) else (r.get('crate_id') if isinstance(r, dict) else r['crate_id']) or '').strip()
-            suffix = cid[len(prefix):]
-            if suffix.isdigit():
-                max_crate_seq = max(max_crate_seq, int(suffix))
-    except Exception:
-        pass
-
-    # 2. Cek semua crate_id di standalone_packing_labels untuk prefix ini
-    try:
-        cur.execute("SELECT crates_json FROM standalone_packing_labels")
-        rows = cur.fetchall()
-        for r in rows:
-            cj = r[0] if isinstance(r, (tuple, list)) else (r.get('crates_json') if isinstance(r, dict) else r['crates_json'])
-            crates = json.loads(cj or '[]')
-            for c in crates:
-                cid = str(c.get('crate_id') or '').strip()
-                if cid.startswith(prefix):
-                    suffix = cid[len(prefix):]
-                    if suffix.isdigit():
-                        max_crate_seq = max(max_crate_seq, int(suffix))
-    except Exception:
-        pass
-
-    if crate_index is not None and isinstance(crate_index, int) and crate_index > 0:
-        seq = max_crate_seq + crate_index
-    else:
-        seq = max_crate_seq + 1
-
-    candidate = f"{prefix}{seq:03d}"
+    c_idx = crate_index if (crate_index is not None and isinstance(crate_index, int) and crate_index > 0) else 1
+    d_str = f"{c_idx:02d}"
+    candidate = f"{prefix}{d_str}"
+    
+    seq = c_idx
     while True:
         cur.execute("SELECT 1 FROM packing_lists WHERE crate_id = ?", (candidate,))
         if not cur.fetchone():
             break
         seq += 1
-        candidate = f"{prefix}{seq:03d}"
+        candidate = f"{prefix}{seq:02d}"
     return candidate
 
-def get_next_box_id(cur, batch_number=1, box_index=1, target_date=None, exclude_ids=None):
+def get_next_box_id(cur, batch_number=1, box_index=1, target_date=None, exclude_ids=None, delivery_seq=1, crate_index=1):
     now = parse_target_date(target_date)
     yymm = now.strftime("%y%m")
-    parent_crate_id = f"{yymm}-{batch_number}000"
-    prefix = f"{parent_crate_id}-"
-    exclude_set = set(exclude_ids or [])
-    
-    max_box_seq = 0
-    # 1. Check packing_list_boxes
-    try:
-        cur.execute("SELECT box_id FROM packing_list_boxes WHERE box_id LIKE ?", (f"{prefix}%",))
-        for r in cur.fetchall():
-            bid = str(r[0] if isinstance(r, (tuple, list)) else (r.get('box_id') if isinstance(r, dict) else r['box_id']) or '').strip()
-            suffix = bid[len(prefix):]
-            if suffix.isdigit():
-                max_box_seq = max(max_box_seq, int(suffix))
-    except Exception:
-        pass
-
-    # 2. Check packing_lists (where box_id might be stored in crate_id)
-    try:
-        cur.execute("SELECT crate_id FROM packing_lists WHERE crate_id LIKE ?", (f"{prefix}%",))
-        for r in cur.fetchall():
-            cid = str(r[0] if isinstance(r, (tuple, list)) else (r.get('crate_id') if isinstance(r, dict) else r['crate_id']) or '').strip()
-            suffix = cid[len(prefix):]
-            if suffix.isdigit():
-                max_box_seq = max(max_box_seq, int(suffix))
-    except Exception:
-        pass
-
-    # 3. Check standalone_packing_labels
-    try:
-        cur.execute("SELECT crates_json FROM standalone_packing_labels")
-        for r in cur.fetchall():
-            cj = r[0] if isinstance(r, (tuple, list)) else (r.get('crates_json') if isinstance(r, dict) else r['crates_json'])
-            crates = json.loads(cj or '[]')
-            for c in crates:
-                bid = str(c.get('box_id') or '').strip()
-                if bid.startswith(prefix):
-                    suffix = bid[len(prefix):]
-                    if suffix.isdigit():
-                        max_box_seq = max(max_box_seq, int(suffix))
-                for b in (c.get('boxes') or []):
-                    bid = str(b.get('box_id') or '').strip()
-                    if bid.startswith(prefix):
-                        suffix = bid[len(prefix):]
-                        if suffix.isdigit():
-                            max_box_seq = max(max_box_seq, int(suffix))
-    except Exception:
-        pass
-
-    next_seq = max_box_seq + (box_index if (box_index and box_index > 0) else 1)
-    candidate = f"{prefix}{next_seq:02d}"
-    while True:
-        if candidate in exclude_set:
-            next_seq += 1
-            candidate = f"{prefix}{next_seq:02d}"
-            continue
-        cur.execute("SELECT 1 FROM packing_list_boxes WHERE box_id = ?", (candidate,))
-        in_boxes = cur.fetchone()
-        cur.execute("SELECT 1 FROM packing_lists WHERE crate_id = ?", (candidate,))
-        in_pl = cur.fetchone()
-        if not in_boxes and not in_pl:
-            break
-        next_seq += 1
-        candidate = f"{prefix}{next_seq:02d}"
+    b_str = f"{int(batch_number or 1):02d}"
+    p_str = f"{int(delivery_seq or 1):02d}"
+    d_str = f"{int(crate_index or 1):02d}"
+    s_str = f"{int(box_index or 1):02d}"
+    parent_crate_id = f"{yymm}-{b_str}-{p_str}{d_str}"
+    candidate = f"{parent_crate_id}-{s_str}"
     return candidate
-
 
 def find_tray_by_code(cur, code_str):
     if not code_str:
@@ -4191,6 +4105,67 @@ class Handler(SimpleHTTPRequestHandler):
                             rows = [dict(r) for r in cur.fetchall()]
                     return send_json(self, {"ok": True, "data": rows})
 
+                elif path == "/api/delivery-orders/track-sn":
+                    sn = query.get("sn", [""])[0].strip().upper()
+                    if not sn:
+                        return send_json(self, {"ok": False, "message": "Serial Number wajib diisi"}, 400)
+                    with get_conn() as conn:
+                        with conn.cursor() as cur:
+                            # 1. Cari di packing_list_items
+                            cur.execute("""
+                                SELECT pli.serial_number, pli.slot_number,
+                                       plb.box_number, plb.box_id,
+                                       pl.crate_number, pl.crate_id, pl.pl_number,
+                                       d.id as delivery_id, d.do_number, d.do_date, d.customer_name,
+                                       d.contract_number, d.program_name, d.status
+                                FROM packing_list_items pli
+                                LEFT JOIN packing_list_boxes plb ON plb.id = pli.box_id
+                                LEFT JOIN packing_lists pl ON pl.id = plb.packing_list_id
+                                JOIN delivery_orders d ON d.id = pli.delivery_order_id
+                                WHERE UPPER(pli.serial_number) LIKE ?
+                                LIMIT 1
+                            """, (f"%{sn}%",))
+                            row = cur.fetchone()
+                            if row:
+                                item = dict(row)
+                                d_seq = 1
+                                if item.get('do_number'):
+                                    m = re.match(r'^0*(\d+)', str(item['do_number']))
+                                    if m: d_seq = int(m.group(1))
+                                item['delivery_seq'] = d_seq
+                                return send_json(self, {"ok": True, "found": True, "type": "delivery_order", "data": item})
+
+                            # 2. Cari di standalone_packing_labels
+                            cur.execute("SELECT * FROM standalone_packing_labels")
+                            labels = cur.fetchall()
+                            for lbl in labels:
+                                lbl_dict = dict(lbl)
+                                cj = lbl_dict.get('crates_json') or '[]'
+                                try: crates = json.loads(cj)
+                                except: crates = []
+                                for cIdx, c in enumerate(crates):
+                                    for bIdx, b in enumerate(c.get('boxes') or []):
+                                        for it in (b.get('items') or []):
+                                            it_sn = it.get('serial_number') if isinstance(it, dict) else str(it)
+                                            if it_sn and sn in str(it_sn).upper():
+                                                return send_json(self, {
+                                                    "ok": True, "found": True, "type": "standalone_label",
+                                                    "data": {
+                                                        "serial_number": str(it_sn),
+                                                        "slot_number": it.get('slot_number', bIdx + 1) if isinstance(it, dict) else 1,
+                                                        "label_batch_id": lbl_dict.get('label_batch_id', ''),
+                                                        "pl_number": lbl_dict.get('pl_number', ''),
+                                                        "delivery_seq": 1,
+                                                        "crate_number": c.get('crate_number', cIdx + 1),
+                                                        "crate_id": c.get('crate_id', ''),
+                                                        "box_number": b.get('box_number', bIdx + 1),
+                                                        "box_id": b.get('box_id', ''),
+                                                        "customer_name": "Label Standalone (Gudang)",
+                                                        "status": "Tersimpan di Label Standalone"
+                                                    }
+                                                })
+                    return send_json(self, {"ok": True, "found": False, "message": f"Serial Number '{sn}' tidak ditemukan pada riwayat pengiriman manapun."})
+
                 elif path == "/api/delivery-orders/settings":
                     with get_conn() as conn:
                         with conn.cursor() as cur:
@@ -4361,18 +4336,32 @@ class Handler(SimpleHTTPRequestHandler):
                                 created_by, created_by as created_by_name, created_by_title, created_by_department, package_type, status, notes, created_at,
                                 cloud_public_id, cloud_pdf_url, cloud_version, cloud_uploaded_at
                             """
-                            if q:
+                            sort_order = query.get("sort_order", ["desc"])[0].strip().lower()
+                            order_dir = "ASC" if sort_order == "asc" else "DESC"
+                            sn_filter = query.get("sn", [""])[0].strip().upper()
+                            
+                            if sn_filter:
+                                cur.execute(f"""
+                                    SELECT DISTINCT {cols}
+                                    FROM delivery_orders
+                                    WHERE id IN (
+                                        SELECT delivery_order_id FROM packing_list_items WHERE UPPER(serial_number) LIKE ?
+                                    )
+                                    ORDER BY do_date {order_dir}, id {order_dir}
+                                """, (f"%{sn_filter}%",))
+                            elif q:
                                 cur.execute(f"""
                                     SELECT {cols}
                                     FROM delivery_orders
                                     WHERE do_number LIKE ? OR customer_name LIKE ? OR contract_number LIKE ? OR program_name LIKE ?
-                                    ORDER BY id DESC
-                                """, (f"%{q}%", f"%{q}%", f"%{q}%", f"%{q}%"))
+                                       OR id IN (SELECT delivery_order_id FROM packing_list_items WHERE UPPER(serial_number) LIKE ?)
+                                    ORDER BY do_date {order_dir}, id {order_dir}
+                                """, (f"%{q}%", f"%{q}%", f"%{q}%", f"%{q}%", f"%{q}%"))
                             else:
                                 cur.execute(f"""
                                     SELECT {cols}
                                     FROM delivery_orders
-                                    ORDER BY id DESC
+                                    ORDER BY do_date {order_dir}, id {order_dir}
                                 """)
                             rows = [dict(r) for r in cur.fetchall()]
                             for r in rows:
@@ -9100,4 +9089,4 @@ if __name__ == "__main__":
     ThreadingHTTPServer.allow_reuse_address = True
     server = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
     print(f"Server jalan di port {PORT}", flush=True)
-    server.serve_forever()
+    server.serve_forever()

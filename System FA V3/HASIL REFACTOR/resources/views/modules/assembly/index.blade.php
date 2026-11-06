@@ -223,14 +223,18 @@
           </div>
 
           <!-- Selesaikan Sesi & Jeda Toolbar (Hanya untuk Operator / Admin saat Tray Aktif) -->
-          <div v-if="currentTray && userRole !== 'gudang' && userRole !== 'qc' && !isTrayLocked"
+          <div v-if="currentTray && userRole !== 'gudang' && userRole !== 'qc'"
             class="flex flex-wrap items-center justify-between gap-2.5 bg-slate-50 border border-slate-200 p-3 rounded-xl">
             <div class="flex items-center space-x-2">
               <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                <i class="fa-solid fa-stopwatch text-red-600"></i>
+                <i class="fa-solid fa-stopwatch" :class="(isTrayFullyFinished || currentTray.session_status === 'COMPLETED') ? 'text-emerald-600' : 'text-red-600'"></i>
                 <span>Kontrol Sesi Pengerjaan Tray:</span>
               </span>
-              <span v-if="isWorkstationPaused"
+              <span v-if="isTrayFullyFinished || currentTray.session_status === 'COMPLETED'"
+                class="bg-emerald-100 text-emerald-900 border border-emerald-300 font-black text-[10px] uppercase px-2.5 py-1 rounded-md flex items-center gap-1 shadow-2xs">
+                <i class="fa-solid fa-circle-check text-emerald-600"></i> Selesai Dirakit (100%)
+              </span>
+              <span v-else-if="isWorkstationPaused"
                 class="bg-amber-100 text-amber-900 border border-amber-300 font-black text-[10px] uppercase px-2 py-0.5 rounded-md animate-pulse">
                 Sedang Dijeda ({{ pausedDurationDisplay }})
               </span>
@@ -240,25 +244,28 @@
               </span>
             </div>
 
-            <div class="flex items-center gap-2">
+            <!-- Tombol Jeda & Selesaikan Sesi HANYA TAMPIL jika masih ada slot yang belum dirakit -->
+            <div v-if="!isTrayFullyFinished && !isTrayLocked && currentTray.session_status !== 'COMPLETED'" class="flex items-center gap-2">
               <!-- Tombol Jeda / Lanjutkan -->
               <button v-if="!isWorkstationPaused" type="button" @click="openPauseModal"
                 class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-3.5 py-2 rounded-xl text-xs shadow-sm transition active:scale-95 flex items-center gap-1.5 cursor-pointer">
                 <i class="fa-solid fa-pause"></i>
                 <span>Jeda Pengerjaan</span>
               </button>
-              <button v-else type="button" @click="resumeAssemblyWork"
-                class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-md shadow-emerald-600/30 transition active:scale-95 flex items-center gap-1.5 cursor-pointer animate-bounce">
-                <i class="fa-solid fa-play"></i>
-                <span>Lanjutkan Pengerjaan</span>
-              </button>
 
               <!-- Tombol Selesaikan Sesi -->
-              <button type="button" @click="openSessionModal"
-                class="bg-slate-800 hover:bg-slate-900 text-white font-bold px-3.5 py-2 rounded-xl text-xs shadow-sm transition active:scale-95 flex items-center gap-1.5 cursor-pointer">
-                <i class="fa-solid fa-flag-checkered text-red-400"></i>
+              <button type="button" @click="openSessionModal" :disabled="isWorkstationPaused"
+                :class="isWorkstationPaused ? 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-60' : 'bg-slate-800 hover:bg-slate-900 text-white cursor-pointer active:scale-95 shadow-sm'"
+                class="font-bold px-3.5 py-2 rounded-xl text-xs transition flex items-center gap-1.5"
+                :title="isWorkstationPaused ? 'Pengerjaan sedang dijeda. Klik Lanjutkan Pengerjaan terlebih dahulu.' : 'Selesaikan sesi perakitan'">
+                <i class="fa-solid fa-flag-checkered" :class="isWorkstationPaused ? 'text-slate-400' : 'text-red-400'"></i>
                 <span>Selesaikan Sesi</span>
               </button>
+            </div>
+            <!-- Jika seluruh slot telah selesai dirakit: Tampilkan indikator terkunci selesai -->
+            <div v-else-if="isTrayFullyFinished || currentTray.session_status === 'COMPLETED'" class="text-xs font-bold text-slate-600 flex items-center gap-1.5 bg-emerald-50/80 px-3 py-1.5 rounded-xl border border-emerald-200">
+              <i class="fa-solid fa-lock text-emerald-600 text-xs"></i>
+              <span>Seluruh set selesai dirakit &amp; sesi tuntas</span>
             </div>
           </div>
 
@@ -294,21 +301,29 @@
             </div>
           </div>
 
-          <!-- Paused Banner Alert (Jika Sedang Jeda) -->
-          <div v-if="isWorkstationPaused"
-            class="bg-amber-500 text-slate-950 p-4 rounded-2xl shadow-md border-2 border-amber-400 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div class="flex items-center space-x-3">
+          <!-- Paused Banner Alert (Jika Sedang Jeda dan Tray Belum Selesai) -->
+          <div v-if="isWorkstationPaused && !isTrayFullyFinished"
+            class="bg-amber-500 text-slate-950 p-4 sm:p-5 rounded-2xl shadow-lg border-2 border-amber-400 flex flex-col sm:flex-row items-center justify-between gap-4 animate-pulse">
+            <div class="flex items-center space-x-3.5">
               <div
-                class="w-10 h-10 rounded-xl bg-slate-950 text-amber-400 flex items-center justify-center text-lg font-bold flex-shrink-0">
+                class="w-12 h-12 rounded-2xl bg-slate-950 text-amber-400 flex items-center justify-center text-xl font-bold flex-shrink-0 shadow-md">
                 <i class="fa-solid fa-pause"></i>
               </div>
               <div>
-                <h4 class="font-black text-sm sm:text-base leading-tight">Pengerjaan Perakitan Sedang Dijeda</h4>
-                <p class="text-xs font-semibold text-slate-900">Alasan: <strong>{{ activePauseReason || 'Istirahat / Jeda' }}</strong> &bull; Waktu Berhenti: <strong class="font-mono">{{ pausedDurationDisplay
-                    }}</strong></p>
+                <div class="flex items-center gap-2">
+                  <h4 class="font-black text-sm sm:text-base leading-tight">Pengerjaan Perakitan Sedang Dijeda</h4>
+                  <span class="text-[10px] font-black uppercase bg-slate-950 text-amber-300 px-2 py-0.5 rounded-md font-mono">{{ pausedDurationDisplay }}</span>
+                </div>
+                <p class="text-xs font-semibold text-slate-900 mt-0.5">
+                  Alasan: <strong>{{ activePauseReason || 'Istirahat / Jeda Operasional' }}</strong> &bull; Seluruh aktivitas perakitan &amp; penyelesaikan sesi dinonaktifkan sementara.
+                </p>
               </div>
             </div>
-
+            <button type="button" @click="resumeAssemblyWork"
+              class="w-full sm:w-auto bg-slate-950 hover:bg-slate-900 text-white font-black px-5 py-2.5 rounded-xl text-xs shadow-md transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer flex-shrink-0">
+              <i class="fa-solid fa-play text-emerald-400"></i>
+              <span>Lanjutkan Pengerjaan Sekarang</span>
+            </button>
           </div>
 
           <!-- Tray Metadata & Progress Bar -->
@@ -386,6 +401,20 @@
             </div>
           </div>
 
+          <!-- Banner Status Tray Selesai Dirakit 100% -->
+          <div v-else-if="isTrayFullyFinished"
+            class="bg-emerald-50 border border-emerald-200 text-emerald-950 text-xs p-3.5 sm:p-4 rounded-xl flex flex-wrap items-center justify-between gap-3 shadow-xs">
+            <div class="flex items-center space-x-2.5">
+              <i class="fa-solid fa-circle-check text-emerald-600 text-xl flex-shrink-0"></i>
+              <div>
+                <strong class="text-xs sm:text-sm font-black text-emerald-950">Seluruh Set Telah Selesai Dirakit (100%)</strong>
+                <p class="text-[11px] text-emerald-700 mt-0.5">
+                  Semua {{ currentTraySetsCount }} set rakitan pada tray ini telah tuntas dirakit. Sesi perakitan ditutup dan unit dapat diuji pada Test Functional 1 (TF 1).
+                </p>
+              </div>
+            </div>
+          </div>
+
           <!-- Sequential Lock Notice Banner -->
           <div v-else
             class="bg-red-50 border border-red-200 text-red-800 text-xs p-3 sm:p-4 rounded-xl flex items-start space-x-2.5">
@@ -424,11 +453,11 @@
                     <span
                       v-if="slot.assy_doc_number || ((slot.status === 'Dirakit Ulang' || slot.qc_status === 'RU' || (typeof isReassemblySet === 'function' && isReassemblySet(slot))) && currentTray)"
                       class="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-lg border bg-indigo-50 text-indigo-800 border-indigo-200"
-                      :title="'Dokumen: ' + ((slot.status === 'Dirakit Ulang' || slot.qc_status === 'RU' || (typeof isReassemblySet === 'function' && isReassemblySet(slot))) ? getFormattedDocCode(currentTray.tray_code, 'assy_rework') : slot.assy_doc_number)">
+                      :title="'Dokumen: ' + ((slot.status === 'Dirakit Ulang' || slot.qc_status === 'RU' || (typeof isReassemblySet === 'function' && isReassemblySet(slot))) ? getFormattedDocCode(currentTray ? currentTray.tray_code : '', 'assy_rework') : slot.assy_doc_number)">
                       <i :class="slot.status === 'Good' ? 'fa-solid fa-circle-check text-indigo-600' : 'fa-solid fa-file-lines text-indigo-600'"
                         class="mr-0.5"></i>
                       {{ (slot.status === 'Dirakit Ulang' || slot.qc_status === 'RU' || (typeof isReassemblySet ===
-                      'function' && isReassemblySet(slot))) ? getFormattedDocCode(currentTray.tray_code, 'assy_rework')
+                      'function' && isReassemblySet(slot))) ? getFormattedDocCode(currentTray ? currentTray.tray_code : '', 'assy_rework')
                       : slot.assy_doc_number }}
                     </span>
                     <span :class="getStatusBadgeClass(slot.original_assembly_status || slot.status)"
@@ -555,10 +584,19 @@
 
                 <!-- Mode Operator Assembly / Admin -->
                 <template v-else>
+                  <!-- KONDISI SEDANG DIJEDA: Seluruh aksi perakitan terkunci mutlak -->
+                  <div v-if="isWorkstationPaused" class="w-full">
+                    <button type="button" @click="resumeAssemblyWork"
+                      class="w-full bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-900 font-bold py-2.5 px-2 rounded-xl text-xs flex items-center justify-center space-x-1.5 transition cursor-pointer shadow-2xs active:scale-95">
+                      <i class="fa-solid fa-lock text-amber-700 text-xs"></i>
+                      <span>Dijeda (Klik Lanjutkan)</span>
+                    </button>
+                  </div>
+
                   <!-- Sedang Dikerjakan -> Dua tombol: [Sedang Dikerjakan] & [Selesai] di ujung kanan card -->
-                  <div v-if="!isSlotLocked(index) && slot.started_at" class="grid grid-cols-5 gap-1.5">
+                  <div v-else-if="!isSlotLocked(index) && slot.started_at" class="grid grid-cols-5 gap-1.5">
                     <button @click="openAssemblyModal(index)"
-                      class="col-span-3 bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-2 rounded-xl text-xs shadow-md shadow-amber-500/25 transition flex items-center justify-center space-x-1.5 active:scale-95 min-h-[40px]">
+                      class="col-span-3 bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-2 rounded-xl text-xs shadow-md shadow-amber-500/25 transition flex items-center justify-center space-x-1.5 active:scale-95 min-h-[40px] cursor-pointer">
                       <span class="relative flex h-2 w-2 flex-shrink-0">
                         <span
                           class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
@@ -567,7 +605,7 @@
                       <span class="truncate">Sedang Dikerjakan</span>
                     </button>
                     <button @click="quickFinishSlot(index)" title="Selesaikan perakitan langsung dari card"
-                      class="col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-2 rounded-xl text-xs shadow-md shadow-emerald-600/25 transition flex items-center justify-center space-x-1 active:scale-95 min-h-[40px]">
+                      class="col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-2 rounded-xl text-xs shadow-md shadow-emerald-600/25 transition flex items-center justify-center space-x-1 active:scale-95 min-h-[40px] cursor-pointer">
                       <i class="fa-solid fa-circle-check text-xs"></i>
                       <span>Selesai</span>
                     </button>
@@ -575,7 +613,7 @@
 
                   <!-- Belum Dimulai -> Button Pilih -->
                   <button v-else-if="!isSlotLocked(index)" @click="openAssemblyModal(index)"
-                    class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md shadow-red-600/25 transition flex items-center justify-center space-x-2 active:scale-95 min-h-[40px]">
+                    class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md shadow-red-600/25 transition flex items-center justify-center space-x-2 active:scale-95 min-h-[40px] cursor-pointer">
                     <i class="fa-solid fa-arrow-pointer"></i>
                     <span>Pilih</span>
                   </button>

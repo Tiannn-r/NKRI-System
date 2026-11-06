@@ -2,6 +2,9 @@
 
     const app = createApp({
       setup() {
+        if (typeof window !== 'undefined' && window.logger) {
+          logger.init('Sistem Final Assembly & Traceability P9', '3.0');
+        }
         const userRole = ref(localStorage.getItem('role') || '');
         const userName = ref(localStorage.getItem('username') || 'Operator');
         const userFullName = ref(localStorage.getItem('full_name') || '');
@@ -12,6 +15,21 @@
           initialPerms = JSON.parse(localStorage.getItem('permissions') || '{}');
         } catch (_) { }
         const userPermissions = ref(initialPerms);
+
+
+        // ===================================================================
+        // MODULAR DOMAIN MODULES (FASE 2)
+        // ===================================================================
+        let assemblyModule = {};
+        let deliveryModule = {};
+        let qcModule = {};
+        let tf1Module = {};
+        let holdsModule = {};
+
+        // Forward references to avoid Temporal Dead Zone (TDZ)
+        let loadProductionHoldItems = async () => {};
+        let isReassemblySet = () => false;
+        let isAssyDocDropdownOpen = ref(false);
 
         const syncCurrentUserPermissions = () => {
           try {
@@ -475,6 +493,42 @@
           if (window.location.pathname.startsWith('/admin') || window.__IS_ADMIN_PORTAL) {
             return { tab: 'users', subTab: 'cms_portal', queryParams: {} };
           }
+
+          // Clean URL Routing Map (Direct URL bar access)
+          const PATH_ROUTE_MAP = {
+            '/perakitan': { tab: 'assembly' },
+            '/assembly': { tab: 'assembly' },
+            '/tf1': { tab: 'assy_testing' },
+            '/assy-test': { tab: 'assy_testing' },
+            '/qc': { tab: 'qc' },
+            '/tf2': { tab: 'qc' },
+            '/work-order': { tab: 'warehouse' },
+            '/input-part': { tab: 'warehouse' },
+            '/gudang': { tab: 'warehouse' },
+            '/hasil-perakitan': { tab: 'production_hold' },
+            '/hasil-test': { tab: 'functional_hold' },
+            '/penerimaan': { tab: 'warehouse_receipt' },
+            '/wh-gr': { tab: 'warehouse_receipt' },
+            '/rakit-ulang': { tab: 'reassembly' },
+            '/pengembalian': { tab: 'returns' },
+            '/traveler': { tab: 'traveler' },
+            '/cetak': { tab: 'traveler' },
+            '/master-stok': { tab: 'master' },
+            '/master': { tab: 'master' },
+            '/history': { tab: 'report' },
+            '/laporan': { tab: 'report' },
+            '/delivery': { tab: 'delivery_order' },
+            '/delivery-order': { tab: 'delivery_order' },
+            '/verifikasi': { tab: 'users', subTab: 'verify_set' }
+          };
+
+          const rawPath = (window.location.pathname || '').toLowerCase().replace(/\/+$/, '');
+          if (PATH_ROUTE_MAP[rawPath]) {
+            hash = PATH_ROUTE_MAP[rawPath].tab;
+            if (PATH_ROUTE_MAP[rawPath].subTab) {
+              subTab = PATH_ROUTE_MAP[rawPath].subTab;
+            }
+          }
           const rawRole = String(userRole.value || localStorage.getItem('role') || 'admin').toLowerCase().trim();
           let normalizedRole = 'admin';
           if (rawRole.includes('admin') || rawRole.includes('super')) {
@@ -651,6 +705,60 @@
           return getTodayDateStr();
         };
 
+        // Live Clock & Time Helpers (Strictly WIB - UTC+7 Asia/Jakarta)
+        const getNowWIBDate = () => {
+          const now = new Date();
+          const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+          return new Date(utc + (7 * 3600000));
+        };
+
+        const parseWIBDate = (dtStr) => {
+          if (!dtStr) return null;
+          if (dtStr instanceof Date) return isNaN(dtStr.getTime()) ? null : dtStr;
+          let str = String(dtStr).trim();
+          if (!str || ['none', 'null', '-', 'undefined', 'invalid date', 'n/a', ''].includes(str.toLowerCase())) return null;
+          if (str.endsWith('Z') || str.includes('+') || (str.length > 10 && str.substring(10).includes('-'))) {
+            const d = new Date(str);
+            return isNaN(d.getTime()) ? null : d;
+          }
+          str = str.replace(' ', 'T');
+          if (str.length === 10) str += 'T00:00:00';
+          const d = new Date(str + '+07:00');
+          return isNaN(d.getTime()) ? null : d;
+        };
+
+        const getNowTimeStr = () => {
+          const w = getNowWIBDate();
+          const pad = (n) => String(n).padStart(2, '0');
+          return `${pad(w.getHours())}:${pad(w.getMinutes())}`;
+        };
+
+        const formatTimeInput = (dtStr) => {
+          if (!dtStr) return getNowTimeStr();
+          try {
+            const d = parseWIBDate(dtStr);
+            if (!d || isNaN(d.getTime())) return getNowTimeStr();
+            const pad = (n) => String(n).padStart(2, '0');
+            return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+          } catch (_) {
+            return getNowTimeStr();
+          }
+        };
+
+        const getNowLocalDateTimeStr = () => {
+          const w = getNowWIBDate();
+          const pad = (n) => String(n).padStart(2, '0');
+          return `${w.getFullYear()}-${pad(w.getMonth() + 1)}-${pad(w.getDate())} ${pad(w.getHours())}:${pad(w.getMinutes())}:${pad(w.getSeconds())}`;
+        };
+
+        const liveClock = ref(new Date());
+        let liveClockTimer = null;
+
+        const liveClockString = computed(() => {
+          const d = liveClock.value;
+          return d.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' WIB';
+        });
+
         const defaultCrateIdForNow = computed(() => {
           const targetDate = previewDOData?.value?.do_date || activePrintDO?.value?.do_date || doForm?.value?.do_date;
           const { yy, mm } = getYearMonthFromDate(targetDate);
@@ -701,6 +809,24 @@
         let confirmAdminUnsavedNavigation = async () => { };
         let cancelAdminUnsavedNavigation = () => { };
 
+        // Global Clean Route Path Mapper for all navigation
+        const TAB_CLEAN_URLS = {
+          'assembly': '/perakitan',
+          'assy_testing': '/tf1',
+          'qc': '/qc',
+          'warehouse': '/work-order',
+          'production_hold': '/hasil-perakitan',
+          'functional_hold': '/hasil-test',
+          'warehouse_receipt': '/penerimaan',
+          'reassembly': '/rakit-ulang',
+          'returns': '/pengembalian',
+          'traveler': '/traveler',
+          'master': '/master-stok',
+          'report': '/history',
+          'delivery_order': '/delivery',
+          'users': '/verifikasi'
+        };
+
         const navigateTo = (tab, subTab = null, isFromPopState = false) => {
           isMobileMenuOpen.value = false;
           if (tab === 'add_part') {
@@ -731,6 +857,9 @@
           }
           currentTab.value = tab;
           localStorage.setItem('activeTab', tab);
+          if (typeof window !== 'undefined' && window.logger) {
+            logger.navigate(tab, subTab);
+          }
 
           let targetHash = '#' + tab;
           let targetKey = tab;
@@ -780,22 +909,15 @@
             targetHash = '#' + tab;
             targetKey = tab;
             if (tab === 'qc') {
-              loadQCPendingItems();
+              if (qcModule && typeof qcModule.initQCTab === 'function') {
+                qcModule.initQCTab();
+              } else if (typeof loadQCPendingItems === 'function') {
+                loadQCPendingItems();
+              }
             } else if (tab === 'delivery_order') {
-              loadCustomers();
-              loadDOSettings();
-              loadNextDOMeta();
-              loadStandaloneLabels();
-              syncLabelPackagingStructure();
-              loadDOList().then(() => {
-                if (doList.value && doList.value.length > 0) {
-                  if (!previewDOId.value) {
-                    previewDOId.value = doList.value[0].id;
-                  }
-                  loadDOPreviewData(previewDOId.value);
-                }
-              });
-              loadAvailableFinishedSNs();
+              if (deliveryModule && typeof deliveryModule.initDeliveryTab === 'function') {
+                deliveryModule.initDeliveryTab();
+              }
             } else if (tab === 'master') {
               loadMasterData();
             } else if (tab === 'add_part') {
@@ -807,7 +929,11 @@
               loadReturnedTrays();
               loadOperatorsList();
             } else if (tab === 'reassembly') {
-              loadPendingReassembly();
+              if (holdsModule && typeof holdsModule.initReassemblyTab === 'function') {
+                holdsModule.initReassemblyTab();
+              } else if (typeof loadPendingReassembly === 'function') {
+                loadPendingReassembly();
+              }
               loadOperatorsList();
             } else if (tab === 'assembly' || tab === 'assy_testing') {
               loadTrays().then(() => {
@@ -834,12 +960,20 @@
                 startAssemblyAutoPoll();
               }
             } else if (tab === 'production_hold') {
-              loadAssemblyResults();
-              loadProductionHoldItems();
-              loadProductionProducts();
+              if (holdsModule && typeof holdsModule.initProductionHoldTab === 'function') {
+                holdsModule.initProductionHoldTab();
+              } else {
+                loadAssemblyResults();
+                loadProductionHoldItems();
+                loadProductionProducts();
+              }
             } else if (tab === 'functional_hold') {
-              loadProductionHoldItems();
-              loadProductionProducts();
+              if (holdsModule && typeof holdsModule.initFunctionalHoldTab === 'function') {
+                holdsModule.initFunctionalHoldTab();
+              } else {
+                loadProductionHoldItems();
+                loadProductionProducts();
+              }
             } else if (tab === 'traveler') {
               loadTrays().then(() => {
                 const savedCode = localStorage.getItem('selectedTrayCode');
@@ -858,22 +992,42 @@
             }
           }
 
+          // Clean URL Address Bar Mapper
+          const TAB_CLEAN_URLS = {
+            'assembly': '/perakitan',
+            'assy_testing': '/tf1',
+            'qc': '/qc',
+            'warehouse': '/work-order',
+            'production_hold': '/hasil-perakitan',
+            'functional_hold': '/hasil-test',
+            'warehouse_receipt': '/penerimaan',
+            'reassembly': '/rakit-ulang',
+            'returns': '/pengembalian',
+            'traveler': '/traveler',
+            'master': '/master-stok',
+            'report': '/history',
+            'delivery_order': '/delivery',
+            'users': '/verifikasi'
+          };
+          const cleanPath = TAB_CLEAN_URLS[tab] || ('/' + tab);
+          const targetUrl = cleanPath;
+
           // Track sequence for back navigation across all roles & tabs
           if (!isFromPopState) {
             const last = _tabNavStack[_tabNavStack.length - 1];
             if (!last || last.key !== targetKey) {
               _tabNavStack.push({ tab, subTab: subTab || null, key: targetKey });
               try {
-                history.pushState({ type: 'tab', key: targetKey }, '', targetHash);
+                history.pushState({ type: 'tab', key: targetKey, tab, subTab }, '', targetUrl);
               } catch (_) { }
             } else {
               try {
-                history.replaceState({ type: 'tab', key: targetKey }, '', targetHash);
+                history.replaceState({ type: 'tab', key: targetKey, tab, subTab }, '', targetUrl);
               } catch (_) { }
             }
           } else {
             try {
-              history.replaceState({ type: 'tab', key: targetKey }, '', targetHash);
+              history.replaceState({ type: 'tab', key: targetKey, tab, subTab }, '', targetUrl);
             } catch (_) { }
           }
         };
@@ -969,6 +1123,21 @@
           }
         };
 
+        const getModuleFromApiPath = (p) => {
+          if (!p) return 'API';
+          const lp = String(p).toLowerCase();
+          if (lp.includes('assembly')) return 'PERAKITAN';
+          if (lp.includes('tf1') || lp.includes('functional') || lp.includes('assy-test')) return 'TF1';
+          if (lp.includes('qc') || lp.includes('tf2')) return 'TF2/QC';
+          if (lp.includes('warehouse') || lp.includes('receipts') || lp.includes('supply') || lp.includes('returns')) return 'GUDANG';
+          if (lp.includes('report') || lp.includes('laporan')) return 'LAPORAN';
+          if (lp.includes('delivery')) return 'DELIVERY';
+          if (lp.includes('hold')) return 'HOLD';
+          if (lp.includes('traveler')) return 'TRAVELER';
+          if (lp.includes('admin') || lp.includes('user') || lp.includes('audit') || lp.includes('downtime')) return 'ADMIN';
+          return 'SISTEM';
+        };
+
         // API Helper with Auto-Retry for Transient Gateway Glitches
         const fetchAPI = async (path, options = {}, retryCount = 0) => {
           const token = localStorage.getItem('token');
@@ -1023,6 +1192,29 @@
 
           try {
             const json = await res.json();
+            const method = (options.method || 'GET').toUpperCase();
+            const modName = getModuleFromApiPath(path);
+
+            const actionLabel = (typeof window !== 'undefined' && window.logger && typeof logger.getActionLabel === 'function')
+              ? logger.getActionLabel(method, path)
+              : (method + ' ' + path);
+
+            if (!res.ok || (json && json.success === false)) {
+              if (typeof window !== 'undefined' && window.logger) {
+                const errMsg = (json && (json.message || json.error)) || ('HTTP ' + res.status);
+                logger.error(modName, actionLabel, {
+                  status: res.status,
+                  url: method + ' /api' + path,
+                  message: errMsg,
+                  details: json
+                });
+              }
+            } else if (method !== 'GET') {
+              if (typeof window !== 'undefined' && window.logger) {
+                const sMsg = (json && json.message) || (actionLabel + ' berhasil');
+                logger.success(modName, sMsg);
+              }
+            }
             return json;
           } catch (jsonErr) {
             console.error('JSON parse error:', jsonErr);
@@ -1032,6 +1224,54 @@
             throw new Error('Gagal memproses data server: Format JSON dari server tidak valid.');
           }
         };
+
+        // =========================================================
+        // PAGINATION STATE (Moved up for modular modules)
+        // =========================================================
+        const pgState = Vue.reactive({
+          adminSets: { page: 1, size: 20 },
+          adminParts: { page: 1, size: 20 },
+          adminRepl: { page: 1, size: 20 },
+          auditLogs: { page: 1, size: 20 },
+          downtime: { page: 1, size: 20 },
+          testPoint: { page: 1, size: 10 },
+          users: { page: 1, size: 10 },
+          masterStock: { page: 1, size: 50 },
+          qcList: { page: 1, size: 10 },
+          gudangVerif: { page: 1, size: 10 },
+          woReport: { page: 1, size: 20 },
+          assyReport: { page: 1, size: 20 },
+          assyTestReport: { page: 1, size: 20 },
+          qcReport: { page: 1, size: 20 },
+          receiptReport: { page: 1, size: 20 },
+          warehouseReport: { page: 1, size: 20 },
+          productionHold: { page: 1, size: 15 },
+          qcTraySummary: { page: 1, size: 10 },
+          assemblyResults: { page: 1, size: 10 },
+          doHistory: { page: 1, size: 10 },
+          labelsHistory: { page: 1, size: 10 },
+          returns: { page: 1, size: 10 },
+          receiptTray: { page: 1, size: 10 },
+        });
+
+
+        // ===================================================================
+        // INITIALIZE DELIVERY ORDER & PACKING LIST MODULE (FASE 2)
+        // ===================================================================
+        if (typeof window.createDeliveryModule === 'function') {
+          deliveryModule = window.createDeliveryModule({
+            fetchAPI,
+            triggerToast,
+            showConfirmCard,
+            pgState,
+            userRole,
+            operatorName,
+            userFullName,
+            getNowWIBDateString,
+            getYearMonthFromDate
+          });
+        }
+
 
         const logout = async () => {
           showAdminUnsavedModal.value = false;
@@ -1066,30 +1306,7 @@
           window.location.replace('/login');
         };
 
-        // Trays State
-        const traysList = ref([]);
-        const selectedTrayCode = ref('');
-        const currentTray = ref(null);
-        const currentTrayParts = ref([]);
-        const currentTrayAssemblies = ref([]);
-
-        // Searchable Dropdown State
-        const isTrayDropdownOpen = ref(false);
-        const traySearchText = ref('');
-        const trayDropdownRef = ref(null);
-
-        const toggleTrayDropdown = () => {
-          isTrayDropdownOpen.value = !isTrayDropdownOpen.value;
-          if (isTrayDropdownOpen.value) {
-            traySearchText.value = '';
-          }
-        };
-
-        const selectTrayFromDropdown = (code) => {
-          selectedTrayCode.value = code;
-          isTrayDropdownOpen.value = false;
-          loadAssemblyTray();
-        };
+        // Trays State & Searchable Dropdown moved to public/js/modules/assembly.js (Fase 2E)
 
         // Operators list for Warehouse assignment (Role: assembly only)
         // Database Environment State (Production vs Testing)
@@ -1145,8 +1362,6 @@
         const operatorUsersList = ref([]);
         // All users list for name lookup across the entire system
         const allUsersLookupList = ref([]);
-        // Operator Filter for Gudang / Admin
-        const selectedOperatorFilter = ref('');
 
         const loadOperatorsList = async () => {
           try {
@@ -1213,31 +1428,99 @@
           return clean;
         };
 
-        const filteredTraysList = computed(() => {
-          let list = (traysList.value || []).filter(t => t.session_status !== 'RETURNED_TO_WAREHOUSE' || (t.finished_count && t.finished_count > 0));
-          if (currentTab.value === 'assy_testing') {
-            list = list.filter(t => (t.good_assembly_count || t.good_count || 0) > 0);
-          }
-          if (selectedOperatorFilter.value && selectedOperatorFilter.value !== '' && selectedOperatorFilter.value !== 'Semua Operator Assembly') {
-            const op = selectedOperatorFilter.value.toLowerCase().trim();
-            list = list.filter(t => {
-              const assigned = (t.assigned_operator || '').toLowerCase().trim();
-              const assignedFull = getOperatorFullName(t.assigned_operator).toLowerCase().trim();
-              return assigned === op || assignedFull === op || assigned.includes(op) || assignedFull.includes(op);
-            });
-          }
-          if (traySearchText.value && traySearchText.value.trim()) {
-            const q = traySearchText.value.toLowerCase().trim();
-            list = list.filter(t =>
-              (t.tray_code && t.tray_code.toLowerCase().includes(q)) ||
-              (isPUTray(t) && getPUDocNumber(t.tray_code).toLowerCase().includes(q)) ||
-              (t.pic_warehouse && t.pic_warehouse.toLowerCase().includes(q)) ||
-              (t.assigned_operator && t.assigned_operator.toLowerCase().includes(q))
-            );
-          }
-          list.sort((a, b) => (a.tray_code || '').localeCompare(b.tray_code || '', undefined, { numeric: true, sensitivity: 'base' }));
-          return list;
-        });
+        // ===================================================================
+        // 10. AREA PERAKITAN (ASSEMBLY) MODULE (FASE 2E)
+        // ===================================================================
+        if (typeof window.createAssemblyModule === 'function') {
+          assemblyModule = window.createAssemblyModule({
+            Vue,
+            fetchAPI,
+            triggerToast,
+            showConfirmCard,
+            userRole,
+            operatorName,
+            userFullName,
+            currentTab,
+            getOperatorFullName,
+            getNowTimeStr,
+            getNowLocalDateTimeStr,
+            formatTimeInput,
+            openLabelPreview: (...args) => (typeof openLabelPreview === 'function' ? openLabelPreview(...args) : null),
+            openDetailModal: (...args) => (typeof openDetailModal === 'function' ? openDetailModal(...args) : null),
+            loadAssemblyResults: (...args) => (typeof loadAssemblyResults === 'function' ? loadAssemblyResults(...args) : null),
+            loadProductionHoldItems: (...args) => (typeof loadProductionHoldItems === 'function' ? loadProductionHoldItems(...args) : null),
+            loadReturnedTrays: (...args) => (typeof loadReturnedTrays === 'function' ? loadReturnedTrays(...args) : null),
+            loadLaporan: (...args) => (typeof loadLaporan === 'function' ? loadLaporan(...args) : null),
+            loadMasterData: (...args) => (typeof loadMasterData === 'function' ? loadMasterData(...args) : null),
+            liveClock
+          });
+        }
+
+        // Bridge refs/methods for internal app.js usage
+        const {
+          traysList,
+          selectedTrayCode,
+          currentTray,
+          currentTrayParts,
+          currentTrayAssemblies,
+          isTrayDropdownOpen,
+          traySearchText,
+          trayDropdownRef,
+          selectedOperatorFilter,
+          toggleTrayDropdown,
+          selectTrayFromDropdown,
+          filteredTraysList,
+          inProgressMap,
+          loadSavedProgress,
+          saveProgress,
+          currentTraySetsCount,
+          finishedSlotsCount,
+          isTrayFullyFinished,
+          hasHoldItem,
+          isTrayLocked,
+          firstUnfinishedIndex,
+          traySlots,
+          isSlotLocked,
+          canEditSlot,
+          isStatusGood,
+          availablePartsByType,
+          loadTrays,
+          loadAssemblyTray,
+          assemblyPollTimer,
+          startAssemblyAutoPoll,
+          activeModalIndex,
+          assyForm,
+          setStartTimeNow,
+          setEndTimeNow,
+          captureStartTime,
+          startAssemblyNow,
+          openAssemblyModal,
+          closeModal,
+          saveAssemblyItem,
+          showQuickStatusModal,
+          quickStatusData,
+          quickFinishSlot,
+          submitQuickStatusModal,
+          submitQuickFinish,
+          showPauseModal,
+          pauseForm,
+          isWorkstationPaused,
+          activePauseReason,
+          activeDowntimeId,
+          pausedStartTime,
+          pausedDurationSeconds,
+          pausedDurationDisplay,
+          openPauseModal,
+          submitPauseAssembly,
+          resumeAssemblyWork,
+          showSessionModal,
+          sessionForm,
+          openSessionModal,
+          openReturnToWarehouseFromAssembly,
+          submitSessionAction
+        } = assemblyModule;
+
+        // filteredTraysList moved to public/js/modules/assembly.js (Fase 2E)
 
         const assemblyOverallCounts = computed(() => {
           let list = traysList.value || [];
@@ -1300,18 +1583,7 @@
           }
         };
 
-        // Assembly Form State
-        const activeModalIndex = ref(null);
-        const assyForm = ref({
-          part15: '',
-          part1: '',
-          part12: '',
-          startTime: '',
-          endTime: '',
-          started_at: null,
-          status: 'Good',
-          reason: ''
-        });
+        // Assembly Form State moved to public/js/modules/assembly.js (Fase 2E)
 
         // Label Preview State
         const showLabelPreviewModal = ref(false);
@@ -2044,6 +2316,7 @@
               body: JSON.stringify({
                 assembly_id: it.id,
                 action: action,
+                operator: userFullName.value || userName.value || 'Administrator NKRI',
                 notes: (qcActualVerifyNotes.value || '').trim()
               })
             });
@@ -2098,6 +2371,7 @@
               body: JSON.stringify({
                 tray_id: qcVerifyTargetTray.value.id,
                 action: action,
+                operator: userFullName.value || userName.value || 'Administrator NKRI',
                 notes: (qcActualVerifyNotes.value || '').trim()
               })
             });
@@ -2414,224 +2688,7 @@
           }
         };
 
-        // ================= ASSEMBLY SESSION ACTIONS (RETURN, HANDOVER) =================
-        const showSessionModal = ref(false);
-        const sessionForm = ref({
-          action: 'RETURN_WAREHOUSE',
-          reason: '',
-          new_operator: ''
-        });
-
-        const openSessionModal = () => {
-          if (!currentTray.value) {
-            triggerToast('Peringatan', 'Pilih Tray aktif terlebih dahulu!', 'warn');
-            return;
-          }
-          sessionForm.value = {
-            action: 'RETURN_WAREHOUSE',
-            reason: '',
-            new_operator: ''
-          };
-          showSessionModal.value = true;
-        };
-
-        const openReturnToWarehouseFromAssembly = () => {
-          openSessionModal();
-        };
-
-        const submitSessionAction = async () => {
-          if (!currentTray.value) return;
-          try {
-            if (sessionForm.value.action === 'HANDOVER_SHIFT' && !sessionForm.value.new_operator) {
-              triggerToast('Perhatian', 'Harap pilih operator assembly penerima shift!', 'warn');
-              return;
-            }
-
-            const codeToClear = currentTray.value.tray_code;
-
-            const json = await fetchAPI('/assembly/session-action', {
-              method: 'POST',
-              body: JSON.stringify({
-                tray_id: currentTray.value.id,
-                tray_code: currentTray.value.tray_code,
-                action: sessionForm.value.action,
-                reason: sessionForm.value.reason,
-                new_operator: sessionForm.value.new_operator
-              })
-            });
-
-            if (json.ok) {
-              triggerToast('Sesi Selesai', json.message || 'Sesi pengerjaan berhasil diselesaikan.', 'success');
-              showSessionModal.value = false;
-
-              // Bersihkan riwayat in-progress lokal untuk tray ini
-              if (codeToClear) {
-                localStorage.removeItem(`inProgressMap_${codeToClear}`);
-                delete inProgressMap.value;
-                inProgressMap.value = {};
-              }
-
-              await loadTrays();
-              await loadReturnedTrays();
-              await loadLaporan();
-              await loadMasterData();
-
-              if (codeToClear && filteredTraysList.value.some(t => t.tray_code === codeToClear)) {
-                selectedTrayCode.value = codeToClear;
-                await loadAssemblyTray();
-              } else if (filteredTraysList.value.length > 0) {
-                selectedTrayCode.value = filteredTraysList.value[0].tray_code;
-                await loadAssemblyTray();
-              } else {
-                selectedTrayCode.value = '';
-                currentTray.value = null;
-                currentTrayParts.value = [];
-                currentTrayAssemblies.value = [];
-              }
-            } else {
-              triggerToast('Gagal', json.error || 'Gagal memproses aksi sesi.', 'error');
-            }
-          } catch (e) {
-            triggerToast('Error', e.message, 'error');
-          }
-        };
-
-        // ================= ASSEMBLY JEDA / DOWNTIME STATE & ACTIONS =================
-        const showPauseModal = ref(false);
-        const pauseForm = ref({
-          reason: 'Istirahat / Sholat / Toilet',
-          estimatedDuration: '',
-          customReason: ''
-        });
-        const isWorkstationPaused = ref(false);
-        const activePauseReason = ref('');
-        const activeDowntimeId = ref(null);
-        const pausedStartTime = ref(null);
-        const pausedDurationSeconds = ref(0);
-
-        const pausedDurationDisplay = computed(() => {
-          const sec = pausedDurationSeconds.value || 0;
-          const mins = Math.floor(sec / 60);
-          const remSec = sec % 60;
-          return `${String(mins).padStart(2, '0')}:${String(remSec).padStart(2, '0')}`;
-        });
-
-        const openPauseModal = () => {
-          if (!currentTray.value) {
-            triggerToast('Peringatan', 'Pilih Tray aktif terlebih dahulu sebelum jeda!', 'warn');
-            return;
-          }
-          pauseForm.value = {
-            reason: 'Istirahat / Sholat / Toilet',
-            estimatedDuration: '',
-            customReason: ''
-          };
-          showPauseModal.value = true;
-        };
-
-        const submitPauseAssembly = async () => {
-          if (!currentTray.value) return;
-          try {
-            let finalReason = pauseForm.value.reason || 'Jeda Operasional';
-            if (pauseForm.value.estimatedDuration) {
-              finalReason += ` [Est: ${pauseForm.value.estimatedDuration}]`;
-            }
-            if (pauseForm.value.customReason && pauseForm.value.customReason.trim()) {
-              finalReason += ` - ${pauseForm.value.customReason.trim()}`;
-            }
-
-            const json = await fetchAPI('/assembly/pause', {
-              method: 'POST',
-              body: JSON.stringify({
-                tray_id: currentTray.value.id,
-                tray_code: currentTray.value.tray_code,
-                set_number: (firstUnfinishedIndex.value || 0) + 1,
-                reason: finalReason,
-                operator: userFullName.value || userName.value
-              })
-            });
-
-            if (json.ok) {
-              isWorkstationPaused.value = true;
-              activePauseReason.value = finalReason;
-              activeDowntimeId.value = json.downtime_id;
-              pausedStartTime.value = new Date();
-              pausedDurationSeconds.value = 0;
-              showPauseModal.value = false;
-              triggerToast('Pengerjaan Dijeda', 'Waktu jeda pengerjaan mulai dihitung.', 'info');
-            } else {
-              triggerToast('Gagal', json.error || 'Gagal menjeda perakitan.', 'error');
-            }
-          } catch (e) {
-            triggerToast('Error', e.message, 'error');
-          }
-        };
-
-        const resumeAssemblyWork = async () => {
-          try {
-            const pauseStart = pausedStartTime.value ? pausedStartTime.value.getTime() : null;
-            const nowMs = new Date().getTime();
-            const pauseDeltaMs = pauseStart ? Math.max(0, nowMs - pauseStart) : 0;
-
-            const json = await fetchAPI('/assembly/resume', {
-              method: 'POST',
-              body: JSON.stringify({
-                downtime_id: activeDowntimeId.value,
-                tray_id: currentTray.value ? currentTray.value.id : null,
-                tray_code: selectedTrayCode.value || (currentTray.value ? currentTray.value.tray_code : '')
-              })
-            });
-
-            if (json.ok) {
-              isWorkstationPaused.value = false;
-              activeDowntimeId.value = null;
-              pausedStartTime.value = null;
-              pausedDurationSeconds.value = 0;
-
-              // Waktu aktual langsung berjalan kembali (tidak stuck)
-              liveClock.value = new Date();
-
-              // Sesuaikan waktu mulai rakitan aktif agar durasi jeda tidak dihitung sebagai waktu kerja rakitan
-              if (pauseDeltaMs > 0 && selectedTrayCode.value) {
-                Object.keys(inProgressMap.value).forEach(setNum => {
-                  const prog = inProgressMap.value[setNum];
-                  if (prog && prog.started_at) {
-                    const origStart = new Date(prog.started_at).getTime();
-                    if (!isNaN(origStart)) {
-                      const newStart = new Date(origStart + pauseDeltaMs);
-                      const pad = (n) => String(n).padStart(2, '0');
-                      prog.started_at = `${newStart.getFullYear()}-${pad(newStart.getMonth() + 1)}-${pad(newStart.getDate())} ${pad(newStart.getHours())}:${pad(newStart.getMinutes())}:${pad(newStart.getSeconds())}`;
-                    }
-                  }
-                });
-                saveProgress(selectedTrayCode.value);
-              }
-
-              if (activeModalIndex.value !== null && assyForm.value.started_at && pauseDeltaMs > 0) {
-                const origStart = new Date(assyForm.value.started_at).getTime();
-                if (!isNaN(origStart)) {
-                  const newStart = new Date(origStart + pauseDeltaMs);
-                  const pad = (n) => String(n).padStart(2, '0');
-                  assyForm.value.started_at = `${newStart.getFullYear()}-${pad(newStart.getMonth() + 1)}-${pad(newStart.getDate())} ${pad(newStart.getHours())}:${pad(newStart.getMinutes())}:${pad(newStart.getSeconds())}`;
-                }
-              }
-
-              triggerToast('Dilanjutkan', 'Pengerjaan perakitan berhasil dilanjutkan dengan jam aktual.', 'success');
-            } else {
-              triggerToast('Gagal', json.error || 'Gagal melanjutkan perakitan.', 'error');
-            }
-          } catch (e) {
-            triggerToast('Error', e.message, 'error');
-          }
-        };
-
-        // Live timer for pause duration
-        setInterval(() => {
-          if (isWorkstationPaused.value && pausedStartTime.value) {
-            const elapsed = Math.floor((new Date().getTime() - pausedStartTime.value.getTime()) / 1000);
-            pausedDurationSeconds.value = Math.max(0, elapsed);
-          }
-        }, 1000);
+        // Assembly Session Actions & Downtime moved to public/js/modules/assembly.js (Fase 2E)
 
         // ================= DOWNTIME AUDIT LOGS (ADMIN & GUDANG) =================
         const downtimeLogsList = ref([]);
@@ -4191,185 +4248,7 @@
           }
         };
 
-        // Computed Properties for Active Tray & Slots
-        const currentTraySetsCount = computed(() => {
-          const assyCount = (currentTrayAssemblies.value || []).length;
-          const maxAssySet = (currentTrayAssemblies.value || []).reduce((max, a) => Math.max(max, Number(a.set_number) || 0), 0);
-          if (currentTray.value && currentTray.value.session_status === 'COMPLETED_SHIFT') {
-            return Math.max(assyCount, maxAssySet, 0);
-          }
-          const p15Count = (currentTrayParts.value || []).filter(p => p.part_type === '15').length;
-          const p1Count = (currentTrayParts.value || []).filter(p => p.part_type === '1').length;
-          const p12Count = (currentTrayParts.value || []).filter(p => p.part_type === '12').length;
-          const partsCount = Math.max(p15Count, p1Count, p12Count, 0);
-          return Math.max(assyCount, maxAssySet, partsCount, 0);
-        });
-
-        const finishedSlotsCount = computed(() => {
-          return currentTrayAssemblies.value.length;
-        });
-
-        const isTrayFullyFinished = computed(() => {
-          return currentTraySetsCount.value > 0 && finishedSlotsCount.value >= currentTraySetsCount.value;
-        });
-
-        const hasHoldItem = computed(() => {
-          return currentTrayAssemblies.value.some(a => a.status === 'Hold');
-        });
-
-        const isTrayLocked = computed(() => {
-          if (currentTray.value && (currentTray.value.session_status === 'RETURNED_TO_WAREHOUSE' || currentTray.value.session_status === 'COMPLETED_SHIFT')) return true;
-          return isTrayFullyFinished.value && !hasHoldItem.value;
-        });
-
-        const firstUnfinishedIndex = computed(() => {
-          if (currentTray.value && currentTray.value.session_status === 'RETURNED_TO_WAREHOUSE') {
-            return currentTraySetsCount.value;
-          }
-          const finishedSetNums = new Set(currentTrayAssemblies.value.map(a => a.set_number));
-          for (let i = 1; i <= currentTraySetsCount.value; i++) {
-            if (!finishedSetNums.has(i)) return i - 1;
-          }
-          return currentTraySetsCount.value;
-        });
-
-        const inProgressMap = ref({});
-
-        const loadSavedProgress = (trayCode) => {
-          const code = trayCode || selectedTrayCode.value;
-          if (!code) {
-            inProgressMap.value = {};
-            return;
-          }
-          try {
-            const key = `inProgressMap_${code}`;
-            const raw = localStorage.getItem(key);
-            if (raw) {
-              inProgressMap.value = JSON.parse(raw);
-            } else {
-              inProgressMap.value = {};
-            }
-          } catch (_) {
-            inProgressMap.value = {};
-          }
-        };
-
-        const saveProgress = (trayCode) => {
-          const code = trayCode || selectedTrayCode.value;
-          if (!code) return;
-          try {
-            const key = `inProgressMap_${code}`;
-            if (!inProgressMap.value || Object.keys(inProgressMap.value).length === 0) {
-              localStorage.removeItem(key);
-            } else {
-              localStorage.setItem(key, JSON.stringify(inProgressMap.value));
-            }
-          } catch (_) { }
-        };
-
-        const traySlots = computed(() => {
-          const count = currentTraySetsCount.value || 0;
-          const slots = [];
-          const assyMap = {};
-          (currentTrayAssemblies.value || []).forEach(a => {
-            if (a.set_number && (!assyMap[a.set_number] || (a.id && (!assyMap[a.set_number].id || a.id > assyMap[a.set_number].id)))) {
-              assyMap[a.set_number] = a;
-            }
-          });
-
-          // Collect parts that are already assembled
-          const usedP15 = new Set();
-          const usedP1 = new Set();
-          const usedP12 = new Set();
-          (currentTrayAssemblies.value || []).forEach(a => {
-            if (a.part15_sn) usedP15.add(a.part15_sn);
-            if (a.part1_sn) usedP1.add(a.part1_sn);
-            if (a.part12_sn) usedP12.add(a.part12_sn);
-          });
-
-          // Also account for parts in-progress
-          Object.entries(inProgressMap.value).forEach(([sNumStr, prog]) => {
-            if (prog.part15) usedP15.add(prog.part15);
-            if (prog.part1) usedP1.add(prog.part1);
-            if (prog.part12) usedP12.add(prog.part12);
-          });
-
-          // Available unused parts in tray
-          const availP15 = (currentTrayParts.value || []).filter(p => p.part_type === '15' && !usedP15.has(p.sn));
-          const availP1 = (currentTrayParts.value || []).filter(p => p.part_type === '1' && !usedP1.has(p.sn));
-          const availP12 = (currentTrayParts.value || []).filter(p => p.part_type === '12' && !usedP12.has(p.sn));
-
-          let uncompletedIdx = 0;
-          for (let i = 0; i < count; i++) {
-            const setNum = i + 1;
-            const assy = assyMap[setNum];
-            if (assy) {
-              slots.push(assy);
-            } else {
-              const prog = inProgressMap.value[setNum];
-              const p15Val = prog ? prog.part15 : (availP15[uncompletedIdx] ? availP15[uncompletedIdx].sn : '');
-              const p1Val = prog ? prog.part1 : (availP1[uncompletedIdx] ? availP1[uncompletedIdx].sn : '');
-              const p12Val = prog ? prog.part12 : (availP12[uncompletedIdx] ? availP12[uncompletedIdx].sn : '');
-
-              const isReturned = (currentTray.value && currentTray.value.session_status === 'RETURNED_TO_WAREHOUSE') ||
-                (availP15[uncompletedIdx] && availP15[uncompletedIdx].status === 'RETURNED');
-
-              slots.push({
-                set_number: setNum,
-                part15_sn: p15Val,
-                part1_sn: p1Val,
-                part12_sn: p12Val,
-                started_at: prog ? prog.started_at : null,
-                finished_at: null,
-                status: isReturned ? 'RETURNED' : null
-              });
-              uncompletedIdx++;
-            }
-          }
-          return slots;
-        });
-
-        const isSlotLocked = (index) => {
-          if (index > firstUnfinishedIndex.value) return true;
-          return false;
-        };
-
-        const canEditSlot = (slot) => {
-          if (currentTray.value && (currentTray.value.session_status === 'RETURNED_TO_WAREHOUSE' || currentTray.value.session_status === 'COMPLETED_SHIFT')) return false;
-          if (!isTrayFullyFinished.value) return true;
-          return slot.status === 'Hold';
-        };
-
-        const isStatusGood = (status) => {
-          return (status || '').toLowerCase() === 'good';
-        };
-
-        // Available Parts per Tray calculation for Assembly modal
-        const availablePartsByType = (type) => {
-          if (!currentTrayParts.value || !currentTrayParts.value.length) return [];
-
-          const assembledSNs = new Set();
-          const currentSlot = activeModalIndex.value !== null ? traySlots.value[activeModalIndex.value] : null;
-
-          currentTrayAssemblies.value.forEach(a => {
-            // If editing current slot, keep its own parts available
-            if (currentSlot && currentSlot.id && a.id === currentSlot.id) return;
-            if (a.part15_sn) assembledSNs.add(a.part15_sn);
-            if (a.part12_sn) assembledSNs.add(a.part12_sn);
-            if (a.part1_sn) assembledSNs.add(a.part1_sn);
-          });
-
-          // Also exclude parts currently in other in-progress slots
-          Object.entries(inProgressMap.value).forEach(([setNumStr, prog]) => {
-            const sNum = parseInt(setNumStr, 10);
-            if (activeModalIndex.value !== null && sNum === (activeModalIndex.value + 1)) return;
-            if (prog.part15) assembledSNs.add(prog.part15);
-            if (prog.part1) assembledSNs.add(prog.part1);
-            if (prog.part12) assembledSNs.add(prog.part12);
-          });
-
-          return currentTrayParts.value.filter(p => p.part_type === type && !assembledSNs.has(p.sn));
-        };
+        // Slot Calculation & Parts Availability moved to public/js/modules/assembly.js (Fase 2E)
 
         // Traveler Items Computed
         const activePrintDocType = ref('supply'); // 'supply' | 'assy' | 'assy_rework' | 'assy_qc' | 'wh_qc'
@@ -4876,53 +4755,7 @@
           });
         });
 
-        // Live Polling Timer for Assembly Monitoring
-        let assemblyPollTimer = null;
-        const startAssemblyAutoPoll = () => {
-          if (assemblyPollTimer) clearInterval(assemblyPollTimer);
-          assemblyPollTimer = setInterval(() => {
-            if (currentTab.value === 'assembly' && selectedTrayCode.value && activeModalIndex.value === null && !showPauseModal.value && !showSessionModal.value) {
-              fetchAPI(`/assembly/tray?code=${encodeURIComponent(selectedTrayCode.value)}`)
-                .then(json => {
-                  if (json && json.ok && json.data) {
-                    currentTray.value = json.data.tray;
-                    currentTrayParts.value = json.data.parts;
-                    currentTrayAssemblies.value = json.data.assemblies;
-
-                    if (json.data.active_downtime) {
-                      isWorkstationPaused.value = json.data.active_downtime.is_paused;
-                      activePauseReason.value = json.data.active_downtime.reason || 'Jeda Operasional';
-                      activeDowntimeId.value = json.data.active_downtime.downtime_id;
-                      pausedDurationSeconds.value = json.data.active_downtime.elapsed_seconds || 0;
-                      if (json.data.active_downtime.paused_at) {
-                        pausedStartTime.value = new Date(json.data.active_downtime.paused_at);
-                      }
-                    } else {
-                      isWorkstationPaused.value = false;
-                      activePauseReason.value = '';
-                      activeDowntimeId.value = null;
-                      pausedDurationSeconds.value = 0;
-                      pausedStartTime.value = null;
-                    }
-
-                    if (json.data.in_progress) {
-                      const inp = json.data.in_progress;
-                      inProgressMap.value[inp.set_number] = {
-                        started_at: inp.started_at,
-                        part15: inp.part15 || '',
-                        part1: inp.part1 || '',
-                        part12: inp.part12 || '',
-                        operator: inp.operator || ''
-                      };
-                    } else if (userRole.value === 'gudang') {
-                      inProgressMap.value = {};
-                    }
-                  }
-                })
-                .catch(() => { });
-            }
-          }, 3000);
-        };
+        // Assembly Live Polling Timer moved to public/js/modules/assembly.js (Fase 2E)
 
         // Tab Switching — Unified through navigateTo so history is always tracked
         const switchTab = (tab, subTab = null, isFromPopState = false) => {
@@ -4930,105 +4763,7 @@
         };
 
         // Load Data Helpers
-        const loadTrays = async () => {
-          try {
-            let url = '/assembly/trays';
-            if (selectedOperatorFilter.value && (userRole.value === 'gudang' || userRole.value === 'admin' || userRole.value === 'Super Admin' || String(userRole.value || '').toLowerCase().includes('admin'))) {
-              url += `?operator=${encodeURIComponent(selectedOperatorFilter.value)}`;
-            }
-            const json = await fetchAPI(url);
-            if (json.ok) {
-              const items = json.data || [];
-              items.sort((a, b) => (a.tray_code || '').localeCompare(b.tray_code || '', undefined, { numeric: true, sensitivity: 'base' }));
-              traysList.value = items;
-
-              if (currentTab.value === 'assembly' || currentTab.value === 'assy_testing') {
-                const list = filteredTraysList.value || [];
-                if (list.length > 0) {
-                  const savedCode = localStorage.getItem('selectedTrayCode');
-                  const exists = savedCode && list.some(t => t.tray_code === savedCode);
-                  if (exists) {
-                    selectedTrayCode.value = savedCode;
-                  } else if (!selectedTrayCode.value || !list.some(t => t.tray_code === selectedTrayCode.value)) {
-                    selectedTrayCode.value = list[0].tray_code;
-                  }
-                  await loadAssemblyTray();
-                } else {
-                  selectedTrayCode.value = '';
-                  currentTray.value = null;
-                  currentTrayParts.value = [];
-                  currentTrayAssemblies.value = [];
-                }
-              }
-            }
-          } catch (e) {
-            triggerToast('Error', e.message, 'error');
-          }
-        };
-
-        const loadAssemblyTray = async () => {
-          if (!selectedTrayCode.value) return;
-          localStorage.setItem('selectedTrayCode', selectedTrayCode.value);
-          loadSavedProgress(selectedTrayCode.value);
-          try {
-            const json = await fetchAPI(`/assembly/tray?code=${encodeURIComponent(selectedTrayCode.value)}`);
-            if (json.ok) {
-              currentTray.value = json.data.tray;
-              currentTrayParts.value = json.data.parts;
-              currentTrayAssemblies.value = json.data.assemblies;
-
-              // Sync active downtime (pause)
-              if (json.data.active_downtime) {
-                isWorkstationPaused.value = json.data.active_downtime.is_paused;
-                activePauseReason.value = json.data.active_downtime.reason || 'Jeda Operasional';
-                activeDowntimeId.value = json.data.active_downtime.downtime_id;
-                pausedDurationSeconds.value = json.data.active_downtime.elapsed_seconds || 0;
-                if (json.data.active_downtime.paused_at) {
-                  pausedStartTime.value = new Date(json.data.active_downtime.paused_at);
-                }
-              } else {
-                isWorkstationPaused.value = false;
-                activePauseReason.value = '';
-                activeDowntimeId.value = null;
-                pausedDurationSeconds.value = 0;
-                pausedStartTime.value = null;
-              }
-
-              // Sync active in-progress from server
-              if (json.data.in_progress) {
-                const inp = json.data.in_progress;
-                inProgressMap.value[inp.set_number] = {
-                  started_at: inp.started_at,
-                  part15: inp.part15 || '',
-                  part1: inp.part1 || '',
-                  part12: inp.part12 || '',
-                  operator: inp.operator || ''
-                };
-              } else if (userRole.value === 'gudang' || (currentTray.value && currentTray.value.session_status === 'COMPLETED_SHIFT')) {
-                inProgressMap.value = {};
-                if (selectedTrayCode.value) saveProgress(selectedTrayCode.value);
-              }
-
-              // Ensure already finished assemblies in DB are removed from inProgressMap
-              if (json.data.assemblies && json.data.assemblies.length) {
-                let changed = false;
-                json.data.assemblies.forEach(a => {
-                  if (inProgressMap.value[a.set_number]) {
-                    delete inProgressMap.value[a.set_number];
-                    changed = true;
-                  }
-                });
-                if (changed) {
-                  saveProgress(selectedTrayCode.value);
-                }
-              }
-            } else {
-              triggerToast('Info', json.error || 'Tray tidak dapat diakses.', 'warn');
-            }
-          } catch (e) {
-            triggerToast('Error', e.message, 'error');
-          }
-        };
+        // loadTrays & loadAssemblyTray moved to public/js/modules/assembly.js (Fase 2E)
 
         watch(selectedTrayCode, async (newCode) => {
           if (newCode && (currentTab.value === 'assembly' || currentTab.value === 'assy_testing')) {
@@ -5648,460 +5383,12 @@
           }
         };
 
-        // Live Clock & Time Helpers (Strictly WIB - UTC+7 Asia/Jakarta)
-        const getNowWIBDate = () => {
-          const now = new Date();
-          const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-          return new Date(utc + (7 * 3600000));
-        };
-
-        const getNowTimeStr = () => {
-          const w = getNowWIBDate();
-          const pad = (n) => String(n).padStart(2, '0');
-          return `${pad(w.getHours())}:${pad(w.getMinutes())}`;
-        };
-
-        const formatTimeInput = (dtStr) => {
-          if (!dtStr) return getNowTimeStr();
-          try {
-            const d = parseWIBDate(dtStr);
-            if (!d || isNaN(d.getTime())) return getNowTimeStr();
-            const pad = (n) => String(n).padStart(2, '0');
-            return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-          } catch (_) {
-            return getNowTimeStr();
-          }
-        };
-
-        const liveClock = ref(new Date());
-        let liveClockTimer = null;
-
-        const liveClockString = computed(() => {
-          const d = liveClock.value;
-          return d.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' WIB';
-        });
-
-        const getNowLocalDateTimeStr = () => {
-          const w = getNowWIBDate();
-          const pad = (n) => String(n).padStart(2, '0');
-          return `${w.getFullYear()}-${pad(w.getMonth() + 1)}-${pad(w.getDate())} ${pad(w.getHours())}:${pad(w.getMinutes())}:${pad(w.getSeconds())}`;
-        };
-
-        const setStartTimeNow = () => {
-          assyForm.value.startTime = getNowTimeStr();
-        };
-
-        const setEndTimeNow = () => {
-          assyForm.value.endTime = getNowTimeStr();
-        };
-
         // Modal & Action State Variables
         const showDetailModal = ref(false);
         const activeDetailSlot = ref(null);
         const showResetDbModal = ref(false);
         const isResettingDb = ref(false);
-        const showQuickStatusModal = ref(false);
-        const quickStatusData = ref({
-          index: null,
-          set_number: null,
-          status: '',
-          reason: ''
-        });
-
-        // Assembly Form Actions
-        const startAssemblyNow = async () => {
-          if (!assyForm.value.part15?.trim() || !assyForm.value.part1?.trim() || !assyForm.value.part12?.trim()) {
-            triggerToast('Validasi Part', 'Harap pilih Part 15, Part 1, dan Part 12 terlebih dahulu sebelum menekan Mulai!', 'warn');
-            return;
-          }
-          const now = getNowLocalDateTimeStr();
-          assyForm.value.started_at = now;
-          // Status default TIDAK memilih apapun (kosong) sampai operator mengklik status
-          if (activeModalIndex.value !== null) {
-            const setNum = activeModalIndex.value + 1;
-            inProgressMap.value[setNum] = {
-              started_at: now,
-              part15: assyForm.value.part15.trim(),
-              part1: assyForm.value.part1.trim(),
-              part12: assyForm.value.part12.trim(),
-              status: assyForm.value.status || '',
-              defective_parts: assyForm.value.defective_parts || [],
-              reason: assyForm.value.reason ? assyForm.value.reason.trim() : ''
-            };
-            saveProgress(selectedTrayCode.value);
-
-            // Sync directly to server so Gudang and all devices see this card is in progress in real-time
-            if (currentTray.value) {
-              fetchAPI('/assembly/start-set', {
-                method: 'POST',
-                body: JSON.stringify({
-                  tray_id: currentTray.value.id,
-                  tray_code: currentTray.value.tray_code,
-                  set_number: setNum,
-                  operator: userFullName.value || operatorName.value,
-                  part15: assyForm.value.part15.trim(),
-                  part1: assyForm.value.part1.trim(),
-                  part12: assyForm.value.part12.trim(),
-                  started_at: now
-                })
-              }).catch(() => { });
-            }
-          }
-          triggerToast('Pengerjaan Dimulai', 'Timer pengerjaan ON dan form part terkunci. Silakan tentukan status hasil perakitan.', 'success');
-        };
-
-        const openAssemblyModal = (index) => {
-          if (userRole.value === 'gudang' || userRole.value === 'qc') {
-            triggerToast('Akses Terbatas', (userRole.value === 'qc' ? 'Inspector QC' : 'Petugas Gudang') + ' hanya memiliki hak akses untuk memantau (Read Only).', 'info');
-            return;
-          }
-          const slot = traySlots.value[index];
-          if (slot && (slot.status || slot.finished_at)) {
-            triggerToast('Set Terkunci', `Set #${index + 1} sudah selesai dirakit (${slot.status || 'Selesai'}) dan terkunci permanen. Proses tidak dapat diulang.`, 'warn');
-            openDetailModal(slot, index);
-            return;
-          }
-          if (slot && slot.status === 'RETURNED') {
-            triggerToast('Selesai Dikembalikan', 'Set ini telah dikembalikan ke Gudang dan tidak dapat dirakit.', 'warn');
-            return;
-          }
-          if (currentTray.value && currentTray.value.session_status === 'RETURNED_TO_WAREHOUSE' && (!slot || !slot.id)) {
-            triggerToast('Sesi Ditutup', 'Tray ini telah diselesaikan dan sisa set telah dikembalikan ke Gudang.', 'warn');
-            return;
-          }
-          if (isSlotLocked(index)) {
-            triggerToast('Slot Terkunci', `Harap selesaikan perakitan Set #${firstUnfinishedIndex.value + 1} terlebih dahulu!`, 'error');
-            return;
-          }
-
-          activeModalIndex.value = index;
-          const nowStr = getNowTimeStr();
-          const setNum = index + 1;
-          const prog = inProgressMap.value[setNum];
-
-          if (prog) {
-            // In Progress (Sedang Dikerjakan)
-            assyForm.value = {
-              part15: prog.part15 || '',
-              part1: prog.part1 || '',
-              part12: prog.part12 || '',
-              startTime: formatTimeInput(prog.started_at),
-              endTime: nowStr,
-              started_at: prog.started_at,
-              status: prog.status || '',
-              defective_parts: prog.defective_parts || [],
-              reason: prog.reason || ''
-            };
-          } else {
-            // New Mode: Autoselect first available from this tray (Default status: BELUM DIPILIH / KOSONG)
-            const avail15 = availablePartsByType('15');
-            const avail1 = availablePartsByType('1');
-            const avail12 = availablePartsByType('12');
-
-            assyForm.value = {
-              part15: avail15.length ? avail15[0].sn : '',
-              part1: avail1.length ? avail1[0].sn : '',
-              part12: avail12.length ? avail12[0].sn : '',
-              startTime: nowStr,
-              endTime: nowStr,
-              started_at: null,
-              status: '',
-              defective_parts: [],
-              reason: ''
-            };
-          }
-        };
-
-        const closeModal = () => {
-          if (activeModalIndex.value !== null && assyForm.value.started_at) {
-            const setNum = activeModalIndex.value + 1;
-            inProgressMap.value[setNum] = {
-              started_at: assyForm.value.started_at,
-              part15: assyForm.value.part15 ? assyForm.value.part15.trim() : '',
-              part1: assyForm.value.part1 ? assyForm.value.part1.trim() : '',
-              part12: assyForm.value.part12 ? assyForm.value.part12.trim() : '',
-              status: assyForm.value.status || '',
-              defective_parts: assyForm.value.defective_parts || [],
-              reason: assyForm.value.reason ? assyForm.value.reason.trim() : ''
-            };
-            saveProgress(selectedTrayCode.value);
-          }
-          activeModalIndex.value = null;
-        };
-
-        const captureStartTime = () => {
-          assyForm.value.startTime = getNowTimeStr();
-        };
-
-        const saveAssemblyItem = async (andPrint = false) => {
-          if (userRole.value === 'gudang') {
-            triggerToast('Akses Ditolak', 'Petugas Gudang tidak diizinkan menyimpan hasil rakitan.', 'error');
-            return;
-          }
-          if (!assyForm.value.part15.trim() || !assyForm.value.part1.trim() || !assyForm.value.part12.trim()) {
-            triggerToast('Validasi Gagal', 'Semua 3 Part (Part 15, Part 1, Part 12) wajib dipilih!', 'error');
-            return;
-          }
-
-          if (!assyForm.value.status) {
-            triggerToast('Status Belum Dipilih', 'Harap pilih salah satu Status Hasil Assembly (Good, Scrap, atau Hold)!', 'warn');
-            return;
-          }
-
-          if (assyForm.value.status !== 'Good') {
-            if (!assyForm.value.defective_parts || !assyForm.value.defective_parts.length) {
-              triggerToast('Pilih Part Cacat', 'Harap centang minimal satu part (Part 15, Part 1, atau Part 12) yang bermasalah!', 'warn');
-              return;
-            }
-            if (!assyForm.value.reason?.trim()) {
-              triggerToast('Alasan Diperlukan', `Harap isi alasan mengapa part di-${assyForm.value.status.toLowerCase()}!`, 'warn');
-              return;
-            }
-          }
-
-          const existingSlot = traySlots.value[activeModalIndex.value];
-          const setNum = activeModalIndex.value + 1;
-          const payload = {
-            tray_id: currentTray.value.id,
-            set_number: setNum,
-            operator: userFullName.value || operatorName.value,
-            part15: assyForm.value.part15.trim(),
-            part15_sn: assyForm.value.part15.trim(),
-            part12: assyForm.value.part12.trim(),
-            part12_sn: assyForm.value.part12.trim(),
-            part1: assyForm.value.part1.trim(),
-            part1_sn: assyForm.value.part1.trim(),
-            status: assyForm.value.status,
-            defective_parts: assyForm.value.status !== 'Good' ? assyForm.value.defective_parts : [],
-            reason: assyForm.value.reason ? assyForm.value.reason.trim() : null,
-            started_at: assyForm.value.started_at || getNowLocalDateTimeStr(),
-            finished_at: getNowLocalDateTimeStr(),
-            is_edit: !!existingSlot.id,
-            assembly_id: existingSlot.id || null,
-            old_sns: existingSlot.id ? [existingSlot.part15_sn, existingSlot.part12_sn, existingSlot.part1_sn] : null
-          };
-
-          try {
-            const json = await fetchAPI('/assembly/save', {
-              method: 'POST',
-              body: JSON.stringify(payload)
-            });
-
-            if (json.ok) {
-              delete inProgressMap.value[setNum];
-              saveProgress(selectedTrayCode.value);
-              triggerToast('Berhasil', `Set #${setNum} berhasil disimpan (Status: ${assyForm.value.status})!`, 'success');
-              const savedSN = { ...assyForm.value, set_number: setNum, pic_assembly: userFullName.value || operatorName.value, finished_at: new Date() };
-              const activeAssemblyCode = selectedTrayCode.value;
-              closeModal();
-
-              // Update local assembly collection realtime
-              if (json.data) {
-                const updatedAssy = json.data;
-                const existingIdx = (currentTrayAssemblies.value || []).findIndex(a => a.set_number === setNum);
-                if (existingIdx >= 0) {
-                  currentTrayAssemblies.value[existingIdx] = updatedAssy;
-                } else {
-                  currentTrayAssemblies.value.push(updatedAssy);
-                }
-              }
-
-              // Update traysList in realtime immediately
-              const currentTrayItem = (traysList.value || []).find(t => t.tray_code === activeAssemblyCode);
-              if (currentTrayItem) {
-                const totalFin = (currentTrayAssemblies.value || []).filter(a => a.finished_at || a.status).length;
-                currentTrayItem.finished_count = totalFin;
-                if (totalFin >= (currentTrayItem.total_sets || 22)) {
-                  currentTrayItem.session_status = 'COMPLETED';
-                  if (currentTray.value) currentTray.value.session_status = 'COMPLETED';
-                }
-              }
-
-              await loadAssemblyTray();
-              await loadTrays();
-              if (activeAssemblyCode && selectedTrayCode.value !== activeAssemblyCode) {
-                selectedTrayCode.value = activeAssemblyCode;
-                await loadAssemblyTray();
-              }
-              loadAssemblyResults();
-              loadProductionHoldItems();
-
-              if (andPrint && isStatusGood(savedSN.status)) {
-                openLabelPreview(savedSN);
-              }
-            } else {
-              triggerToast('Gagal Simpan', json.error || 'Terjadi kesalahan sistem.', 'error');
-            }
-          } catch (e) {
-            triggerToast('Error', e.message, 'error');
-          }
-        };
-
-        // Quick Finish Slot Directly From Card Without Entering Form
-        const quickFinishSlot = (index) => {
-          if (userRole.value === 'gudang') {
-            triggerToast('Akses Terbatas', 'Petugas Gudang tidak memiliki hak untuk melakukan perakitan.', 'warn');
-            return;
-          }
-          const slot = traySlots.value[index];
-          if (!slot) return;
-          if (slot.status || slot.finished_at) {
-            triggerToast('Set Terkunci', `Set #${index + 1} sudah selesai dirakit (${slot.status || 'Selesai'}) dan terkunci permanen.`, 'warn');
-            return;
-          }
-
-          const setNum = index + 1;
-          const prog = inProgressMap.value[setNum] || {};
-          let p15 = slot.part15_sn || prog.part15 || '';
-          let p1 = slot.part1_sn || prog.part1 || '';
-          let p12 = slot.part12_sn || prog.part12 || '';
-
-          if (!p15 || !p1 || !p12) {
-            const avail15 = availablePartsByType('15');
-            const avail1 = availablePartsByType('1');
-            const avail12 = availablePartsByType('12');
-            if (!p15 && avail15.length) p15 = avail15[0].sn;
-            if (!p1 && avail1.length) p1 = avail1[0].sn;
-            if (!p12 && avail12.length) p12 = avail12[0].sn;
-          }
-
-          if (!p15 || !p1 || !p12) {
-            openAssemblyModal(index);
-            triggerToast('Lengkapi Part', 'Harap pastikan semua part (Part 15, Part 1, Part 12) telah dipilih!', 'warn');
-            return;
-          }
-
-          // Selalu buka modal validasi status dengan status yang sudah terisi / terpilih sebelumnya
-          const currentStatus = prog.status || slot.status || '';
-          const defParts = prog.defective_parts || (slot.defective_parts ? (Array.isArray(slot.defective_parts) ? slot.defective_parts : [slot.defective_parts]) : []);
-          const rsn = prog.reason || slot.reason || '';
-
-          quickStatusData.value = {
-            index: index,
-            set_number: setNum,
-            part15: p15,
-            part1: p1,
-            part12: p12,
-            status: currentStatus || '',
-            defective_parts: defParts,
-            reason: rsn
-          };
-          showQuickStatusModal.value = true;
-        };
-
-        const submitQuickStatusModal = async () => {
-          if (!quickStatusData.value.status) {
-            triggerToast('Pilih Status', 'Harap pilih salah satu status hasil perakitan!', 'warn');
-            return;
-          }
-          if (quickStatusData.value.status !== 'Good') {
-            if (!quickStatusData.value.defective_parts || !quickStatusData.value.defective_parts.length) {
-              triggerToast('Pilih Part Cacat', 'Harap centang minimal satu part yang bermasalah!', 'warn');
-              return;
-            }
-            if (!quickStatusData.value.reason?.trim()) {
-              triggerToast('Alasan Diperlukan', `Harap isi alasan status ${quickStatusData.value.status}!`, 'warn');
-              return;
-            }
-          }
-          const idx = quickStatusData.value.index;
-          const st = quickStatusData.value.status;
-          const rsn = quickStatusData.value.reason;
-          const defParts = quickStatusData.value.defective_parts || [];
-          showQuickStatusModal.value = false;
-          await submitQuickFinish(idx, st, rsn, defParts);
-        };
-
-        const submitQuickFinish = async (index, statusVal, reasonVal, defectivePartsVal = []) => {
-          if (userRole.value === 'gudang') {
-            triggerToast('Akses Ditolak', 'Petugas Gudang tidak diizinkan menyelesaikan perakitan.', 'error');
-            return;
-          }
-          const slot = traySlots.value[index];
-          const setNum = index + 1;
-          const prog = inProgressMap.value[setNum] || {};
-          let p15 = slot.part15_sn || prog.part15 || '';
-          let p1 = slot.part1_sn || prog.part1 || '';
-          let p12 = slot.part12_sn || prog.part12 || '';
-
-          if (!p15 || !p1 || !p12) {
-            const avail15 = availablePartsByType('15');
-            const avail1 = availablePartsByType('1');
-            const avail12 = availablePartsByType('12');
-            if (!p15 && avail15.length) p15 = avail15[0].sn;
-            if (!p1 && avail1.length) p1 = avail1[0].sn;
-            if (!p12 && avail12.length) p12 = avail12[0].sn;
-          }
-
-          const payload = {
-            tray_id: currentTray.value.id,
-            set_number: setNum,
-            operator: userFullName.value || operatorName.value,
-            part15: p15.trim(),
-            part15_sn: p15.trim(),
-            part12: p12.trim(),
-            part12_sn: p12.trim(),
-            part1: p1.trim(),
-            part1_sn: p1.trim(),
-            status: statusVal,
-            defective_parts: statusVal !== 'Good' ? defectivePartsVal : [],
-            reason: reasonVal ? reasonVal.trim() : null,
-            started_at: slot.started_at || prog.started_at || getNowLocalDateTimeStr(),
-            finished_at: getNowLocalDateTimeStr(),
-            is_edit: !!slot.id,
-            assembly_id: slot.id || null,
-            old_sns: slot.id ? [slot.part15_sn, slot.part12_sn, slot.part1_sn] : null
-          };
-
-          try {
-            const json = await fetchAPI('/assembly/save', {
-              method: 'POST',
-              body: JSON.stringify(payload)
-            });
-
-            if (json.ok) {
-              delete inProgressMap.value[setNum];
-              saveProgress(selectedTrayCode.value);
-              triggerToast('Selesai', `Set #${setNum} berhasil diselesaikan (Status: ${statusVal})!`, 'success');
-              const activeAssemblyCode = selectedTrayCode.value;
-
-              // Update local assembly collection realtime
-              if (json.data) {
-                const updatedAssy = json.data;
-                const existingIdx = (currentTrayAssemblies.value || []).findIndex(a => a.set_number === setNum);
-                if (existingIdx >= 0) {
-                  currentTrayAssemblies.value[existingIdx] = updatedAssy;
-                } else {
-                  currentTrayAssemblies.value.push(updatedAssy);
-                }
-              }
-
-              // Update traysList in realtime immediately
-              const currentTrayItem = (traysList.value || []).find(t => t.tray_code === activeAssemblyCode);
-              if (currentTrayItem) {
-                const totalFin = (currentTrayAssemblies.value || []).filter(a => a.finished_at || a.status).length;
-                currentTrayItem.finished_count = totalFin;
-                if (totalFin >= (currentTrayItem.total_sets || 22)) {
-                  currentTrayItem.session_status = 'COMPLETED';
-                  if (currentTray.value) currentTray.value.session_status = 'COMPLETED';
-                }
-              }
-
-              await loadAssemblyTray();
-              await loadTrays();
-              if (activeAssemblyCode && selectedTrayCode.value !== activeAssemblyCode) {
-                selectedTrayCode.value = activeAssemblyCode;
-                await loadAssemblyTray();
-              }
-              loadAssemblyResults();
-              loadProductionHoldItems();
-            } else {
-              triggerToast('Gagal Simpan', json.error || 'Terjadi kesalahan sistem.', 'error');
-            }
-          } catch (e) {
-            triggerToast('Error', e.message, 'error');
-          }
-        };
+        // Quick Status & Quick Finish moved to public/js/modules/assembly.js (Fase 2E)
 
         const showDetailChecklistFull = ref(false);
 
@@ -6122,16 +5409,49 @@
                 (slot.warehouse_receipt_by || slot.warehouse_doc_number || slot.verified_by_user) ? 'warehouse_receipt' :
                   (currentTab.value === 'report' ? reportSubTab.value : (currentTab.value === 'assy_testing' ? 'assy_test' : (currentTab.value === 'qc' ? 'qc_test' : 'assembly'))));
 
-          // 1. Parse TF1 Checklist
-          let rawTF1 = slot.tf1_test_checklist || slot.assy_test_checklist || (context === 'assy_test' ? slot.test_checklist : null);
+          // 1. Parse TF1 Checklist (17 Parameter Uji Fungsional P9)
+          const p9TF1Defaults = [
+            { num: 1, name: "1. Pengecekan visual secara menyeluruh", category: "Cek Visual", desc: "- Penebalan pada hasil pengecatan\n- Retak pada area yang berpasangan dengan part berbahan metal" },
+            { num: 2, name: "1. Cek upper dan lower secara horizontal", category: "Cek Rigiditas", desc: "Tidak mengeluarkan suara akibat hasil rakitan longgar" },
+            { num: 3, name: "2. Cek front sight dan rear sight", category: "Cek Rigiditas", desc: "Tidak boleh bergeser saat digoyangkan" },
+            { num: 4, name: "1. Uji pelepas magasen sebanyak 3x", category: "Cek Mekanik", desc: "Magasen tidak jatuh/lepas setelah dikunci; Magasen dapat masuk-keluar dengan baik saat pelepas magasen ditekan" },
+            { num: 5, name: "2. Uji kokang sebanyak 3x", category: "Cek Mekanik", desc: "Tidak menyangkut ataupun tersendat ketika dikokang dan dapat kembali dengan lancar" },
+            { num: 6, name: "3. Uji picu mengaktifkan pemukul", category: "Cek Mekanik", desc: "Pemukul dapat memukul pena pukul saat picu ditarik" },
+            { num: 7, name: "4. Uji pemukul dan picu", category: "Cek Mekanik", desc: "Pemukul dapat memukul pena pukul" },
+            { num: 8, name: "5. Uji pemukul 1/2 tegang", category: "Cek Mekanik", desc: "Pemukul dapat terkunci pada kondisi 1/2 tegang dan memukul pena pukul saat picu ditarik" },
+            { num: 9, name: "6. Uji pemukul penuh", category: "Cek Mekanik", desc: "Pemukul dapat memukul pena pukul saat ditarik penuh" },
+            { num: 10, name: "7. Uji dorong pemukul kedepan", category: "Cek Mekanik", desc: "Pemukul tidak boleh memukul pena pukul saat didorong kedepan" },
+            { num: 11, name: "7.1. Uji tuas pengaman aktif", category: "Cek Mekanik", desc: "Pemukul tidak boleh memukul pena pukul saat tuas pengaman didorong keatas" },
+            { num: 12, name: "7.1.1 Uji tuas pengaman normal", category: "Cek Mekanik", desc: "Tuas pengaman dapat dikembalikan ke posisi normal dengan lancar" },
+            { num: 13, name: "7.2 Uji kunci eretan", category: "Cek Mekanik", desc: "Eretan dapat terkunci dengan baik dan tidak bergerak maju kedepan" },
+            { num: 14, name: "7.3 Uji turunkan kunci eretan", category: "Cek Mekanik", desc: "Eretan dapat maju kedepan dengan baik dan tidak tersendat" },
+            { num: 15, name: "8. Uji tuas pembongkar keatas", category: "Cek Mekanik", desc: "Tuas pembongkar dapat diputar keatas saat kunci eretan aktif" },
+            { num: 16, name: "8.1 Uji kembalikan tuas pembongkar", category: "Cek Mekanik", desc: "Tuas pembongkar dan kunci eretan dapat dikembalikan ke posisi awal" },
+            { num: 17, name: "9. Uji rigiditas laras", category: "Cek Mekanik", desc: "Laras tidak dapat bergerak mundur ke belakang saat didorong dari depan" }
+          ];
+
+          let rawTF1 = slot.tf1_test_checklist || slot.assy_test_checklist || slot.test_checklist;
           let parsedTF1 = null;
           if (Array.isArray(rawTF1)) parsedTF1 = rawTF1;
           else if (typeof rawTF1 === 'string') {
             try { parsedTF1 = JSON.parse(rawTF1); } catch (_) { parsedTF1 = null; }
           }
+
+          const hasActualTF1Checklist = Array.isArray(parsedTF1) && parsedTF1.length > 0;
+          const hasValidTF1Status = Boolean(slot.assy_test_status && !['PENDING', 'Pending', 'Belum Diuji'].includes(slot.assy_test_status));
+          const hasValidTF1Time = Boolean(slot.assy_tested_at);
+          const isAlreadyInNextStage = (context === 'qc_test' || context === 'warehouse_receipt' || slot.stage === 'QC' || Boolean(slot.qc_status && slot.qc_status !== 'PENDING') || Boolean(slot.qc_tested_at));
+
+          // Set rakitan yang belum diuji TF 1 (masih di perakitan / belum ada catatan uji) TIDAK boleh menampilkan status tested
+          const isTF1Tested = hasActualTF1Checklist ||
+            (hasValidTF1Time && hasValidTF1Status) ||
+            (isAlreadyInNextStage && slot.assy_test_status !== 'PENDING' && slot.assy_test_status !== 'Belum Diuji');
+
           let finalTF1Checklist = [];
-          if (Array.isArray(parsedTF1) && parsedTF1.length > 0) {
+          if (hasActualTF1Checklist) {
             finalTF1Checklist = parsedTF1.map((c, idx) => {
+              const tNum = Number(c.test_num || c.no || (idx + 1));
+              const def = p9TF1Defaults[tNum - 1] || {};
               const rawSt = String(c.status || '').trim().toUpperCase();
               let mappedStatus = 'PENDING';
               if (rawSt === 'GOOD' || rawSt === 'PASS' || rawSt === 'OK') {
@@ -6142,13 +5462,23 @@
                 mappedStatus = 'PENDING';
               }
               return {
-                test_num: c.test_num || (idx + 1),
-                name: c.name || `Uji #${c.test_num || (idx + 1)}`,
-                description: c.description || '',
+                test_num: tNum,
+                name: c.name || def.name || `Uji #${tNum}`,
+                category: c.category || def.category || 'Cek Mekanik',
+                description: c.description || def.desc || '',
                 status: mappedStatus,
                 notes: c.notes || ''
               };
             });
+          } else if (isTF1Tested && (slot.assy_test_status === 'Good' || isAlreadyInNextStage)) {
+            finalTF1Checklist = p9TF1Defaults.map(def => ({
+              test_num: def.num,
+              name: def.name,
+              category: def.category,
+              description: def.desc,
+              status: 'GOOD',
+              notes: ''
+            }));
           }
           let tf1GoodCount = finalTF1Checklist.filter(t => t.status === 'GOOD').length;
           let tf1FailCount = finalTF1Checklist.filter(t => t.status === 'NOT_GOOD').length;
@@ -6240,12 +5570,15 @@
 
           activeDetailSlot.value = {
             ...slot,
+            is_tf1_tested: isTF1Tested,
             index: index,
             process_stage: context,
             status: slotStatus,
             started_at: slot.started_at || slot.created_at || slot.tray_created_at,
             finished_at: slot.finished_at || slot.created_at,
             tested_at: slot.created_at || slot.tested_at || slot.assy_tested_at,
+            assy_tested_at: slot.assy_tested_at || slot.tested_at || null,
+            assy_test_status: slot.assy_test_status || (context === 'assy_test' ? slot.status : null),
             pic_assembly: slot.pic_assembly || slot.operator || slot.assigned_operator || (travelerTray.value && travelerTray.value.assigned_operator ? travelerTray.value.assigned_operator : '-'),
             pic_assembly_name: slot.pic_assembly_name || getOperatorFullName(slot.pic_assembly) || getOperatorFullName(slot.operator) || (slot.operator || slot.assigned_operator ? getOperatorFullName(slot.operator || slot.assigned_operator) : null) || (travelerTray.value && travelerTray.value.assigned_operator ? getOperatorFullName(travelerTray.value.assigned_operator) : null) || slot.pic_assembly || '-',
             pic_tester: slot.tester_full_name || slot.tester_username || slot.assy_tester_fullname || slot.pic_qc || slot.pic_assembly || '-',
@@ -6369,21 +5702,6 @@
             const url = 'https://api.qrserver.com/v1/create-qr-code/?size=72x72&data=' + encodeURIComponent(text);
             container.innerHTML = `<img src="${url}" alt="QR" style="width:72px;height:72px;object-fit:contain;" />`;
           }
-        };
-
-        const parseWIBDate = (dtStr) => {
-          if (!dtStr) return null;
-          if (dtStr instanceof Date) return isNaN(dtStr.getTime()) ? null : dtStr;
-          let str = String(dtStr).trim();
-          if (!str || ['none', 'null', '-', 'undefined', 'invalid date', 'n/a', ''].includes(str.toLowerCase())) return null;
-          if (str.endsWith('Z') || str.includes('+') || (str.length > 10 && str.substring(10).includes('-'))) {
-            const d = new Date(str);
-            return isNaN(d.getTime()) ? null : d;
-          }
-          str = str.replace(' ', 'T');
-          if (str.length === 10) str += 'T00:00:00';
-          const d = new Date(str + '+07:00');
-          return isNaN(d.getTime()) ? null : d;
         };
 
         const getEffectiveFinishedAt = (start, finish) => {
@@ -8193,200 +7511,27 @@
           return `${day} ${month} ${year}`;
         };
 
-        const exportDeliveryOrderExcel = async (specificDOId = null) => {
-          try {
-            let url = '/api/delivery-orders/export-data';
-            const params = [];
-            if (specificDOId) {
-              params.push(`do_id=${encodeURIComponent(specificDOId)}`);
-            } else {
-              if (doDocFilter && doDocFilter.value) {
-                params.push(`doc_number=${encodeURIComponent(doDocFilter.value.trim())}`);
-              } else if (doSearchText && doSearchText.value && doSearchText.value.trim()) {
-                params.push(`doc_number=${encodeURIComponent(doSearchText.value.trim())}`);
-              }
-              if (doStartDate && doStartDate.value) {
-                params.push(`start_date=${encodeURIComponent(doStartDate.value)}`);
-              }
-              if (doEndDate && doEndDate.value) {
-                params.push(`end_date=${encodeURIComponent(doEndDate.value)}`);
-              }
-            }
-            if (params.length > 0) {
-              url += '?' + params.join('&');
-            }
-
-            const token = localStorage.getItem('token');
-            const res = await fetch(url, {
-              headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const result = await res.json();
-            if (!result.ok) {
-              throw new Error(result.error || 'Gagal mengambil data DO untuk export');
-            }
-
-            const rows = result.data || [];
-            if (!rows.length) {
-              triggerToast('Export Excel DO', 'Tidak ada data DO yang dapat diexport!', 'warn');
-              return;
-            }
-
-            const d = new Date();
-            const dateStr = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
-            const fileName = specificDOId ? `Laporan_DO_${(rows[0]?.do_number || String(specificDOId)).replace(/[\/:*?"<>|\\]/g, '_')}.xlsx` : `Laporan_Delivery_Orders_${dateStr}.xlsx`;
-
-            if (typeof ExcelJS === 'undefined') {
-              const simpleRows = rows.map((r, idx) => ({
-                'No': idx + 1,
-                'Tanggal': r.do_date || '-',
-                'Doc DO': r.do_number || '-',
-                'Serial Number': r.serial_number || '-',
-                'Part 12': r.part12_sn || '-',
-                'Part 1': r.part1_sn || '-',
-                'Dikeluarkan Oleh': r.issued_by || '-',
-                'Status Pengiriman': r.delivery_status || '-',
-                'Penerima': r.customer_name || '-',
-                'Alamat Penerima': r.customer_address || '-'
-              }));
-              const worksheet = XLSX.utils.json_to_sheet(simpleRows);
-              const workbook = XLSX.utils.book_new();
-              XLSX.utils.book_append_sheet(workbook, worksheet, 'Laporan_DO');
-              XLSX.writeFile(workbook, fileName);
-              triggerToast('Berhasil', `File ${fileName} berhasil didownload (${rows.length} baris data)!`, 'success');
-              return;
-            }
-
-            const workbook = new ExcelJS.Workbook();
-            workbook.creator = 'PT NKRI - Sistem Assembly & Traceability';
-            workbook.created = new Date();
-
-            const sheet = workbook.addWorksheet('Delivery_Orders', {
-              pageSetup: {
-                paperSize: 9, // A4
-                orientation: 'landscape',
-                fitToPage: true,
-                fitToWidth: 1,
-                fitToHeight: 0,
-                showGridLines: true
-              }
-            });
-
-            // Title Banner
-            const titleRow = sheet.addRow(['LAPORAN DELIVERY ORDER / SURAT JALAN DISTRIBUSI P9']);
-            titleRow.font = { name: 'Arial', size: 14, bold: true, color: { argb: 'FF991B1B' } };
-            titleRow.alignment = { horizontal: 'center', vertical: 'middle' };
-            titleRow.height = 34;
-            sheet.mergeCells(1, 1, 1, 10);
-
-            // Subtitle
-            const subTitleRow = sheet.addRow([`Dicetak pada: ${formatIndoDateTime(new Date())} | Total Data: ${rows.length} Unit SN`]);
-            subTitleRow.font = { name: 'Arial', size: 9.5, italic: true, color: { argb: 'FF64748B' } };
-            subTitleRow.alignment = { horizontal: 'center', vertical: 'middle' };
-            subTitleRow.height = 20;
-            sheet.mergeCells(2, 1, 2, 10);
-
-            sheet.addRow([]); // Spacer row
-
-            // Columns Header: No | Tanggal | Doc DO | Serial Number | Part 12 | Part 1 | Dikeluarkan Oleh | Status Pengiriman | Penerima | Alamat Penerima
-            const headers = [
-              'No', 'Tanggal', 'Doc DO', 'Serial Number', 'Part 12', 'Part 1',
-              'Dikeluarkan Oleh', 'Status Pengiriman', 'Penerima', 'Alamat Penerima'
-            ];
-            const headerRow = sheet.addRow(headers);
-            headerRow.height = 26;
-            headerRow.eachCell((cell) => {
-              cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
-              cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDC2626' } };
-              cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-              cell.border = {
-                top: { style: 'thin', color: { argb: 'FFB91C1C' } },
-                bottom: { style: 'medium', color: { argb: 'FF991B1B' } },
-                left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-                right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
-              };
-            });
-
-            // Data Rows
-            rows.forEach((r, idx) => {
-              const rowValues = [
-                idx + 1,
-                r.do_date || '-',
-                r.do_number || '-',
-                r.serial_number || '-',
-                r.part12_sn || '-',
-                r.part1_sn || '-',
-                r.issued_by || '-',
-                r.delivery_status || '-',
-                r.customer_name || '-',
-                (r.customer_address || '-').replace(/\n/g, ', ')
-              ];
-              const dRow = sheet.addRow(rowValues);
-              dRow.height = 22;
-              dRow.eachCell((cell, colNumber) => {
-                cell.font = { name: 'Arial', size: 9.5, color: { argb: 'FF1E293B' } };
-                if (colNumber === 1 || colNumber === 2 || colNumber === 8) {
-                  cell.alignment = { horizontal: 'center', vertical: 'middle' };
-                } else if (colNumber === 3 || colNumber === 4 || colNumber === 5 || colNumber === 6) {
-                  cell.alignment = { horizontal: 'center', vertical: 'middle' };
-                  cell.font = { name: 'Arial', size: 9.5, bold: true, color: { argb: 'FF0F172A' } };
-                } else {
-                  cell.alignment = { horizontal: 'left', vertical: 'middle' };
-                }
-                if (idx % 2 === 1) {
-                  cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
-                }
-                cell.border = {
-                  top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-                  bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-                  left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-                  right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
-                };
-              });
-            });
-
-            // Column Widths
-            const colWidths = [6, 14, 22, 16, 14, 14, 20, 18, 22, 34];
-            colWidths.forEach((w, i) => {
-              sheet.getColumn(i + 1).width = w;
-            });
-
-            const buffer = await workbook.xlsx.writeBuffer();
-            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-            const fileUrl = window.URL.createObjectURL(blob);
-            const aLink = document.createElement('a');
-            aLink.href = fileUrl;
-            aLink.download = fileName;
-            document.body.appendChild(aLink);
-            aLink.click();
-            setTimeout(() => { document.body.removeChild(aLink); window.URL.revokeObjectURL(fileUrl); }, 250);
-
-            triggerToast('Berhasil', `File ${fileName} berhasil diexport (${rows.length} baris data)!`, 'success');
-          } catch (err) {
-            triggerToast('Gagal Export', err.message, 'error');
-          }
-        };
-
-        // Close dropdown on click outside
-        window.addEventListener('click', (e) => {
-          if (trayDropdownRef.value && !trayDropdownRef.value.contains(e.target)) {
-            isTrayDropdownOpen.value = false;
-          }
-          if (showPrintDocTypeDropdown.value) {
-            const el = document.getElementById('printDocTypeDropdownContainer');
-            if (el && !el.contains(e.target)) {
-              showPrintDocTypeDropdown.value = false;
-            }
-          }
-          if (isAssyDocDropdownOpen.value) {
-            const elDoc = document.getElementById('assyDocDropdownContainer');
-            if (elDoc && !elDoc.contains(e.target)) {
-              isAssyDocDropdownOpen.value = false;
-            }
-          }
-        });
-
+        // exportDeliveryOrderExcel moved to public/js/modules/delivery.js
 
         onMounted(() => {
+          // Close dropdown on click outside
+          window.addEventListener('click', (e) => {
+            if (trayDropdownRef.value && !trayDropdownRef.value.contains(e.target)) {
+              isTrayDropdownOpen.value = false;
+            }
+            if (showPrintDocTypeDropdown.value) {
+              const el = document.getElementById('printDocTypeDropdownContainer');
+              if (el && !el.contains(e.target)) {
+                showPrintDocTypeDropdown.value = false;
+              }
+            }
+            if (typeof isAssyDocDropdownOpen !== 'undefined' && isAssyDocDropdownOpen && isAssyDocDropdownOpen.value) {
+              const elDoc = document.getElementById('assyDocDropdownContainer');
+              if (elDoc && !elDoc.contains(e.target)) {
+                isAssyDocDropdownOpen.value = false;
+              }
+            }
+          });
           const token = localStorage.getItem('token');
           if (!token) {
             const currentPath = window.location.pathname;
@@ -8550,6 +7695,20 @@
           return 'bg-slate-100 text-slate-700 border-slate-200';
         };
 
+        const getStatusTextClass = (status) => {
+          if (!status || status === '-') return 'text-slate-500 font-bold';
+          const s = String(status).toLowerCase().trim();
+          if (['good', 'tersedia', 'pass', 'terima', 'accepted', 'completed'].includes(s)) return 'text-emerald-600 font-bold';
+          if (['hold', 'hold_assy', 'hold_qc', 'pending'].includes(s) || s.includes('menunggu')) return 'text-amber-600 font-bold';
+          if (['rework', 'rework_assy', 'rework_qc', 'ru', 'dirakit ulang'].includes(s)) return 'text-purple-600 font-bold';
+          if (['scrap', 'rusak', 'not_good', 'decline', 'declined', 'fail'].includes(s)) return 'text-red-600 font-bold';
+          return 'text-slate-600 font-bold';
+        };
+
+        const getDocStatusTextClass = (status) => {
+          return getStatusTextClass(status);
+        };
+
         const formatDateTime = (dtStr, refStartStr = null) => {
           if (!dtStr) return '-';
           try {
@@ -8596,25 +7755,7 @@
         const currentGuideImages = ref([]);
         const guideCarouselIndex = ref(0);
 
-        const isSingleRetestMode = ref(false);
-        const singleRetestTestNum = ref(null);
-        const singleRetestStatus = ref('GOOD');
-        const singleRetestReturnSource = ref('view2_table');
-        const singleRetestSlot = ref(null);
-        const singleRetestNotes = ref('');
-        const isSubmittingSingleRetest = ref(false);
-
-        const assyTotalSteps = computed(() => {
-          return (assyTestForm.value && assyTestForm.value.checklist && assyTestForm.value.checklist.length) || 15;
-        });
-
-        const currentActiveChecklistItem = computed(() => {
-          if (!assyTestForm.value || !assyTestForm.value.checklist) return null;
-          if (isSingleRetestMode.value && singleRetestTestNum.value) {
-            return assyTestForm.value.checklist.find(t => Number(t.test_num) === Number(singleRetestTestNum.value)) || assyTestForm.value.checklist[0];
-          }
-          return assyTestForm.value.checklist[assyTestStep.value] || null;
-        });
+        // Single retest state moved to public/js/modules/tf1.js (Fase 2D)
 
         const filteredTestingPointsList = computed(() => {
           const q = (testingPointFilterQ.value || '').toLowerCase().trim();
@@ -8913,307 +8054,101 @@
           guideCarouselIndex.value = (guideCarouselIndex.value - 1 + currentGuideImages.value.length) % currentGuideImages.value.length;
         };
 
-        const startSingleRetest = (slot, testNum, returnSource = 'view2_table') => {
-          if (userRole.value === 'gudang' || userRole.value === 'qc') {
-            triggerToast('Akses Terbatas', (userRole.value === 'qc' ? 'Inspector QC' : 'Petugas Gudang') + ' tidak berhak melakukan pengujian perakitan.', 'error');
-            return;
-          }
-          if (slot && isSlotTested(slot)) {
-            triggerToast('Pengujian Terkunci', 'Rakitan ini sudah selesai diuji dan terkunci dari pengujian ulang.', 'warning');
-            return;
-          }
-          isSingleRetestMode.value = true;
-          singleRetestTestNum.value = Number(testNum);
-          singleRetestReturnSource.value = returnSource;
-          singleRetestSlot.value = slot;
-          singleRetestNotes.value = '';
+        // Single retest methods moved to public/js/modules/tf1.js (Fase 2D)
 
-          // Find current status of this test item in slot
-          let currentStatus = 'GOOD';
-          let checklist = slot.test_checklist || slot.assy_test_checklist || (assyTestForm.value && assyTestForm.value.checklist);
-          if (typeof checklist === 'string') {
-            try { checklist = JSON.parse(checklist); } catch (_) { checklist = null; }
-          }
-          if (Array.isArray(checklist)) {
-            const found = checklist.find(t => Number(t.test_num) === Number(testNum) || Number(t.id) === Number(testNum));
-            if (found && found.status) currentStatus = String(found.status).toUpperCase();
-          }
-          singleRetestStatus.value = currentStatus;
+        // ===================================================================
+        // 11. TEST FUNCTIONAL 1 (ASSY TEST) MODULE (FASE 2D)
+        // ===================================================================
+        tf1Module = {};
+        if (typeof window.createTF1Module === 'function') {
+          tf1Module = window.createTF1Module({
+            Vue,
+            fetchAPI,
+            triggerToast,
+            showConfirmCard,
+            pgState,
+            userRole,
+            operatorName,
+            currentTab,
+            getOperatorFullName,
+            selectedTrayCode,
+            currentTray,
+            traySlots,
+            testingPointsList,
+            showDetailModal,
+            openDetailModal: (...args) => (typeof openDetailModal === 'function' ? openDetailModal(...args) : null),
+            loadAssemblyTray: (...args) => (typeof loadAssemblyTray === 'function' ? loadAssemblyTray(...args) : null),
+            loadQCPendingItems: (...args) => (typeof loadQCPendingItems === 'function' ? loadQCPendingItems(...args) : null),
+            loadProductionHoldItems: (...args) => (typeof loadProductionHoldItems === 'function' ? loadProductionHoldItems(...args) : null),
+            loadPendingVerifications: (...args) => (typeof loadPendingVerifications === 'function' ? loadPendingVerifications(...args) : null),
+            loadTravelerTray: (...args) => (typeof loadTravelerTray === 'function' ? loadTravelerTray(...args) : null),
+            loadTrays: (...args) => (typeof loadTrays === 'function' ? loadTrays(...args) : null),
+            filteredTraysList,
+            isReassemblySet: (...args) => (typeof isReassemblySet === 'function' ? isReassemblySet(...args) : false),
+            navigateTo,
+            activePrintDocType,
+            getCurrentTabHash: (...args) => (typeof getCurrentTabHash === 'function' ? getCurrentTabHash(...args) : ''),
+            getNowLocalDateTimeStr: (...args) => (typeof getNowLocalDateTimeStr === 'function' ? getNowLocalDateTimeStr(...args) : '')
+          });
+        }
 
-          // Prepare assyTestForm with this slot
-          if (slot && (slot.set_number || slot.id)) {
-            const baseSource = (testingPointsList.value.length ? testingPointsList.value : defaultAssyTestItems);
-            let initialChecklist = baseSource.map(item => ({
-              test_num: item.test_num,
-              name: item.instruction || item.name,
-              description: item.output || item.description,
-              category: item.category || 'Umum / Fungsional',
-              status: ''
-            }));
-
-            if (checklist && Array.isArray(checklist) && checklist.length) {
-              initialChecklist = initialChecklist.map((defItem) => {
-                const ex = checklist.find(p => p && (Number(p.test_num) === Number(defItem.test_num) || Number(p.id) === Number(defItem.test_num)));
-                return {
-                  ...defItem,
-                  status: ex && ex.status ? ex.status : ''
-                };
-              });
-            }
-
-            assyTestForm.value = {
-              tray_id: slot.tray_id || (currentTray.value ? currentTray.value.id : null),
-              tray_code: slot.tray_code || (currentTray.value ? currentTray.value.tray_code : ''),
-              set_number: slot.set_number || 1,
-              assembly_id: slot.id || null,
-              part15_sn: slot.part15_sn || '',
-              part12_sn: slot.part12_sn || '',
-              part1_sn: slot.part1_sn || '',
-              checklist: initialChecklist,
-              notes: ''
-            };
-          }
-
-          // Cari indeks step untuk nomor uji ini agar active card focus dan progress indicator akurat
-          let targetStepIdx = -1;
-          if (assyTestForm.value && assyTestForm.value.checklist) {
-            targetStepIdx = assyTestForm.value.checklist.findIndex(t => Number(t.test_num) === Number(testNum));
-          }
-          if (targetStepIdx !== -1) {
-            assyTestStep.value = targetStepIdx;
-          } else {
-            assyTestStep.value = Math.max(0, Number(testNum) - 1);
-          }
-
-          // Close detail modal if open & buka form uji retest
-          showDetailModal.value = false;
-          showAssyTestModal.value = true;
-          try {
-            const setNo = slot ? (slot.set_number || (assyTestForm.value ? assyTestForm.value.set_number : 1)) : 1;
-            history.replaceState(null, '', `#assy_testing?retest=${testNum}&set=${setNo}`);
-          } catch (_) { }
-        };
-
-        const cancelSingleRetest = () => {
-          isSingleRetestMode.value = false;
-          if (singleRetestReturnSource.value === 'view2_table') {
-            showAssyTestModal.value = true;
-            assyTestStep.value = assyTotalSteps.value; // Tampilkan tabel rekap selesai
-          } else if (singleRetestReturnSource.value === 'detail_modal') {
-            showAssyTestModal.value = false;
-            if (singleRetestSlot.value) {
-              openDetailModal(singleRetestSlot.value, (singleRetestSlot.value.set_number || 1) - 1);
-            }
-          } else {
-            showAssyTestModal.value = false;
-          }
-          try { history.replaceState(null, '', '#assy_testing'); } catch (_) { }
-        };
-
-        const setSingleRetestStatus = (status) => {
-          singleRetestStatus.value = status;
-          if (assyTestForm.value && assyTestForm.value.checklist) {
-            const target = assyTestForm.value.checklist.find(t => Number(t.test_num) === Number(singleRetestTestNum.value));
-            if (target) target.status = status;
-          }
-        };
-
-        const setSingleRetestAndSubmit = async (status) => {
-          if (isSubmittingSingleRetest.value) return;
-          singleRetestStatus.value = status;
-          if (assyTestForm.value && assyTestForm.value.checklist) {
-            const target = assyTestForm.value.checklist.find(t => Number(t.test_num) === Number(singleRetestTestNum.value));
-            if (target) target.status = status;
-          }
-
-          // Otomatis langsung alihkan kembali ke halaman rekap status seketika (0ms response time)
-          const source = singleRetestReturnSource.value;
-          const targetSetNum = assyTestForm.value ? assyTestForm.value.set_number : 1;
-          isSingleRetestMode.value = false;
-
-          if (source === 'view2_table') {
-            showAssyTestModal.value = true;
-            assyTestStep.value = assyTotalSteps.value; // Tampilkan tabel rekap selesai
-            try { history.replaceState(null, '', '#assy_testing'); } catch (_) { }
-            triggerToast('Status Diperbarui', `Test #${singleRetestTestNum.value} diubah menjadi ${status === 'GOOD' ? 'Good' : 'Not Good'}. Perubahan akan disimpan saat tombol Simpan ditekan.`, 'info');
-            return;
-          } else if (source === 'detail_modal') {
-            showAssyTestModal.value = false;
-          }
-          try { history.replaceState(null, '', '#assy_testing'); } catch (_) { }
-
-          // Simpan data hasil retest ke server di latar belakang
-          isSubmittingSingleRetest.value = true;
-          try {
-            if (assyTestForm.value && (assyTestForm.value.assembly_id || (assyTestForm.value.tray_id && assyTestForm.value.set_number))) {
-              const payload = {
-                assembly_id: assyTestForm.value.assembly_id,
-                tray_id: assyTestForm.value.tray_id,
-                set_number: assyTestForm.value.set_number,
-                test_num: singleRetestTestNum.value,
-                status: status,
-                notes: singleRetestNotes.value || ''
-              };
-              const res = await fetchAPI('/assembly/submit-single-retest', {
-                method: 'POST',
-                body: JSON.stringify(payload)
-              });
-              if (res && res.ok) {
-                triggerToast('Retest Selesai', res.message || `Test #${singleRetestTestNum.value} berhasil diuji ulang (${res.overall_status || status}).`, (res.overall_status || status) === 'Good' || status === 'GOOD' ? 'success' : 'warn');
-              } else {
-                triggerToast('Peringatan', (res && res.error) || 'Gagal menyimpan hasil uji ulang', 'warn');
-              }
-            } else {
-              triggerToast('Status Terupdate', `Test #${singleRetestTestNum.value} berhasil diubah menjadi ${status}.`, 'success');
-            }
-
-            // Reload data secara asynchronous
-            await Promise.all([
-              loadAssemblyTray(),
-              loadQCPendingItems(),
-              loadProductionHoldItems(),
-              loadPendingVerifications(),
-              loadTravelerTray()
-            ]);
-
-            if (source === 'detail_modal') {
-              const freshSlot = (traySlots.value || []).find(s => s && s.set_number === targetSetNum) || singleRetestSlot.value;
-              if (freshSlot) {
-                openDetailModal(freshSlot, targetSetNum - 1);
-              }
-            }
-          } catch (e) {
-            triggerToast('Error', e.message, 'error');
-          } finally {
-            isSubmittingSingleRetest.value = false;
-          }
-        };
-
-        const submitSingleRetest = async () => {
-          return setSingleRetestAndSubmit(singleRetestStatus.value || 'GOOD');
-        };
-
-        const defaultAssyTestItems = [
-          {
-            test_num: 1,
-            name: "1. Pengecekan visual secara menyeluruh mulai dari sisi atas-bawah, samping kanan-kiri, depan belakang",
-            description: "- Penebalan pada hasil pengecatan\n- Retak pada area yang berpasangan dengan part berbahan metal",
-            category: "Cek Visual",
-            status: "GOOD"
-          },
-          {
-            test_num: 2,
-            name: "1. Cek upper dan lower dengan cara digoyangkan secara horizontal",
-            description: "Tidak mengeluarkan suara akibat hasil rakitan longgar",
-            category: "Cek Rigiditas",
-            status: "GOOD"
-          },
-          {
-            test_num: 3,
-            name: "2. Cek front sight dan rear sight dengan cara digoyangkan",
-            description: "Tidak boleh bergeser",
-            category: "Cek Rigiditas",
-            status: "GOOD"
-          },
-          {
-            test_num: 4,
-            name: "1. Uji pelepas magasen sebanyak 3x",
-            description: "Magasen tidak jatuh / lepas setelah dikunci\nMagasen dapat masuk - keluar dengan baik ketika pelepas magasen di tekan",
-            category: "Cek Mekanik",
-            status: "GOOD"
-          },
-          {
-            test_num: 5,
-            name: "2. Uji kokang sebanyak 3x",
-            description: "Tidak menyangkut ataupun tersendat ketika di kokang dan dapat kembali dengan lancar",
-            category: "Cek Mekanik",
-            status: "GOOD"
-          },
-          {
-            test_num: 6,
-            name: "3. Uji picu dengan cara menarik picu untuk mengaktifkan pemukul",
-            description: "Pemukul dapat memukul pena pukul",
-            category: "Cek Mekanik",
-            status: "GOOD"
-          },
-          {
-            test_num: 7,
-            name: "4. Uji pemukul dengan cara menarik pemukul kemudian tarik picu",
-            description: "Pemukul dapat memukul pena pukul",
-            category: "Cek Mekanik",
-            status: "GOOD"
-          },
-          {
-            test_num: 8,
-            name: "5. Uji pemukul dengan cara menarik pemukul 1/2 kemudian tarik picu",
-            description: "Pemukul dapat terkunci pada kondisi 1/2 tegang\nPemukul dapat memukul pena pukul",
-            category: "Cek Mekanik",
-            status: "GOOD"
-          },
-          {
-            test_num: 9,
-            name: "6. Uji pemukul dengan cara menarik penuh pemukul kemudian tarik picu",
-            description: "Pemukul dapat memukul pena pukul",
-            category: "Cek Mekanik",
-            status: "GOOD"
-          },
-          {
-            test_num: 10,
-            name: "7. Uji pemukul dengan cara menarik penuh pemukul kemudian dorong kedepan",
-            description: "Pemukul tidak boleh memukul pena pukul",
-            category: "Cek Mekanik",
-            status: "GOOD"
-          },
-          {
-            test_num: 11,
-            name: "7.1. Dorong keatas tuas pengaman kemudian tarik picu",
-            description: "Pemukul tidak boleh memukul pena pukul",
-            category: "Cek Mekanik",
-            status: "GOOD"
-          },
-          {
-            test_num: 12,
-            name: "7.1.1 Dorong kebawah tuas pengaman (untuk menormalkan kembali)",
-            description: "Tuas pengaman kembali ke posisi normal",
-            category: "Cek Mekanik",
-            status: "GOOD"
-          },
-          {
-            test_num: 13,
-            name: "7.2 Tarik pemukul secara penuh kemudian kokang penuh lalu aktifkan kunci eretan",
-            description: "Eretan dapat terkunci dengan baik dan tidak bergerak maju kedepan",
-            category: "Cek Mekanik",
-            status: "GOOD"
-          },
-          {
-            test_num: 14,
-            name: "7.3 Turunkan kunci eretan",
-            description: "Eretan dapat maju kedepan dengan baik dan tidak tersendat",
-            category: "Cek Mekanik",
-            status: "GOOD"
-          },
-          {
-            test_num: 15,
-            name: "8. Kokang penuh kemudian aktifkan kunci eretan dan putar keatas tuas pembongkar",
-            description: "Tuas pembongkar dapat diputar keatas",
-            category: "Cek Mekanik",
-            status: "GOOD"
-          },
-          {
-            test_num: 16,
-            name: "8.1 Putar kembali kebawah tuas pembongkar kemudian non-aktifkan kunci eretan",
-            description: "Tuas pembongkar dan kunci eretan dapat dikembalikan ke posisi awal",
-            category: "Cek Mekanik",
-            status: "GOOD"
-          },
-          {
-            test_num: 17,
-            name: "9. Tarik pemukul secara penuh, kemudian dorong laras dari depan ke belakang",
-            description: "Laras tidak dapat bergerak mundur ke belakang",
-            category: "Cek Mekanik",
-            status: "GOOD"
-          }
-        ];
+        // Bridge refs/methods for internal app.js usage
+        const {
+          defaultAssyTestItems,
+          isSingleRetestMode,
+          singleRetestTestNum,
+          singleRetestStatus,
+          singleRetestReturnSource,
+          singleRetestSlot,
+          singleRetestNotes,
+          isSubmittingSingleRetest,
+          assyTotalSteps,
+          currentActiveChecklistItem,
+          startSingleRetest,
+          cancelSingleRetest,
+          setSingleRetestStatus,
+          setSingleRetestAndSubmit,
+          submitSingleRetest,
+          showAssyTestModal,
+          isSubmittingAssyTest,
+          assyTestStep,
+          assyTestTableViewMode,
+          qcTestTableViewMode,
+          showAssySaveProgressModal,
+          assyDraftProgress,
+          saveAssyDraftToStorage,
+          hasSlotTestingHistory,
+          isSlotTested,
+          isSlotTF1Hold,
+          isSlotTF1Good,
+          getSlotDraftProgress,
+          handleAssyBackNavigation,
+          confirmSaveAssyProgress,
+          showFirstNGPromptModal,
+          showSecondNGPromptModal,
+          showEarlyEndButton,
+          handleFirstNGChoice,
+          confirmEndSessionEarly,
+          assyTestForm,
+          openAssyTestModal,
+          chooseAssyTestStatus,
+          prevAssyTestStep,
+          nextAssyTestStep,
+          setAllAssyTestStatus,
+          assyTestCalculatedFailures,
+          assyTestGeneratedFailureReason,
+          submitAssyTest,
+          activeAssyQCDocSlot,
+          testedGoodSlots,
+          countTestedGoodInTray,
+          countTestedHoldInTray,
+          countTestedRUInTray,
+          countUntestedInTray,
+          getTestingTrayCounts,
+          getTestingSetProgress,
+          selectAndPrintAssyQC,
+          getTestItemParamStatus
+        } = tf1Module;
 
         const defaultQCTestItems = [
           { test_num: 1, name: 'Pemeriksaan Visual & Label Mutu', description: 'Kondisi fisik, kelengkapan label, dan kebersihan', status: 'GOOD' },
@@ -9223,2132 +8158,236 @@
           { test_num: 5, name: 'Kalibrasi Akhir Standar Mutu QC', description: 'Verifikasi deviasi toleransi standar mutu akhir', status: 'GOOD' }
         ];
 
-        // 1. Operator Assembly Functional Testing
-        const showAssyTestModal = ref(false);
-        const isSubmittingAssyTest = ref(false);
-        const assyTestStep = ref(0);
-        const assyTestTableViewMode = ref('dual'); // 'dual' (2 kolom tabel) atau 'single' (1 tabel penuh)
-        const qcTestTableViewMode = ref('dual');
-        const showAssySaveProgressModal = ref(false);
-        const assyDraftProgress = ref({}); // key: `${tray_id}_${set_number}`
-
-        try {
-          const savedDrafts = localStorage.getItem('assy_draft_progress');
-          if (savedDrafts) {
-            assyDraftProgress.value = JSON.parse(savedDrafts);
-          }
-        } catch (_) { }
-
-        const saveAssyDraftToStorage = () => {
-          try {
-            localStorage.setItem('assy_draft_progress', JSON.stringify(assyDraftProgress.value));
-          } catch (_) { }
-        };
-
-        const hasSlotTestingHistory = (s) => {
-          if (!s) return false;
-          if (s.assy_doc_number) return true;
-          if (s.assy_failure_reasons) return true;
-          const chk = s.assy_test_checklist;
-          if (chk && (typeof chk === 'string' ? chk.length > 5 : Array.isArray(chk) && chk.length > 0)) return true;
-          const qcSt = String(s.qc_status || '').trim().toUpperCase();
-          if (qcSt && !['', 'PENDING'].includes(qcSt)) return true;
-          const atSt = String(s.assy_test_status || '').trim().toUpperCase();
-          if (atSt && !['', 'PENDING'].includes(atSt)) return true;
-          return false;
-        };
-
-        const isSlotTested = (slot) => {
-          if (!slot) return false;
-          if (slot.assy_doc_number) return true;
-          if (slot.assy_test_status && slot.assy_test_status !== 'PENDING' && slot.assy_test_status !== '') return true;
-          if (slot.qc_status && ['HOLD_ASSY', 'REWORK_ASSY', 'PENDING_QC', 'GOOD', 'HOLD_QC', 'RU'].includes(slot.qc_status)) return true;
-          const isRU = (typeof isReassemblySet === 'function' && isReassemblySet(slot)) || slot.status === 'Dirakit Ulang' || slot.verified_status === 'WAITING_REASSEMBLY' || slot.assy_test_status === 'RU';
-          if (isRU && hasSlotTestingHistory(slot)) return true;
-          return false;
-        };
-
-        const getSlotDraftProgress = (slot) => {
-          if (!slot || isSlotTested(slot)) return null;
-          const trayId = slot.tray_id || (currentTray.value ? currentTray.value.id : null);
-          const key = `${trayId}_${slot.set_number}`;
-          return assyDraftProgress.value[key] || null;
-        };
-
-        const initialSessionSnapshot = ref(null);
-
-        const handleAssyBackNavigation = () => {
-          if (isSingleRetestMode.value) {
-            cancelSingleRetest();
-            return;
-          }
-
-          // Periksa apakah ada perubahan jawaban atau catatan dari saat pertama dibuka di sesi ini
-          const form = assyTestForm.value;
-          const snap = initialSessionSnapshot.value;
-          let hasChanges = false;
-
-          if (snap && Array.isArray(snap.checklist) && Array.isArray(form.checklist)) {
-            const currentStatusStr = form.checklist.map(c => `${c.test_num}:${c.status || ''}`).join(';');
-            const initialStatusStr = snap.checklist.map(c => `${c.test_num}:${c.status || ''}`).join(';');
-            const currentNotes = (form.notes || '').trim();
-            const initialNotes = (snap.notes || '').trim();
-
-            if (currentStatusStr !== initialStatusStr || currentNotes !== initialNotes) {
-              hasChanges = true;
-            }
-          }
-
-          // Jika TIDAK ADA perubahan atau posisi berhenti di test itu lagi tanpa input baru:
-          // Langsung kembali ke halaman card testing tanpa perlu validasi konfirmasi!
-          if (!hasChanges) {
-            showAssyTestModal.value = false;
-            return;
-          }
-
-          // Jika ada perubahan penilaian baru, tanyakan apakah ingin simpan progres
-          showAssySaveProgressModal.value = true;
-        };
-
-        const confirmSaveAssyProgress = (shouldSave) => {
-          const form = assyTestForm.value;
-          const key = `${form.tray_id}_${form.set_number}`;
-          const snap = initialSessionSnapshot.value;
-
-          if (shouldSave) {
-            assyDraftProgress.value[key] = {
-              step: assyTestStep.value,
-              totalSteps: assyTotalSteps.value,
-              checklist: JSON.parse(JSON.stringify(form.checklist || [])),
-              notes: form.notes || '',
-              savedAt: getNowLocalDateTimeStr()
-            };
-            saveAssyDraftToStorage();
-            triggerToast('Progres Disimpan', `Progres pengujian Set #${form.set_number} berhasil disimpan.`, 'success');
-          } else {
-            // User memilih "Tidak": JANGAN hapus progres jika sebelumnya sudah pernah disimpan (misal draf 50%)!
-            if (snap && snap.hadSavedDraft && snap.savedDraftData) {
-              // Kembalikan ke progres terakhir yang tersimpan sebelumnya (misal 50%)
-              assyDraftProgress.value[key] = JSON.parse(JSON.stringify(snap.savedDraftData));
-              saveAssyDraftToStorage();
-              triggerToast('Info', `Perubahan dibatalkan. Progres dikembalikan ke draf tersimpan sebelumnya.`, 'info');
-            } else {
-              delete assyDraftProgress.value[key];
-              saveAssyDraftToStorage();
-              triggerToast('Info', `Progres pengujian Set #${form.set_number} tidak disimpan.`, 'info');
-            }
-          }
-          showAssySaveProgressModal.value = false;
-          showAssyTestModal.value = false;
-        };
-
-        const hasEncounteredNotGoodInSession = ref(false);
-        const showEarlyEndButton = ref(false);
-        const showFirstNGPromptModal = ref(false);
-        const showSecondNGPromptModal = ref(false);
-
-        const assyTestForm = ref({
-          tray_id: null,
-          tray_code: '',
-          set_number: null,
-          assembly_id: null,
-          part15_sn: '',
-          part12_sn: '',
-          part1_sn: '',
-          checklist: [],
-          notes: ''
-        });
-
-        const openAssyTestModal = (slot, index) => {
-          if (userRole.value === 'gudang' || userRole.value === 'qc') {
-            triggerToast('Akses Terbatas', 'Role ' + (userRole.value === 'qc' ? 'QC' : 'Gudang') + ' hanya memiliki hak akses pantau (Read Only) pada pengujian perakitan.', 'info');
-            return;
-          }
-          const rawAssyStatus = String(slot.assembly_status || slot.status || '').trim();
-          if (!rawAssyStatus || rawAssyStatus.toLowerCase() !== 'good') {
-            triggerToast('Perakitan Belum Good', 'Unit ini belum berstatus Good di proses perakitan (Status: ' + (rawAssyStatus || 'Belum Dirakit') + '). Hanya unit berstatus Good yang dapat diuji pada Test Functional 1.', 'warning');
-            return;
-          }
-          if (isSlotTested(slot)) {
-            triggerToast('Pengujian Terkunci', 'Rakitan ini sudah selesai diuji dan terkunci dari pengujian ulang.', 'warning');
-            return;
-          }
-          isSingleRetestMode.value = false;
-          const existingDraft = getSlotDraftProgress(slot);
-          if (existingDraft && existingDraft.step != null) {
-            assyTestStep.value = existingDraft.step;
-          } else {
-            assyTestStep.value = 0;
-          }
-
-          const baseSource = (testingPointsList.value && testingPointsList.value.length) ? testingPointsList.value : defaultAssyTestItems;
-          let initialChecklist = baseSource.map(item => ({
-            test_num: item.test_num,
-            name: item.instruction || item.name,
-            description: item.output || item.description,
-            category: item.category || 'Umum / Fungsional',
-            status: ''
-          }));
-
-          if (existingDraft && Array.isArray(existingDraft.checklist) && existingDraft.checklist.length) {
-            initialChecklist = existingDraft.checklist;
-          } else if (slot.assy_test_checklist) {
-            let parsed = slot.assy_test_checklist;
-            if (typeof parsed === 'string') {
-              try { parsed = JSON.parse(parsed); } catch (_) { parsed = null; }
-            }
-            if (Array.isArray(parsed) && parsed.length) {
-              initialChecklist = baseSource.map((item, i) => {
-                const existing = parsed.find(p => p && (p.test_num === item.test_num || p.id === item.test_num)) || parsed[i];
-                return {
-                  test_num: item.test_num,
-                  name: item.instruction || item.name,
-                  description: item.output || item.description,
-                  category: item.category || 'Umum / Fungsional',
-                  status: existing && existing.status ? existing.status : ''
-                };
-              });
-            }
-          }
-
-          const sessionNotes = (existingDraft && existingDraft.notes) ? existingDraft.notes : '';
-
-          assyTestForm.value = {
-            tray_id: slot.tray_id || (currentTray.value ? currentTray.value.id : null),
-            tray_code: slot.tray_code || (currentTray.value ? currentTray.value.tray_code : ''),
-            set_number: slot.set_number || (index + 1),
-            assembly_id: slot.id || null,
-            part15_sn: slot.part15_sn || '',
-            part12_sn: slot.part12_sn || '',
-            part1_sn: slot.part1_sn || '',
-            checklist: initialChecklist,
-            notes: sessionNotes
-          };
-
-          // Reset status pop-up Not Good & tombol Akhiri Sesi per sesi testing
-          showFirstNGPromptModal.value = false;
-          showSecondNGPromptModal.value = false;
-          const hasExistingNG = initialChecklist.some(t => {
-            const st = String(t.status || '').toUpperCase();
-            return st === 'NOT_GOOD' || st === 'NOT GOOD' || st === 'NG' || st === 'FAIL';
+        // ===================================================================
+        // 12. QUALITY CONTROL & TEST FUNCTIONAL 2 (QC) MODULE (FASE 2C)
+        // ===================================================================
+        if (typeof window.createQCModule === 'function') {
+          qcModule = window.createQCModule({
+            Vue,
+            fetchAPI,
+            triggerToast,
+            showConfirmCard,
+            pgState,
+            userRole,
+            operatorName,
+            currentTab,
+            defaultAssyTestItems,
+            getOperatorFullName,
+            selectedTrayCode,
+            activePrintDocType,
+            navigateTo,
+            loadTravelerTray: (...args) => (typeof loadTravelerTray === 'function' ? loadTravelerTray(...args) : null),
+            loadProductionHoldItems: (...args) => (typeof loadProductionHoldItems === 'function' ? loadProductionHoldItems(...args) : null),
+            loadPendingVerifications: (...args) => (typeof loadPendingVerifications === 'function' ? loadPendingVerifications(...args) : null),
+            loadTrays: (...args) => (typeof loadTrays === 'function' ? loadTrays(...args) : null),
+            reportSubTab: { get value() { return typeof reportSubTab !== 'undefined' ? reportSubTab.value : ''; }, set value(v) { if (typeof reportSubTab !== 'undefined') reportSubTab.value = v; } },
+            loadQCTestReports: (...args) => (typeof loadQCTestReports === 'function' ? loadQCTestReports(...args) : null),
+            openReregisterSetConfirmModal: (...args) => (typeof openReregisterSetConfirmModal === 'function' ? openReregisterSetConfirmModal(...args) : null),
+            openReregisterModal: (...args) => (typeof openReregisterModal === 'function' ? openReregisterModal(...args) : null),
+            openDetailModal: (...args) => (typeof openDetailModal === 'function' ? openDetailModal(...args) : null)
           });
-          if (hasExistingNG) {
-            hasEncounteredNotGoodInSession.value = true;
-            showEarlyEndButton.value = true;
-          } else {
-            hasEncounteredNotGoodInSession.value = false;
-            showEarlyEndButton.value = false;
-          }
+        }
 
-          // Simpan snapshot kondisi awal sesi ini untuk deteksi perubahan saat tombol Kembali ditekan
-          initialSessionSnapshot.value = {
-            step: assyTestStep.value,
-            checklist: JSON.parse(JSON.stringify(initialChecklist)),
-            notes: sessionNotes,
-            hadSavedDraft: !!existingDraft,
-            savedDraftData: existingDraft ? JSON.parse(JSON.stringify(existingDraft)) : null
-          };
-
-          showAssyTestModal.value = true;
-          try {
-            history.pushState({ type: 'assy_test', step: assyTestStep.value }, '', getCurrentTabHash());
-            assyTestHistoryDepth.value = 1;
-          } catch (_) { }
-        };
-
-        const chooseAssyTestStatus = (status) => {
-          if (assyTestForm.value.checklist && assyTestForm.value.checklist[assyTestStep.value]) {
-            assyTestForm.value.checklist[assyTestStep.value].status = status;
-          }
-
-          // Kondisi 1: Status "Not Good" Pertama Kali dalam satu sesi testing
-          if (status === 'NOT_GOOD' && !hasEncounteredNotGoodInSession.value) {
-            hasEncounteredNotGoodInSession.value = true;
-            showFirstNGPromptModal.value = true;
-            return; // Tahan perpindahan step, tunggu pilihan user: [Iya] atau [Tidak]
-          }
-
-          assyTestStep.value++;
-          try {
-            history.pushState({ type: 'assy_test', step: assyTestStep.value }, '', getCurrentTabHash());
-            assyTestHistoryDepth.value++;
-          } catch (_) { }
-        };
-
-        const handleFirstNGChoice = async (shouldEndEarly) => {
-          if (shouldEndEarly) {
-            // Jika klik [Iya]: Langsung akhiri sesi testing, ubah statusset produk menjadi "Hold"
-            await confirmEndSessionEarly();
-          } else {
-            // Jika klik [Tidak]: Tutup pop-up, lanjutkan ke langkah berikutnya, munculkan button [Akhiri Sesi]
-            showFirstNGPromptModal.value = false;
-            showEarlyEndButton.value = true;
-            assyTestStep.value++;
-            try {
-              history.pushState({ type: 'assy_test', step: assyTestStep.value }, '', getCurrentTabHash());
-              assyTestHistoryDepth.value++;
-            } catch (_) { }
-          }
-        };
-
-        const confirmEndSessionEarly = async () => {
-          if (isSubmittingAssyTest.value) return;
-
-          // Penanganan Data: Untuk sisa task/test yang belum dikerjakan, set statusnya menjadi "Pending"
-          if (assyTestForm.value && Array.isArray(assyTestForm.value.checklist)) {
-            const currentStep = assyTestStep.value;
-            assyTestForm.value.checklist.forEach((t, idx) => {
-              const st = String(t.status || '').trim().toUpperCase();
-              if (idx > currentStep) {
-                // Tests AFTER current step: force to Pending regardless of existing status
-                // (may have leftover 'GOOD' from previous session data)
-                t.status = 'Pending';
-              } else if (!st || st === '' || st === 'PENDING') {
-                // Tests at/before current step with no status: also Pending
-                t.status = 'Pending';
-              }
-            });
-          }
-
-          showFirstNGPromptModal.value = false;
-          showSecondNGPromptModal.value = false;
-
-          await submitAssyTest();
-        };
-
-        const prevAssyTestStep = (isFromPopState = false) => {
-          if (assyTestStep.value > 0) {
-            assyTestStep.value--;
-            if (!isFromPopState && assyTestHistoryDepth.value > 0) {
-              assyTestHistoryDepth.value--;
-              programmaticBackCount++;
-              try {
-                window.history.back();
-              } catch (_) { }
-            }
-          }
-        };
-
-        const nextAssyTestStep = () => {
-          if (assyTestStep.value < assyTotalSteps.value) {
-            assyTestStep.value++;
-          }
-        };
-
-        const setAllAssyTestStatus = (status) => {
-          (assyTestForm.value.checklist || []).forEach(t => {
-            t.status = status;
-          });
-        };
-
-        const assyTestCalculatedFailures = computed(() => {
-          return (assyTestForm.value.checklist || [])
-            .filter(t => t.status === 'NOT_GOOD' || t.status === 'NOT GOOD' || t.status === 'NG' || t.status === 'FAIL')
-            .map(t => t.test_num);
-        });
-
-        const assyTestGeneratedFailureReason = computed(() => {
-          const fails = assyTestCalculatedFailures.value;
-          if (fails.length === 0) return '';
-          if (fails.length === 1) return `Gagal dalam Test ${fails[0]}`;
-          return `Gagal dalam Test: ${fails.join(', ')}`;
-        });
-
-        const submitAssyTest = async () => {
-          if (isSubmittingAssyTest.value) return;
-          isSubmittingAssyTest.value = true;
-          try {
-            const payload = {
-              tray_id: assyTestForm.value.tray_id,
-              set_number: assyTestForm.value.set_number,
-              assembly_id: assyTestForm.value.assembly_id,
-              part15_sn: assyTestForm.value.part15_sn,
-              part12_sn: assyTestForm.value.part12_sn,
-              part1_sn: assyTestForm.value.part1_sn,
-              test_checklist: assyTestForm.value.checklist,
-              notes: assyTestForm.value.notes
-            };
-            const res = await fetchAPI('/assembly/submit-test', {
-              method: 'POST',
-              body: JSON.stringify(payload)
-            });
-            if (res.ok) {
-              const draftKey = `${assyTestForm.value.tray_id}_${assyTestForm.value.set_number}`;
-              if (assyDraftProgress.value[draftKey]) {
-                delete assyDraftProgress.value[draftKey];
-                saveAssyDraftToStorage();
-              }
-              triggerToast('Uji Fungsional Selesai', res.message || 'Hasil uji berhasil disimpan.', res.status === 'Good' ? 'success' : 'warn');
-              showAssyTestModal.value = false;
-              await loadAssemblyTray();
-              await loadQCPendingItems();
-              await loadProductionHoldItems();
-              await loadPendingVerifications();
-              await loadTrays();
-              await loadTravelerTray();
-            } else {
-              triggerToast('Gagal Simpan Uji', res.error || 'Terjadi kesalahan sistem', 'error');
-              if (res.error && (res.error.includes('selesai diuji') || res.error.includes('terkunci'))) {
-                const draftKey = `${assyTestForm.value.tray_id}_${assyTestForm.value.set_number}`;
-                if (assyDraftProgress.value[draftKey]) {
-                  delete assyDraftProgress.value[draftKey];
-                  saveAssyDraftToStorage();
-                }
-                showAssyTestModal.value = false;
-                await loadAssemblyTray();
-              }
-            }
-          } catch (e) {
-            triggerToast('Error', e.message, 'error');
-          } finally {
-            isSubmittingAssyTest.value = false;
-          }
-        };
-
-        const activeAssyQCDocSlot = ref(null);
-
-        const testedGoodSlots = computed(() => {
-          // ATURAN BAKU: HANYA BARANG BERKONDISI GOOD DI PERAKITAN YANG MASUK KE TF 1!
-          // Unit yang belum dirakit, hold, rework, scrap, atau dirakit ulang di perakitan TIDAK MASUK ke TF 1.
-          // Dan jika unit sudah lolos/pernah diuji di TF 1, perubahan status di perakitan tidak memengaruhi TF 1.
-          return (traySlots.value || []).filter(s => {
-            if (!s || !s.id) return false; // Belum selesai dirakit di perakitan
-            const hasAssyTest = Boolean(s.assy_doc_number || (s.assy_test_status && s.assy_test_status !== 'PENDING' && s.assy_test_status !== 'Pending'));
-            return hasAssyTest || s.status === 'Good';
-          });
-        });
-
-        const countTestedGoodInTray = computed(() => {
-          return (testedGoodSlots.value || []).filter(s => s && s.assy_test_status === 'Good').length;
-        });
-
-        const countTestedHoldInTray = computed(() => {
-          return (testedGoodSlots.value || []).filter(s => s && (s.assy_test_status === 'Hold' || s.qc_status === 'HOLD_ASSY') && s.assy_test_status !== 'RU' && s.qc_status !== 'RU').length;
-        });
-
-        const countTestedRUInTray = computed(() => {
-          return (testedGoodSlots.value || []).filter(s => s && (s.assy_test_status === 'RU' || s.qc_status === 'RU')).length;
-        });
-
-        const countUntestedInTray = computed(() => {
-          return (testedGoodSlots.value || []).filter(s => s && !isSlotTested(s)).length;
-        });
-
-        const getTestingTrayCounts = (t) => {
-          if (!t) return { tested: 0, total: 0 };
-          if (currentTray.value && (currentTray.value.tray_code === t.tray_code || currentTray.value.id === t.id)) {
-            const total = testedGoodSlots.value ? testedGoodSlots.value.length : (t.good_assembly_count || 0);
-            const tested = (countTestedGoodInTray.value || 0) + (countTestedHoldInTray.value || 0) + (countTestedRUInTray.value || 0);
-            return { tested, total };
-          }
-          return {
-            tested: t.tested_count || 0,
-            total: t.good_assembly_count || 0
-          };
-        };
-
-        const getTestingSetProgress = (t) => {
-          const c = getTestingTrayCounts(t);
-          return `${c.tested}/${c.total}`;
-        };
-
-        const selectAndPrintAssyQC = async (tray, slot) => {
-          if (tray && tray.tray_code) {
-            selectedTrayCode.value = tray.tray_code;
-          }
-          activePrintDocType.value = 'assy_qc';
-          activeAssyQCDocSlot.value = slot || null;
-          await loadTravelerTray();
-          navigateTo('traveler');
-          triggerToast('Dokumen Siap Cetak', `Membuka Dokumen Uji Assy No. ${slot && slot.assy_doc_number ? slot.assy_doc_number : '-'}`, 'info');
-        };
-
-        const getTestItemParamStatus = (item, paramNum) => {
-          if (!item) return 'GOOD';
-
-          // Sesuai permintaan user: history/dokumen uji tetap tampilkan data aktual (tidak di-bypass lolos semua)
-          let checklist = item.assy_test_checklist || item.test_checklist;
-          if (typeof checklist === 'string') {
-            try {
-              checklist = JSON.parse(checklist);
-            } catch (_) { }
-          }
-
-          if (Array.isArray(checklist) && checklist.length > 0) {
-            const target = checklist.find(c => c && (Number(c.test_num) === Number(paramNum) || Number(c.id) === Number(paramNum)));
-            if (target) {
-              const st = String(target.status || '').toUpperCase();
-              if (st === 'NOT_GOOD' || st === 'NOT GOOD' || st === 'NG' || st === 'FAIL' || st === 'NOT_OK') {
-                return 'NOT_GOOD';
-              }
-              if (st === 'PENDING' || st === '-' || !st) {
-                return 'PENDING';
-              }
-              return 'GOOD';
-            }
-          }
-
-          const reasons = (item.assy_failure_reasons || item.failure_reasons || item.reason || '').toLowerCase();
-          if (reasons.includes(`test ${paramNum}`) || reasons.includes(`uji ${paramNum}`) || reasons.includes(`parameter ${paramNum}`) || reasons.includes(`tahap ${paramNum}`)) {
-            return 'NOT_GOOD';
-          }
-
-          return 'GOOD';
-        };
-
-        // 2. QC Functional Testing & Card Management
-        const qcPendingList = ref([]);
-        const qcHistoryList = ref([]);
-        const qcAllList = ref([]);
-        const qcStatusFilter = ref('ALL'); // 'ALL', 'PENDING', 'GOOD', 'HOLD'
-        const qcSearchQuery = ref('');
-        const qcTrayFilter = ref('');
-        const showQCTestModal = ref(false);
-        const isQCAssyTableExpanded = ref(false);
-        const isSubmittingQCTest = ref(false);
-        const qcTestForm = ref({
-          assembly_id: null,
-          tray_id: null,
-          tray_code: '',
-          set_number: null,
-          part15_sn: '',
-          part12_sn: '',
-          part1_sn: '',
-          assy_doc_number: '',
-          qc_doc_number: '',
-          pic_assembly: '',
-          finished_at: '',
-          assy_tester_username: '',
-          assy_tested_at: '',
-          assy_test_checklist: [],
-          qc_status: '',
-          qc_failure_reasons: '',
-          pic_qc: '',
-          qc_tested_at: '',
-          notes: '',
-          is_view_mode: false
-        });
-
-        const isQCHoldItem = (item) => {
-          if (!item) return false;
-          const st = String(item.qc_status || '').trim().toUpperCase();
-          const assySt = String(item.assembly_status || item.status || '').trim();
-          if (['HOLD_QC', 'HOLD', 'REWORK_QC', 'REWORK', 'RU'].includes(st)) return true;
-          if (item.status === 'Dirakit Ulang' || item.status === 'Rework' || item.status === 'Hold') return true;
-          if (item.qc_failure_reasons || item.rework_reason) return true;
-          if ((item.qc_tested_at || item.qc_doc_number) && !['GOOD', 'GOOD_QC', 'PASS', 'ACC', 'ACCEPTED'].includes(st)) {
-            return true;
-          }
-          return false;
-        };
-
-        const isQCPendingItem = (item) => {
-          if (!item) return false;
-          // Menunggu HANYA ketika unit belum dilakukan test di QC dan tidak memiliki status hold/rework/good
-          if (item.qc_doc_number || item.qc_tested_at) return false;
-          if (isQCHoldItem(item)) return false;
-          const st = String(item.qc_status || '').trim().toUpperCase();
-          if (['GOOD', 'GOOD_QC', 'PASS', 'ACC', 'ACCEPTED'].includes(st)) return false;
-          return (st === 'PENDING_QC' || st === 'PENDING' || !st) && item.assembly_status === 'Good';
-        };
-
-        const isEligibleForQC = (item) => {
-          if (!item) return false;
-          // 1. Sudah diuji di QC (Memiliki nomor dokumen QC atau hasil uji QC yang sah / Hold QC)
-          if (item.qc_doc_number || item.qc_tested_at || item.qc_status === 'GOOD' || isQCHoldItem(item)) {
-            return true;
-          }
-          // 2. Menunggu QC: Wajib berstatus Good di perakitan & Good di TF1 (lolos Uji Fungsional 1) dan belum diuji QC
-          return isQCPendingItem(item) &&
-            item.assy_test_status === 'Good' &&
-            Boolean(item.assy_doc_number);
-        };
-
-        const loadQCPendingItems = async () => {
-          try {
-            const res = await fetchAPI('/qc/pending-items');
-            if (res.ok) {
-              const filterQC = (arr) => (arr || []).filter(isEligibleForQC);
-              qcPendingList.value = filterQC(res.data);
-              qcHistoryList.value = filterQC(res.history_data);
-              qcAllList.value = filterQC(res.all_data || ((res.data || []).concat(res.history_data || [])));
-            }
-          } catch (_) { }
-        };
-
-        const selectedQCTrayCode = ref(null);
-
-        const openQCTrayDetail = (trayCode) => {
-          selectedQCTrayCode.value = trayCode;
-          try {
-            history.pushState({ type: 'qc_tray', code: trayCode }, '', '#qc/' + trayCode);
-          } catch (_) { }
-        };
-
-        const getParsedAssyChecklist = (item) => {
-          if (!item) return defaultAssyTestItems;
-          let cl = item.assy_test_checklist || item.test_checklist;
-          if (typeof cl === 'string') {
-            try { cl = JSON.parse(cl); } catch (_) { cl = null; }
-          }
-          if (Array.isArray(cl) && cl.length) {
-            return defaultAssyTestItems.map((defItem, idx) => {
-              const match = cl.find(c => c && (Number(c.test_num) === Number(defItem.test_num) || Number(c.id) === Number(defItem.test_num))) || cl[idx];
-              let mappedStatus = 'PENDING';
-              if (match && match.status) {
-                const rawSt = String(match.status).trim().toUpperCase();
-                if (rawSt === 'GOOD' || rawSt === 'PASS' || rawSt === 'OK') mappedStatus = 'GOOD';
-                else if (rawSt === 'NOT_GOOD' || rawSt === 'NOT GOOD' || rawSt === 'FAIL' || rawSt === 'HOLD' || rawSt === 'REWORK' || rawSt === 'NG') mappedStatus = 'NOT_GOOD';
-                else mappedStatus = 'PENDING';
-              }
-              return {
-                test_num: defItem.test_num,
-                name: defItem.name,
-                description: defItem.description,
-                status: mappedStatus
-              };
-            });
-          }
-          return defaultAssyTestItems;
-        };
-
-        const qcTraySummaryList = computed(() => {
-          const map = {};
-          (qcAllList.value || []).forEach(item => {
-            const code = item.tray_code || 'No Tray';
-            if (!map[code]) {
-              map[code] = {
-                tray_code: code,
-                pic_assembly: item.pic_assembly || item.assigned_operator || '',
-                finished_at: item.finished_at || item.tray_created_at || item.started_at,
-                items: [],
-                total_sets: 0,
-                good_qc_count: 0,
-                pending_qc_count: 0,
-                hold_qc_count: 0
-              };
-            }
-            map[code].items.push(item);
-            map[code].total_sets++;
-            if (item.qc_status === 'GOOD' || item.qc_status === 'GOOD_QC') {
-              map[code].good_qc_count++;
-            } else if (isQCHoldItem(item)) {
-              map[code].hold_qc_count++;
-            } else if (isQCPendingItem(item)) {
-              map[code].pending_qc_count++;
-            }
-          });
-
-          let list = Object.values(map);
-          if (qcSearchQuery.value && qcSearchQuery.value.trim()) {
-            const q = qcSearchQuery.value.toLowerCase().trim();
-            list = list.filter(t =>
-              t.tray_code.toLowerCase().includes(q) ||
-              (t.pic_assembly && t.pic_assembly.toLowerCase().includes(q)) ||
-              getOperatorFullName(t.pic_assembly).toLowerCase().includes(q)
-            );
-          }
-          list.sort((a, b) => (a.tray_code || '').localeCompare(b.tray_code || '', undefined, { numeric: true, sensitivity: 'base' }));
-          return list;
-        });
-
-        const distinctQCTrays = computed(() => {
-          const s = new Set();
-          (qcAllList.value || []).forEach(item => {
-            if (item.tray_code) s.add(item.tray_code);
-          });
-          return Array.from(s).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
-        });
-
-        const qcOverallPendingCount = computed(() => {
-          const all = qcAllList.value || [];
-          return all.filter(i => isQCPendingItem(i)).length;
-        });
-
-        const qcOverallSummary = computed(() => {
-          const all = qcAllList.value || [];
-          const docSet = new Set(all.map(i => i.tray_code).filter(Boolean));
-          const docCount = docSet.size;
-          const pcsCount = all.length;
-          const goodCount = all.filter(i => i.qc_status === 'GOOD' || i.qc_status === 'GOOD_QC').length;
-          const holdCount = all.filter(i => isQCHoldItem(i)).length;
-          const pendingCount = all.filter(i => isQCPendingItem(i)).length;
-          return {
-            docCount,
-            pcsCount,
-            goodCount,
-            holdCount,
-            pendingCount
-          };
-        });
-
-        const qcCounts = computed(() => {
-          let all = qcAllList.value || [];
-          if (selectedQCTrayCode.value) {
-            all = all.filter(item => item.tray_code === selectedQCTrayCode.value);
-          }
-          const pending = all.filter(i => isQCPendingItem(i)).length;
-          const good = all.filter(i => i.qc_status === 'GOOD' || i.qc_status === 'GOOD_QC').length;
-          const hold = all.filter(i => isQCHoldItem(i)).length;
-          return {
-            all: all.length,
-            pending,
-            good,
-            hold
-          };
-        });
-
-        const filteredQCList = computed(() => {
-          let list = qcAllList.value || [];
-          if (selectedQCTrayCode.value) {
-            list = list.filter(item => item.tray_code === selectedQCTrayCode.value);
-          }
-          if (qcStatusFilter.value === 'PENDING') {
-            list = list.filter(i => isQCPendingItem(i));
-          } else if (qcStatusFilter.value === 'GOOD') {
-            list = list.filter(i => i.qc_status === 'GOOD' || i.qc_status === 'GOOD_QC');
-          } else if (qcStatusFilter.value === 'HOLD') {
-            list = list.filter(i => isQCHoldItem(i));
-          }
-
-          if (qcTrayFilter.value) {
-            list = list.filter(item => item.tray_code === qcTrayFilter.value);
-          }
-          if (qcSearchQuery.value && qcSearchQuery.value.trim()) {
-            const q = qcSearchQuery.value.toLowerCase().trim();
-            list = list.filter(item =>
-              (item.part15_sn && item.part15_sn.toLowerCase().includes(q)) ||
-              (item.part12_sn && item.part12_sn.toLowerCase().includes(q)) ||
-              (item.part1_sn && item.part1_sn.toLowerCase().includes(q)) ||
-              (item.tray_code && item.tray_code.toLowerCase().includes(q)) ||
-              (item.assy_doc_number && item.assy_doc_number.toLowerCase().includes(q)) ||
-              (item.qc_doc_number && item.qc_doc_number.toLowerCase().includes(q)) ||
-              (item.pic_assembly && item.pic_assembly.toLowerCase().includes(q)) ||
-              (item.assy_tester_username && item.assy_tester_username.toLowerCase().includes(q))
-            );
-          }
-          return list;
-        });
-
-        const qcPendingCount = computed(() => qcOverallPendingCount.value);
-
-        const parseChecklistHelper = (raw, isHoldOrRework) => {
-          let cl = raw;
-          if (typeof cl === 'string') {
-            try { cl = JSON.parse(cl); } catch (_) { cl = []; }
-          }
-          if (!isHoldOrRework && (!Array.isArray(cl) || cl.length === 0)) {
-            return defaultAssyTestItems.map(defItem => ({
-              test_num: defItem.test_num,
-              name: defItem.name,
-              description: defItem.description,
-              status: 'GOOD'
-            }));
-          }
-          if (!Array.isArray(cl) || cl.length === 0) {
-            return JSON.parse(JSON.stringify(defaultAssyTestItems));
-          }
-          return defaultAssyTestItems.map((defItem, idx) => {
-            const match = cl.find(c => c && (Number(c.test_num) === defItem.test_num || Number(c.id) === defItem.test_num)) || cl[idx];
-            let mappedStatus = 'PENDING';
-            if (match && match.status) {
-              const rawSt = String(match.status).trim().toUpperCase();
-              if (rawSt === 'GOOD' || rawSt === 'PASS' || rawSt === 'OK') mappedStatus = 'GOOD';
-              else if (rawSt === 'NOT_GOOD' || rawSt === 'NOT GOOD' || rawSt === 'FAIL' || rawSt === 'HOLD' || rawSt === 'REWORK' || rawSt === 'NG') mappedStatus = 'NOT_GOOD';
-              else mappedStatus = 'PENDING';
-            }
-            return {
-              test_num: defItem.test_num,
-              name: defItem.name,
-              description: defItem.description,
-              status: mappedStatus
-            };
-          });
-        };
-
-        const openQCTestModal = (item, isViewMode = false) => {
-          const isAssemblyHoldOrRework = (item.assembly_status === 'Hold' || item.status === 'Hold' || item.assembly_status === 'Rework' || item.status === 'Rework')
-            && item.verified_status !== 'APPROVED' && item.verified_status !== 'APPROVED_QC' && item.qc_status !== 'GOOD' && !item.qc_doc_number;
-
-          const isQCHoldOrRework = item.hold_source === 'QC' || item.stage === 'QC' || item.qc_status === 'HOLD_QC' || item.qc_status === 'REWORK_QC' || item.qc_status === 'HOLD' || Boolean(item.qc_failure_reasons) || Boolean(item.qc_test_checklist);
-
-          const assyChecklist = parseChecklistHelper(item.assy_test_checklist || (item.stage === 'ASSY' ? item.test_checklist : null), isAssemblyHoldOrRework);
-          const qcChecklist = parseChecklistHelper(item.qc_test_checklist || (item.stage === 'QC' ? item.test_checklist : null), isQCHoldOrRework);
-
-          const defaultActiveTestTab = isQCHoldOrRework ? 'qc' : 'assy';
-          const isPending = (item.qc_status === 'PENDING_QC' || item.qc_status === 'PENDING') && item.assembly_status === 'Good';
-
-          qcTestForm.value = {
-            assembly_id: item.assembly_id || item.id,
-            tray_id: item.tray_id,
-            tray_code: item.tray_code || '',
-            set_number: item.set_number,
-            part15_sn: item.part15_sn || '',
-            part12_sn: item.part12_sn || '',
-            part1_sn: item.part1_sn || '',
-            assy_doc_number: item.assy_doc_number || '',
-            qc_doc_number: item.qc_doc_number || '',
-            pic_assembly: item.pic_assembly || '',
-            finished_at: item.finished_at || item.started_at || '',
-            assy_tester_username: item.assy_tester_username || item.pic_assembly || '',
-            assy_tester_fullname: item.assy_tester_fullname || item.assy_tester_username || item.pic_assembly || '',
-            assy_tested_at: item.assy_tested_at || item.finished_at || '',
-            assy_failure_reasons: item.assy_failure_reasons || '',
-            assy_test_checklist: assyChecklist,
-            qc_tester_username: item.qc_tester_username || item.pic_qc || '',
-            qc_tester_fullname: item.qc_tester_fullname || item.qc_tester_username || item.pic_qc || '',
-            qc_status: item.qc_status || (isPending ? 'PENDING_QC' : 'GOOD'),
-            qc_failure_reasons: item.qc_failure_reasons || '',
-            rework_reason: item.rework_reason || '',
-            pic_qc: item.pic_qc || item.qc_tested_by || '',
-            qc_tested_at: item.qc_test_tested_at || item.qc_tested_at || '',
-            notes: item.qc_notes || '',
-            is_view_mode: isViewMode || !isPending || userRole.value === 'gudang' || userRole.value === 'assembly'
-          };
-          if (currentTab.value !== 'qc') {
-            currentTab.value = 'qc';
-          }
-          if (item.tray_code) {
-            selectedQCTrayCode.value = item.tray_code;
-          }
-          isQCAssyTableExpanded.value = true;
-          showQCTestModal.value = true;
-        };
-
-        const handleHoldItemDetail = (item) => {
-          if (!item) return;
-          // Kalo hold di QC baru munculin halaman QC
-          const isQCHold = item.hold_source === 'QC' || item.stage === 'QC' || item.qc_status === 'HOLD_QC' || item.qc_status === 'REWORK_QC';
-          if (isQCHold) {
-            openQCTestModal(item, true);
-          } else {
-            // Munculkan card modal (persis foto 2) tanpa pindah ke halaman QC
-            openDetailModal(item, (item.set_number ? item.set_number - 1 : 0), 'assy_test');
-          }
-        };
-
-        const submitQCTestDecision = async (decision) => {
-          if (userRole.value === 'assembly' || userRole.value === 'gudang') {
-            triggerToast('Akses Ditolak', 'Hanya Inspector QC atau Admin yang berhak melakukan pengujian QC.', 'error');
-            return;
-          }
-          if (isSubmittingQCTest.value) return;
-          isSubmittingQCTest.value = true;
-          try {
-            const payload = {
-              assembly_id: qcTestForm.value.assembly_id,
-              status: decision,
-              notes: qcTestForm.value.notes,
-              failure_reasons: qcTestForm.value.notes || (decision === 'Hold' ? 'Tertahan di Quality Control (QC)' : null),
-              test_checklist: qcTestForm.value.assy_test_checklist
-            };
-            const res = await fetchAPI('/qc/submit-test', {
-              method: 'POST',
-              body: JSON.stringify(payload)
-            });
-            if (res.ok) {
-              triggerToast('Keputusan QC Berhasil Disimpan', res.message || `Status QC telah diset menjadi ${decision}.`, decision === 'Good' ? 'success' : 'warn');
-              showQCTestModal.value = false;
-              await loadQCPendingItems();
-              await loadProductionHoldItems();
-              await loadPendingVerifications();
-              await loadTrays();
-              await loadTravelerTray();
-              if (reportSubTab.value === 'qc_test') loadQCTestReports();
-            } else {
-              triggerToast('Gagal Simpan QC', res.error || 'Terjadi kesalahan sistem', 'error');
-            }
-          } catch (e) {
-            triggerToast('Error', e.message, 'error');
-          } finally {
-            isSubmittingQCTest.value = false;
-          }
-        };
-
-        const printWHQCDoc = async (trayCode, docNumber) => {
-          if (trayCode) selectedTrayCode.value = trayCode;
-          activePrintDocType.value = 'wh_qc';
-          await loadTravelerTray();
-          navigateTo('traveler');
-          triggerToast('Dokumen Siap Cetak', `Membuka Dokumen Mutu WH/QC No. ${docNumber || '-'}`, 'info');
-        };
-
-        const reregisterDeclinedItem = (item) => {
-          if (!item) return;
-          if (item.set_number || item.assembly_id || item.tray_code || item.part15_sn || item.stage) {
-            openReregisterSetConfirmModal(item);
-          } else {
-            const sn = item.part15_sn || item.sn;
-            const part_type = item.part_type || '15';
-            openReregisterModal({ part_type, sn, status: item.qc_status || item.status || 'Hold' });
-          }
-        };
-
-        const filteredQCPendingList = filteredQCList;
-        const submitQCTest = submitQCTestDecision;
-
-        // Pop-up Alasan Hold QC
-        const showQCHoldReasonModal = ref(false);
-        const qcHoldReasonInput = ref('');
-
-        const openQCHoldReasonModal = () => {
-          qcHoldReasonInput.value = '';
-          showQCHoldReasonModal.value = true;
-        };
-
-        const confirmQCHold = async () => {
-          const reason = (qcHoldReasonInput.value || '').trim();
-          if (!reason) {
-            triggerToast('Alasan Wajib Diisi', 'Mohon masukkan alasan penahanan mutu QC!', 'warn');
-            return;
-          }
-          qcTestForm.value.notes = reason;
-          showQCHoldReasonModal.value = false;
-          await submitQCTestDecision('Hold');
-        };
+        // Bridge refs/methods for internal app.js usage
+        const {
+          qcPendingList,
+          qcHistoryList,
+          qcAllList,
+          qcStatusFilter,
+          qcSearchQuery,
+          qcTrayFilter,
+          showQCTestModal,
+          isQCAssyTableExpanded,
+          isSubmittingQCTest,
+          selectedQCTrayCode,
+          qcTestForm,
+          showQCHoldReasonModal,
+          qcHoldReasonInput,
+          isQCHoldItem,
+          isQCPendingItem,
+          isEligibleForQC,
+          getQCCardClass,
+          loadQCPendingItems,
+          openQCTrayDetail,
+          getParsedAssyChecklist,
+          qcTraySummaryList,
+          distinctQCTrays,
+          qcOverallPendingCount,
+          qcOverallSummary,
+          qcCounts,
+          filteredQCList,
+          pagedQCList,
+          pagedQcTraySummaryList,
+          totalPgQCList,
+          totalPgQcTraySummary,
+          qcPendingCount,
+          openQCTestModal,
+          handleHoldItemDetail,
+          submitQCTestDecision,
+          printWHQCDoc,
+          reregisterDeclinedItem,
+          filteredQCPendingList,
+          submitQCTest,
+          openQCHoldReasonModal,
+          confirmQCHold
+        } = qcModule;
 
         // ==========================================
-        // 13. BARANG PRODUKSI (HOLD ASSEMBLED UNITS)
+        // 13. HOLD & REASSEMBLY MODULE (FASE 2F)
         // ==========================================
-        const productionHoldList = ref([]);
-        const productionProductsList = ref(['Nanggala P9']);
-        const selectedProductionProduct = ref('ALL');
-        const productionSourceFilter = ref('ALL');
-        const productionSearchQuery = ref('');
-        const productionViewMode = ref('table'); // 'table' (default, requested by user), 'cards', or 'grouped'
-        const functionalHoldViewMode = ref('table'); // 'table' (default view as requested by user), or 'cards'
-        const isLoadingProductionHold = ref(false);
-        const assemblyResults = ref([]);
-        const isLoadingAssemblyResults = ref(false);
-        const assemblyResultsStatusFilter = ref('ALL');
-        const selectedProductionOperator = ref('ALL');
-        const selectedProductionDocAssy = ref('ALL');
-
-        const isReassemblySet = (item) => {
-          if (!item) return false;
-          // Jika item telah di-Decline (ditolak gudang/admin), BUKAN set perakitan ulang:
-          if (Boolean(item.is_declined) || String(item.status || '').toLowerCase() === 'declined' || String(item.verified_status || '').toUpperCase() === 'DECLINED') {
-            return false;
-          }
-          const vStat = String(item.verified_status || '').trim().toUpperCase();
-          // Jika statusnya WAITING_REASSEMBLY, APPROVED_REREG, atau COMPLETED_PU (hasil verifikasi admin), PASTI SUDAH RU:
-          if (['WAITING_REASSEMBLY', 'APPROVED_REREG', 'COMPLETED_PU'].includes(vStat)) return true;
-
-          // Set yang masih menunggu verifikasi admin untuk daftar ulang belum masuk RU
-          if (vStat === 'PENDING_ADMIN_ASSY_REREG' || vStat === 'PENDING_ADMIN' || vStat === 'PENDING_ADMIN_QC' || item.pending_action_type === 'PENDING_DAFTAR_ULANG') {
-            return false;
-          }
-          const st = String(item.assembly_status || item.status || '').trim().toLowerCase();
-          const assyTestSt = String(item.assy_test_status || '').trim().toUpperCase();
-          const qcSt = String(item.qc_status || '').trim().toUpperCase();
-          if (st === 'dirakit ulang' || st === 'ru' || assyTestSt === 'RU' || qcSt === 'RU') return true;
-          if (Boolean(item.is_reregistered && st !== 'good' && !vStat.startsWith('PENDING_ADMIN'))) return true;
-          if (Boolean(item.rereg_pending_operator) || Boolean(item.rereg_wo_suffix)) return true;
-          if (item.latest_replacement_status === 'APPROVED') return true;
-          if (item.rework_reason && item.rework_reason.includes('Ganti Part') && (st === 'hold' || st === 'dirakit ulang' || vStat === 'WAITING_REASSEMBLY' || vStat === 'APPROVED' || vStat === 'COMPLETED_PU')) return true;
-          const cleanR = String(item.assembly_reason || item.reason || '').toLowerCase();
-          if (cleanR.includes('dirakit ulang')) return true;
-          return false;
-        };
-
-        const isTravelerItemAssembled = (item) => {
-          if (!item) return false;
-          // Item perakitan resmi yang sudah selesai dirakit WAJIB memiliki record perakitan di DB atau finished_at
-          if (!item.finished_at && !item.id && !item.assembly_id) return false;
-          // Jika status kosong atau bernilai null/undefined/RETURNED tanpa adanya record perakitan nyata yang selesai
-          const st = String(item.status || item.assembly_status || '').trim();
-          if (!st || st.toUpperCase() === 'RETURNED') return false;
-          // Khusus dokumen Perakitan Ulang (assy_rework): jika belum pernah ada proses perakitan ulang (finished_at kosong) maka prosesnya belum dilakuin
-          if (activePrintDocType.value === 'assy_rework' && !item.finished_at) return false;
-          return Boolean(item.finished_at || (item.id && st));
-        };
-
-        const getTravelerItemActualStatus = (item) => {
-          if (!item) return '-';
-          if (!isTravelerItemAssembled(item)) {
-            return '-';
-          }
-          if (item.original_assembly_status) {
-            const oSt = String(item.original_assembly_status).trim();
-            if (oSt && oSt.toLowerCase() !== 'none' && oSt.toLowerCase() !== 'null') {
-              return oSt.charAt(0).toUpperCase() + oSt.slice(1).toLowerCase();
-            }
-          }
-          const cleanReason = String(item.reason || item.assembly_reason || '').trim();
-          const hasDefectiveParts = Boolean(item.defective_parts && String(item.defective_parts).trim() !== '' && String(item.defective_parts).trim() !== '-');
-          const isRealReason = Boolean(cleanReason && cleanReason !== '-' && !cleanReason.startsWith('|') && !cleanReason.toLowerCase().includes('dirakit ulang'));
-          if (isRealReason || hasDefectiveParts) {
-            if (cleanReason.toLowerCase().includes('scrap')) return 'Scrap';
-            if (cleanReason.toLowerCase().includes('rework')) return 'Rework';
-            return 'Hold';
-          }
-          const st = String(item.status || item.assembly_status || '').trim();
-          if (st && !['dirakit ulang', 'ru'].includes(st.toLowerCase())) {
-            return st;
-          }
-          return 'Good';
-        };
-
-        const getAssemblyStageStatus = (it) => {
-          if (!it) return 'Good';
-
-          const rawSt = String(it.assembly_status || it.status || '').trim().toLowerCase();
-          const vStat = String(it.verified_status || '').trim().toUpperCase();
-
-          // 0. Status Ditolak / Declined:
-          if (Boolean(it.is_declined) || rawSt === 'declined' || vStat === 'DECLINED') {
-            return 'Declined';
-          }
-
-          // 1. Prioritas Status Transisi Rakit Ulang (RU):
-          // Jika item sudah disetujui / sedang dalam proses Rakit Ulang
-          if (typeof isReassemblySet === 'function' && isReassemblySet(it)) {
-            return 'RU';
-          }
-          const qcSt = String(it.qc_status || '').trim().toUpperCase();
-          const assyTestSt = String(it.assy_test_status || '').trim().toUpperCase();
-
-          if (rawSt === 'dirakit ulang' || rawSt === 'ru' || assyTestSt === 'RU' || qcSt === 'RU' || ['WAITING_REASSEMBLY', 'APPROVED_REREG', 'COMPLETED_PU'].includes(vStat)) {
-            return 'RU';
-          }
-
-          // 2. Ambil catatan status perakitan aktual awal (original_assembly_status dari database / history)
-          if (it.original_assembly_status) {
-            const oSt = String(it.original_assembly_status).trim().toLowerCase();
-            if (oSt === 'good') return 'Good';
-            if (oSt === 'hold') return 'Hold';
-            if (oSt === 'scrap') return 'Scrap';
-            if (oSt === 'rework') return 'Rework';
-          }
-
-          // 3. Cek apakah saat perakitan ada kendala/cacat/alasan asli
-          const cleanReason = String(it.assembly_reason || it.reason || '').trim();
-          const isRealAssyReason = Boolean(cleanReason && cleanReason !== '-' && cleanReason !== 'None' && cleanReason !== 'null' && !cleanReason.startsWith('|') && !cleanReason.toLowerCase().includes('dirakit ulang'));
-          const hasDefectiveParts = Boolean(it.defective_parts && String(it.defective_parts).trim() !== '' && String(it.defective_parts).trim() !== '-');
-
-          if (isRealAssyReason || hasDefectiveParts) {
-            if (cleanReason.toLowerCase().includes('scrap')) return 'Scrap';
-            if (cleanReason.toLowerCase().includes('rework')) return 'Rework';
-            return 'Hold';
-          }
-
-          // 4. Status mentah perakitan sebelum dirubah
-          if (rawSt === 'hold') return 'Hold';
-          if (rawSt === 'scrap') return 'Scrap';
-          if (rawSt === 'rework') return 'Rework';
-
-          return 'Good';
-        };
-
-        const getItemStartTime = (item) => {
-          if (!item) return '-';
-          if (!isTravelerItemAssembled(item) && !item.started_at) {
-            return '-';
-          }
-          let raw = item.started_at;
-          if (!raw && item.finished_at) {
-            raw = item.finished_at;
-          }
-          if (!raw) {
-            return '-';
-          }
-          const t = formatTimeOnly(raw);
-          return t && t !== '-' ? t : '-';
-        };
-
-        const getItemFinishTime = (item) => {
-          if (!item) return '-';
-          if (!isTravelerItemAssembled(item) || !item.finished_at) {
-            return '-';
-          }
-          let raw = item.finished_at;
-          const t = formatTimeOnly(raw, item.started_at);
-          return t && t !== '-' ? t : '-';
-        };
-
-        const previousPendingAssemblyItemIds = ref(new Set());
-        const isAssemblyResultsInitialLoaded = ref(false);
-
-        const loadAssemblyResults = async (isSilent = false) => {
-          if (!isSilent && (!assemblyResults.value || !assemblyResults.value.length)) {
-            isLoadingAssemblyResults.value = true;
-          }
-          try {
-            const res = await fetchAPI('/production/assembly-results');
-            if (res.ok && res.data) {
-              const rawData = Array.isArray(res.data) ? res.data : (res.data?.trays || res.data?.data || []);
-              let rawTrays = [];
-              if (rawData.length > 0 && !rawData[0].items && rawData[0].tray_code) {
-                const gMap = {};
-                rawData.forEach(item => {
-                  const tKey = item.tray_id || item.tray_code;
-                  if (!gMap[tKey]) {
-                    gMap[tKey] = {
-                      tray_id: item.tray_id,
-                      tray_code: item.tray_code,
-                      source_document_mo: item.source_document_mo,
-                      product_type: item.product_type || 'Nanggala P9',
-                      tray_status: item.tray_status || 'active',
-                      tray_created_at: item.tray_created_at,
-                      pic_assembly: item.pic_assembly,
-                      pic_warehouse: item.pic_warehouse,
-                      items: []
-                    };
-                  }
-                  gMap[tKey].items.push(item);
-                });
-                rawTrays = Object.values(gMap);
-              } else {
-                rawTrays = rawData;
-              }
-
-              assemblyResults.value = rawTrays.map(t => {
-                let good_count = 0;
-                let hold_count = 0;
-                let ru_count = 0;
-                let rework_count = 0;
-                let scrap_count = 0;
-                let declined_count = 0;
-                (t.items || []).forEach(it => {
-                  const st = getAssemblyStageStatus(it);
-                  if (st === 'Hold') hold_count++;
-                  else if (st === 'RU') ru_count++;
-                  else if (st === 'Rework') rework_count++;
-                  else if (st === 'Scrap') scrap_count++;
-                  else if (st === 'Declined') declined_count++;
-                  else good_count++;
-                });
-                return {
-                  ...t,
-                  good_count,
-                  hold_count,
-                  ru_count,
-                  rework_count,
-                  scrap_count,
-                  declined_count
-                };
-              });
-
-              isAssemblyResultsInitialLoaded.value = true;
-
-              if (selectedAssemblyItem.value && selectedAssemblyItem.value.assembly_id) {
-                for (const tray of (assemblyResults.value || [])) {
-                  const found = (tray.items || []).find(it => it.assembly_id === selectedAssemblyItem.value.assembly_id);
-                  if (found) {
-                    Object.assign(selectedAssemblyItem.value, found);
-                    if (selectedHoldItem.value) Object.assign(selectedHoldItem.value, found);
-                    break;
-                  }
-                }
-              }
-            }
-          } catch (e) {
-            console.error('Failed to load assembly results', e);
-          } finally {
-            isLoadingAssemblyResults.value = false;
-          }
-        };
-
-        const assemblyResultsSummary = computed(() => {
-          const trays = assemblyResults.value || [];
-          let totalTrays = trays.length;
-          let totalSets = 0;
-          let totalGood = 0;
-          let totalHold = 0;
-          let totalRU = 0;
-          let totalScrap = 0;
-          let unresolvedHoldScrap = 0;
-          trays.forEach(t => {
-            totalSets += (t.sets_count || t.items?.length || 0);
-            (t.items || []).forEach(it => {
-              const st = getAssemblyStageStatus(it).toUpperCase();
-              const isResolved = !!(it.is_resolved || it.status === 'Selesai' || it.status === 'Dirakit Ulang' || it.verified_status === 'APPROVED' || it.verified_status === 'WAITING_REASSEMBLY' || it.status === 'Scrap_Confirmed');
-              if (st === 'HOLD' || st === 'REWORK') {
-                totalHold++;
-                if (!isResolved) unresolvedHoldScrap++;
-              }
-              else if (st === 'RU') {
-                totalRU++;
-              }
-              else if (st === 'SCRAP') {
-                totalScrap++;
-                if (!isResolved) unresolvedHoldScrap++;
-              }
-              else if (st === 'DECLINED') {
-                // Declined items do not count towards Good or RU
-              }
-              else {
-                totalGood++;
-              }
-            });
+        if (typeof window.createHoldsModule === 'function') {
+          holdsModule = window.createHoldsModule({
+            Vue,
+            fetchAPI,
+            triggerToast,
+            showConfirmCard,
+            showPromptCard,
+            userRole,
+            userName,
+            userFullName,
+            operatorName,
+            currentTab,
+            activePrintDocType,
+            pgState,
+            traysList,
+            currentTray,
+            operatorUsersList,
+            getPUDocNumber,
+            formatTimeOnly,
+            openReregisterModal: (...args) => (typeof openReregisterModal === 'function' ? openReregisterModal(...args) : null),
+            openReregisterSetConfirmModal: (...args) => (typeof openReregisterSetConfirmModal === 'function' ? openReregisterSetConfirmModal(...args) : null),
+            loadTrays: (...args) => (typeof loadTrays === 'function' ? loadTrays(...args) : null),
+            loadPendingVerifications: (...args) => (typeof loadPendingVerifications === 'function' ? loadPendingVerifications(...args) : null),
+            loadQCPendingItems: (...args) => (typeof loadQCPendingItems === 'function' ? loadQCPendingItems(...args) : null),
+            loadPendingAssemblies: (...args) => (typeof loadPendingAssemblies === 'function' ? loadPendingAssemblies(...args) : null)
           });
-          const totalNotGood = totalHold + totalRU + totalScrap;
-          const notifCount = unresolvedHoldScrap; // Auto-decrement / clear when process is DONE
-          return { totalTrays, totalSets, totalGood, totalHold, totalRU, totalRework: 0, totalScrap, totalNotGood, notifCount };
-        });
-
-        const distinctAssemblyOperators = computed(() => {
-          const ops = new Set();
-          (assemblyResults.value || []).forEach(t => {
-            if (t.pic_assembly && t.pic_assembly !== '-') ops.add(t.pic_assembly);
-            (t.items || []).forEach(it => {
-              if (it.pic_assembly && it.pic_assembly !== '-') ops.add(it.pic_assembly);
-            });
-          });
-          return Array.from(ops).sort();
-        });
-
-        const distinctAssyDocNumbers = computed(() => {
-          const docs = new Set();
-          (assemblyResults.value || []).forEach(t => {
-            const tc = (t.tray_code || '').trim();
-            if (tc && tc.toUpperCase().startsWith('WH/ASSY')) docs.add(tc);
-            if (t.ru_count > 0 || /-PU/i.test(tc)) {
-              docs.add(getPUDocNumber(tc));
-            }
-            (t.items || []).forEach(it => {
-              const adc = (it.assy_doc_number || '').trim();
-              if (adc && adc.toUpperCase().startsWith('WH/ASSY')) docs.add(adc);
-            });
-          });
-          return Array.from(docs).sort();
-        });
-
-        const isAssyDocDropdownOpen = ref(false);
-        const assyDocSearchText = ref('');
-        const toggleAssyDocDropdown = () => {
-          isAssyDocDropdownOpen.value = !isAssyDocDropdownOpen.value;
-          assyDocSearchText.value = '';
-        };
-        const selectAssyDocFromDropdown = (doc) => {
-          selectedProductionDocAssy.value = doc;
-          isAssyDocDropdownOpen.value = false;
-        };
-        const filteredAssyDocNumbers = computed(() => {
-          const list = distinctAssyDocNumbers.value || [];
-          if (!assyDocSearchText.value.trim()) return list;
-          const q = assyDocSearchText.value.trim().toLowerCase();
-          return list.filter(d => String(d).toLowerCase().includes(q));
-        });
-
-        const calculateAssemblyDuration = (startedAt, finishedAt) => {
-          if (!startedAt || !finishedAt) return '-';
-          try {
-            const s = new Date(startedAt.replace(' ', 'T')).getTime();
-            const f = new Date(finishedAt.replace(' ', 'T')).getTime();
-            if (isNaN(s) || isNaN(f)) return '-';
-            let diffSec = Math.floor((f - s) / 1000);
-            if (diffSec < 0) return '-';
-            const m = Math.floor(diffSec / 60);
-            const sec = diffSec % 60;
-            if (m === 0) return `${sec} detik`;
-            return `${m} mnt ${sec} dtk`;
-          } catch (_) {
-            return '-';
-          }
-        };
-
-        const filteredGroupedAssemblyResults = computed(() => {
-          let list = assemblyResults.value || [];
-
-          // 1. Filter Produk
-          if (selectedProductionProduct.value && selectedProductionProduct.value !== 'ALL') {
-            list = list.filter(t => (t.product_type || 'Nanggala P9') === selectedProductionProduct.value);
-          }
-
-          // 2. Filter Operator Perakitan
-          if (selectedProductionOperator.value && selectedProductionOperator.value !== 'ALL') {
-            const op = selectedProductionOperator.value.toLowerCase();
-            list = list.map(t => {
-              const trayOpMatch = (t.pic_assembly || '').toLowerCase().includes(op);
-              const filteredItems = (t.items || []).filter(it => {
-                return (it.pic_assembly && it.pic_assembly.toLowerCase().includes(op)) || trayOpMatch;
-              });
-              return { ...t, items: filteredItems };
-            }).filter(t => t.items.length > 0);
-          }
-
-          // 3. Filter No. Dokumen WH/ASSY
-          if (selectedProductionDocAssy.value && selectedProductionDocAssy.value !== 'ALL') {
-            const doc = selectedProductionDocAssy.value.toLowerCase();
-            list = list.map(t => {
-              const trayDocMatch = (t.tray_code || '').toLowerCase() === doc;
-              if (trayDocMatch) return t;
-              const filteredItems = (t.items || []).filter(it => {
-                return (it.assy_doc_number && it.assy_doc_number.toLowerCase() === doc);
-              });
-              return { ...t, items: filteredItems };
-            }).filter(t => t.items.length > 0);
-          }
-
-          // 4. Filter Status Murni Perakitan (Good, Hold, Rework, Scrap)
-          if (assemblyResultsStatusFilter.value && assemblyResultsStatusFilter.value !== 'ALL') {
-            const stFilter = assemblyResultsStatusFilter.value.toUpperCase();
-            list = list.map(t => {
-              const filteredItems = (t.items || []).filter(it => {
-                const itSt = getAssemblyStageStatus(it).toUpperCase();
-                if (stFilter === 'GOOD') return itSt === 'GOOD';
-                if (stFilter === 'HOLD') return itSt === 'HOLD';
-                if (stFilter === 'RU') return itSt === 'RU';
-                if (stFilter === 'REWORK') return itSt === 'REWORK';
-                if (stFilter === 'SCRAP') return itSt === 'SCRAP';
-                return true;
-              });
-              return { ...t, items: filteredItems };
-            }).filter(t => t.items.length > 0);
-          }
-
-          // 5. Search Query
-          if (productionSearchQuery.value) {
-            const q = productionSearchQuery.value.trim().toLowerCase();
-            list = list.map(t => {
-              const trayMatch = (t.tray_code && t.tray_code.toLowerCase().includes(q)) ||
-                (t.source_document_mo && t.source_document_mo.toLowerCase().includes(q)) ||
-                (t.pic_assembly && t.pic_assembly.toLowerCase().includes(q));
-              if (trayMatch) return t;
-              const filteredItems = (t.items || []).filter(it => {
-                return (it.part15_sn && it.part15_sn.toLowerCase().includes(q)) ||
-                  (it.part1_sn && it.part1_sn.toLowerCase().includes(q)) ||
-                  (it.part12_sn && it.part12_sn.toLowerCase().includes(q)) ||
-                  (it.assembly_reason && it.assembly_reason.toLowerCase().includes(q)) ||
-                  (it.reason && it.reason.toLowerCase().includes(q)) ||
-                  (it.pic_assembly && it.pic_assembly.toLowerCase().includes(q)) ||
-                  (it.assy_doc_number && it.assy_doc_number.toLowerCase().includes(q));
-              });
-              return { ...t, items: filteredItems };
-            }).filter(t => t.items.length > 0);
-          }
-
-          return list;
-        });
-
-        const flatFilteredAssemblyResults = computed(() => {
-          const grouped = filteredGroupedAssemblyResults.value || [];
-          const items = [];
-          grouped.forEach(t => {
-            (t.items || []).forEach(it => {
-              items.push({
-                ...it,
-                tray_code: t.tray_code,
-                source_document_mo: t.source_document_mo,
-                product_type: t.product_type
-              });
-            });
-          });
-          return items;
-        });
-
-        // Modal Detail Hasil Perakitan (Murni Perakitan)
-        const showAssemblyDetailModal = ref(false);
-        const selectedAssemblyItem = ref(null);
-        const selectedAssemblyTray = ref(null);
-
-        // Alias for backward compatibility
-        const showHoldDetailModal = ref(false);
-        const selectedHoldItem = ref(null);
-        const selectedHoldTray = ref(null);
-
-
-
-        // Helper: check if all problematic parts are already pending replacement or already replaced
-        const isAllProblematicPartsReplaced = (item) => {
-          if (!item) return false;
-          if (isReassemblySet(item)) return false;
-          // Jika sudah selesai didaftarkan ulang & disetujui admin, tidak lagi menampilkan siap daftar ulang
-          if (item.verified_status === 'APPROVED_REREG' || item.is_reregistered) return false;
-          if (item.latest_replacement_status === 'APPROVED') return true;
-          if (item.rework_reason && item.rework_reason.includes('Ganti Part')) return true;
-          return !!(item.replacement_pending || item.pending_action_type === 'PENDING_GANTI_PART');
-        };
-
-        const getHoldProceedButtonLabel = (item) => {
-          if (!item) return 'Lanjut';
-          // 1. Jika part bermasalah telah diganti -> Rakit Ulang
-          if (isAllProblematicPartsReplaced(item)) {
-            return 'Rakit Ulang';
-          }
-          // 2. Jika hold terjadi di TF2 (Quality Control / QC) -> Lanjut ke Penerimaan
-          const isQC = item.hold_source === 'QC' || item.stage === 'QC' || item.process_stage === 'qc' ||
-            ['HOLD_QC', 'REWORK_QC'].includes(item.qc_status) ||
-            (Boolean(item.qc_failure_reasons) && !item.assy_failure_reasons);
-          if (isQC) {
-            return 'Lanjut ke Penerimaan';
-          }
-          // 3. Jika hold terjadi di TF1 (Tester Assembly / Test Functional 1) -> Lanjut ke TF2
-          const isTF1 = item.hold_source === 'TESTER_ASSEMBLY' || item.stage === 'TF1' || item.process_stage === 'test_functional_1' ||
-            ['Hold', 'Rework'].includes(item.assy_test_status) || ['HOLD_ASSY', 'REWORK_ASSY'].includes(item.qc_status) ||
-            Boolean(item.assy_failure_reasons) || Boolean(item.assy_test_checklist);
-          if (isTF1) {
-            return 'Lanjut ke TF2';
-          }
-          // 4. Default: Hold pada proses Perakitan (Assembly) -> Lanjut TF1
-          return 'Lanjut TF1';
-        };
-
-        const getHoldProceedButtonTitle = (item) => {
-          if (!item) return '';
-          if (isAllProblematicPartsReplaced(item)) {
-            return 'Rakit Ulang (Part telah diganti)';
-          }
-          const label = getHoldProceedButtonLabel(item);
-          return `${label} (Tanpa ganti part)`;
-        };
-
-        const getItemPendingLabel = (item) => {
-          if (!item) return 'MENUNGGU VERIFIKASI ADMIN';
-          const t = item.pending_action_type || '';
-          if (t === 'PENDING_GANTI_PART' || item.has_pending_replacement || item.replacement_pending || item.verified_status === 'PENDING_REPLACEMENT') {
-            return 'MENUNGGU VERIFIKASI GANTI PART';
-          }
-          if (t === 'PENDING_DAFTAR_ULANG' || item.has_pending_reregister || item.re_register_pending || item.verified_status === 'PENDING_ADMIN_ASSY_REREG') {
-            return 'MENUNGGU VERIFIKASI DAFTAR ULANG';
-          }
-          return 'MENUNGGU VERIFIKASI ADMIN';
-        };
-
-        const isItemPendingAdmin = (item) => {
-          if (!item) return false;
-          const vStat = String(item.verified_status || '').trim().toUpperCase();
-
-          // 0. Status final/disetujui oleh admin: PASTI BUKAN PENDING LAGI!
-          const resolvedStatuses = ['WAITING_REASSEMBLY', 'APPROVED', 'APPROVED_QC', 'APPROVED_REREG', 'ACC', 'COMPLETED_PU', 'REJECTED', 'DECLINED'];
-          if (resolvedStatuses.includes(vStat)) {
-            item.re_register_pending = false;
-            item.has_pending_reregister = false;
-            item.replacement_pending = false;
-            item.has_pending_replacement = false;
-            item.pending_action_type = '';
-            return false;
-          }
-          if (isReassemblySet(item)) return false;
-
-          // 1. Explicit verified_status for pending admin verification:
-          if (vStat === 'PENDING_REPLACEMENT' || vStat === 'PENDING_ADMIN_ASSY_REREG' || vStat === 'PENDING_ADMIN' || vStat === 'PENDING_ADMIN_QC') {
-            return true;
-          }
-
-          // 2. Immediate local reactive flags & Authoritative DB status flags
-          if (Boolean(item.replacement_pending) || Boolean(item.has_pending_replacement)) return true;
-          if (Boolean(item.re_register_pending) || Boolean(item.has_pending_reregister)) return true;
-          if (item.pending_action_type === 'PENDING_GANTI_PART' || item.pending_action_type === 'PENDING_DAFTAR_ULANG') return true;
-
-          // 3. Fallbacks
-          if (Boolean(item.is_reregistered) && !resolvedStatuses.includes(vStat)) {
-            return true;
-          }
-          if (Boolean(item.has_pending_request) || Boolean(item.is_pending_verif)) {
-            if (!resolvedStatuses.includes(vStat)) {
-              return true;
-            }
-          }
-          return false;
-        };
-
-        const openAssemblyDetailModal = (item, tray = null) => {
-          if (item) {
-            if (!item.assembly_id && item.id) item.assembly_id = item.id;
-            const v = String(item.verified_status || '').toUpperCase();
-            if (v === 'APPROVED' || v === 'APPROVED_REREG' || v === 'ACC' || item.latest_replacement_status === 'APPROVED') {
-              item.replacement_pending = false;
-              item.has_pending_replacement = false;
-              if (item.pending_action_type === 'PENDING_GANTI_PART') {
-                item.pending_action_type = '';
-              }
-            }
-          }
-          selectedAssemblyItem.value = item;
-          selectedAssemblyTray.value = tray || (assemblyResults.value || []).find(t => t.tray_code === item?.tray_code);
-          selectedHoldItem.value = item;
-          selectedHoldTray.value = selectedAssemblyTray.value;
-          showAssemblyDetailModal.value = true;
-          showHoldDetailModal.value = false;
-        };
-
-        const openHoldDetailModal = (item, tray = null) => {
-          openAssemblyDetailModal(item, tray);
-          showHoldDetailModal.value = true;
-        };
-
-        // Aksi Pindahkan ke Gudang
-        const transferSingleSetToWarehouse = async (item, tray = null) => {
-          const target = item || selectedAssemblyItem.value || selectedHoldItem.value;
-          if (!target) return;
-          const setNum = target.set_number || '?';
-          const trayCode = target.tray_code || (tray ? tray.tray_code : (selectedAssemblyTray.value ? selectedAssemblyTray.value.tray_code : ''));
-          const ok = await showConfirmCard({
-            title: 'Pindahkan ke Gudang',
-            message: `Pindahkan Set #${setNum} (${trayCode}) ke Gudang untuk penanganan fisik / verifikasi?`,
-            icon: 'fa-solid fa-boxes-packing',
-            iconBg: 'bg-amber-100 text-amber-600',
-            confirmText: 'Ya, Pindahkan',
-            confirmBtnClass: 'bg-amber-600 hover:bg-amber-700 text-white'
-          });
-          if (!ok) return;
-
-          try {
-            const res = await fetchAPI('/assembly/transfer-to-warehouse', {
-              method: 'POST',
-              body: JSON.stringify({
-                assembly_id: target.assembly_id,
-                tray_id: target.tray_id || (tray ? tray.tray_id : null),
-                set_number: target.set_number,
-                reason: 'Dipindahkan ke gudang oleh operator dari Hasil Perakitan'
-              })
-            });
-            if (res.ok) {
-              triggerToast('Berhasil', res.message || `Set #${setNum} berhasil dipindahkan ke Gudang!`, 'success');
-              showAssemblyDetailModal.value = false;
-              showHoldDetailModal.value = false;
-              await loadAssemblyResults();
-              if (typeof loadProductionHoldItems === 'function') await loadProductionHoldItems();
-            } else {
-              triggerToast('Gagal', res.error || 'Gagal memindahkan set ke gudang', 'error');
-            }
-          } catch (err) {
-            triggerToast('Error', err.message || 'Terjadi kesalahan sistem', 'error');
-          }
-        };
-
-        const confirmReturnTrayToWarehouse = async (tray) => {
-          if (!tray) return;
-          const reason = await showPromptCard({
-            title: 'Kembalikan Work Order ke Gudang',
-            message: `Masukkan alasan pengembalian/pemindahan Work Order ${tray.tray_code} ke Gudang:`,
-            defaultValue: 'Sisa set belum selesai dikembalikan ke gudang',
-            inputLabel: 'Alasan Pemindahan:',
-            confirmText: 'Pindahkan ke Gudang',
-            confirmBtnClass: 'bg-amber-600 hover:bg-amber-700 text-white'
-          });
-          if (reason === null) return;
-
-          try {
-            const res = await fetchAPI('/assembly/session-action', {
-              method: 'POST',
-              body: JSON.stringify({
-                tray_id: tray.tray_id,
-                action: 'RETURN_WAREHOUSE',
-                reason: (reason && reason.trim()) ? reason.trim() : 'Dikembalikan ke gudang dari Hasil Perakitan'
-              })
-            });
-            if (res.ok) {
-              triggerToast('Berhasil', res.message || `Tray ${tray.tray_code} berhasil dipindahkan ke Gudang!`, 'success');
-              await loadAssemblyResults();
-            } else {
-              triggerToast('Gagal', res.error || 'Gagal memindahkan tray ke gudang', 'error');
-            }
-          } catch (err) {
-            triggerToast('Error', err.message || 'Terjadi kesalahan sistem', 'error');
-          }
-        };
-
-        // Sub-Modal 1: Daftar Ulang 1-Set Utuh (New Flow: Perakitan Ulang)
-        const showReregisterSubModal = ref(false);
-        const reregisterTargetStatus = ref(''); // Legacy, not used in new flow
-        const reregOperator = ref(''); // NEW: operator yang akan merakit ulang
-        const reregisterReason = ref('');
-        const isSubmittingReregisterSetAction = ref(false);
-
-        const availableReregisterStatuses = computed(() => {
-          // Legacy computed, kept for compatibility
-          const cur = String(selectedHoldItem.value?.assembly_status || selectedHoldItem.value?.qc_status || 'Hold');
-          const all = ['Good', 'Hold', 'Scrap'];
-          return all.filter(s => s.toLowerCase() !== cur.toLowerCase());
-        });
-
-        const openReregisterSubModal = () => {
-          const currentItem = selectedHoldItem.value || selectedAssemblyItem.value;
-          if (!currentItem) return;
-
-          // GUARD KETAT: Jika item berasal dari Pengujian (Test Functional 1 atau 2), JANGAN PERNAH masuk ke Perakitan Ulang!
-          const isFromTesting = currentTab.value === 'functional_hold' || Boolean(selectedHoldItem.value) ||
-            currentItem.stage === 'QC' || currentItem.process_stage === 'qc' || currentItem.process_stage === 'test_functional_1' ||
-            Boolean(currentItem.assy_test_checklist) || Boolean(currentItem.assy_failure_reasons) || Boolean(currentItem.qc_failure_reasons);
-          if (isFromTesting) {
-            showHoldDetailModal.value = false;
-            showAssemblyDetailModal.value = false;
-            openReregisterSetConfirmModal(currentItem);
-            return;
-          }
-
-          if (currentItem.verified_status === 'APPROVED_REREG' || currentItem.is_reregistered) {
-            triggerToast('Informasi', 'Set ini sudah berhasil didaftarkan ulang dan disetujui Admin ke dokumen perakitan ulang.', 'info');
-            return;
-          }
-          if (isItemPendingAdmin(currentItem)) {
-            triggerToast('Perhatian', 'Set ini sedang dalam antrean verifikasi Admin. Harap tunggu persetujuan Admin sebelum dapat mendaftar ulang kembali.', 'warning');
-            return;
-          }
-          // Pre-fill with current operator
-          reregOperator.value = currentItem?.pic_assembly || '';
-          reregisterReason.value = '';
-          showReregisterSubModal.value = true;
-        };
-
-        const submitReregisterSetAction = async () => {
-          const item = selectedHoldItem.value || selectedAssemblyItem.value;
-          if (!item || !item.assembly_id) return;
-          isSubmittingReregisterSetAction.value = true;
-          try {
-            const res = await fetchAPI('/assembly/reregister-set', {
-              method: 'POST',
-              body: JSON.stringify({
-                assembly_id: item.assembly_id,
-                new_operator: reregOperator.value || item.pic_assembly || '',
-                reason: reregisterReason.value
-              })
-            });
-            if (res.ok) {
-              triggerToast('Berhasil', `Pengajuan Perakitan Ulang Set #${item.set_number} telah dikirim ke Admin untuk diverifikasi.`, 'success');
-              // Realtime immediate local mutation for open modal and background grid
-              const assyId = item.assembly_id;
-              const chosenOp = reregOperator.value || item.pic_assembly;
-              const reregState = {
-                re_register_pending: true,
-                has_pending_reregister: true,
-                pending_action_type: 'PENDING_DAFTAR_ULANG',
-                verified_status: 'PENDING_ADMIN_ASSY_REREG',
-                rereg_pending_operator: chosenOp
-              };
-              if (selectedHoldItem.value) Object.assign(selectedHoldItem.value, reregState);
-              if (selectedAssemblyItem.value) Object.assign(selectedAssemblyItem.value, reregState);
-              if (assyId) {
-                (assemblyResults.value || []).forEach(tray => {
-                  (tray.items || []).forEach(it => {
-                    if (it.assembly_id === assyId) Object.assign(it, reregState);
-                  });
-                });
-                (productionHoldList.value || []).forEach(it => {
-                  if (it.assembly_id === assyId) Object.assign(it, reregState);
-                });
-              }
-              showReregisterSubModal.value = false;
-              await loadAssemblyResults();
-              if (typeof loadProductionHoldItems === 'function') await loadProductionHoldItems();
-              if (typeof loadPendingVerifications === 'function') await loadPendingVerifications();
-            } else {
-              triggerToast('Gagal', res.error || 'Gagal mengajukan perakitan ulang', 'error');
-            }
-          } catch (err) {
-            triggerToast('Error', err.message || 'Terjadi kesalahan sistem', 'error');
-          } finally {
-            isSubmittingReregisterSetAction.value = false;
-          }
-        };
-
-        // Sub-Modal 2: Ganti Part Rusak dengan Stok Master (Support 3 Dropdown untuk Masing-Masing Part)
-        const showReplacePartModal = ref(false);
-        const replaceOldStatus = ref('Hold');
-        const replaceReason = ref('');
-        const isSubmittingReplacePartAction = ref(false);
-        const showAllReplaceParts = ref(false);
-
-        // State 3 Dropdown Part Pengganti (Part 15, Part 1, Part 12)
-        const replaceSelections = ref({ '15': '', '1': '', '12': '' });
-        const replaceDropdownOpen = ref({ '15': false, '1': false, '12': false });
-        const replaceSearchQueries = ref({ '15': '', '1': '', '12': '' });
-        const availableReplacePartsByType = ref({ '15': [], '1': [], '12': [] });
-        const isLoadingPartsByType = ref({ '15': false, '1': false, '12': false });
-
-        // Backward-compat aliases
-        const replacePartType = ref('15');
-        const replaceNewSN = computed({
-          get: () => replaceSelections.value['15'] || replaceSelections.value['1'] || replaceSelections.value['12'] || '',
-          set: (val) => { replaceSelections.value['15'] = val; }
-        });
-        const availableReplaceParts = computed(() => availableReplacePartsByType.value[replacePartType.value] || []);
-        const isLoadingReplaceParts = computed(() => isLoadingPartsByType.value[replacePartType.value] || false);
-        const isReplacePartDropdownOpen = ref(false);
-        const replacePartSearchQuery = ref('');
-
-        // Deteksi part yang bermasalah dari data rakitan yang dipilih
-        const problematicPartTypes = computed(() => {
-          const item = selectedAssemblyItem.value || selectedHoldItem.value;
-          if (!item) return [];
-          const raw = item.defective_parts || item.defective_part_types || '';
-          if (!raw) return [];
-          let list = [];
-          if (Array.isArray(raw)) {
-            list = raw.map(x => String(x).trim().toLowerCase());
-          } else if (typeof raw === 'string') {
-            let str = raw.trim();
-            if (str.startsWith('[') && str.endsWith(']')) {
-              try {
-                const parsed = JSON.parse(str);
-                if (Array.isArray(parsed)) list = parsed.map(x => String(x).trim().toLowerCase());
-              } catch (_) { }
-            }
-            if (!list.length) {
-              list = str.split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
-            }
-          }
-          const normalized = [];
-          for (const p of list) {
-            if (['15', 'part15', 'p15', 'p9'].includes(p)) normalized.push('15');
-            else if (['1', 'part1', 'p1'].includes(p)) normalized.push('1');
-            else if (['12', 'part12', 'p12'].includes(p)) normalized.push('12');
-            else if (item.part15_sn && p === String(item.part15_sn).toLowerCase()) normalized.push('15');
-            else if (item.part1_sn && p === String(item.part1_sn).toLowerCase()) normalized.push('1');
-            else if (item.part12_sn && p === String(item.part12_sn).toLowerCase()) normalized.push('12');
-          }
-          return [...new Set(normalized)];
-        });
-
-        const isProblemPart = (type) => {
-          const list = problematicPartTypes.value;
-          if (!list || list.length === 0) return true;
-          return list.includes(String(type));
-        };
-
-        const hasNonProblematicParts = computed(() => {
-          return problematicPartTypes.value.length > 0 && problematicPartTypes.value.length < 3;
-        });
-
-        const getParsedReplacementHistory = (text) => {
-          if (!text) return [];
-          const str = String(text);
-          const results = [];
-          const regex = /Part\s+(\d+)\s*\(([^-\s>]+)\s*->\s*([^)\s]+)\)/gi;
-          let m;
-          while ((m = regex.exec(str)) !== null) {
-            results.push({ partType: m[1], oldSN: m[2], newSN: m[3] });
-          }
-          return results;
-        };
-
-        const getItemProblemReason = (item) => {
-          if (!item) return '-';
-          const parts = [];
-          const r = (item.reason || item.assembly_reason || '').trim();
-          if (r) parts.push(r);
-          const rw = (item.rework_reason || '').trim();
-          if (rw && !parts.includes(rw)) parts.push(`Rework: ${rw}`);
-          const assyFail = (item.assy_failure_reasons || '').trim();
-          if (assyFail && !parts.includes(assyFail)) parts.push(`Gagal Uji Perakitan: ${assyFail}`);
-          const qcFail = (item.qc_failure_reasons || '').trim();
-          if (qcFail && !parts.includes(qcFail)) parts.push(`Gagal Uji QC: ${qcFail}`);
-          const decl = (item.declined_reason || '').trim();
-          if (decl && !parts.includes(decl)) parts.push(`Ditolak: ${decl}`);
-          const notes = (item.qc_notes || '').trim();
-          if (notes && !parts.includes(notes)) parts.push(`Catatan: ${notes}`);
-
-          return parts.length > 0 ? parts.join(' • ') : 'Tidak ada keterangan alasan khusus yang tercatat.';
-        };
-
-        const getFilteredPartsForType = (type) => {
-          const list = availableReplacePartsByType.value[type] || [];
-          const q = (replaceSearchQueries.value[type] || '').trim().toLowerCase();
-          if (!q) return list;
-          return list.filter(p => (p.sn && p.sn.toLowerCase().includes(q)) || (p.status && p.status.toLowerCase().includes(q)));
-        };
-
-        const filteredReplaceParts = computed(() => getFilteredPartsForType('15'));
-
-        const selectReplaceSNForPart = (type, sn) => {
-          replaceSelections.value[type] = sn;
-          replaceDropdownOpen.value[type] = false;
-        };
-
-        const clearReplaceSNForPart = (type) => {
-          replaceSelections.value[type] = '';
-        };
-
-        const toggleReplaceDropdown = (type) => {
-          const current = replaceDropdownOpen.value[type];
-          replaceDropdownOpen.value = { '15': false, '1': false, '12': false };
-          replaceDropdownOpen.value[type] = !current;
-        };
-
-        const closeAllReplaceDropdowns = () => {
-          replaceDropdownOpen.value = { '15': false, '1': false, '12': false };
-        };
-
-        const selectReplaceNewSN = (sn) => {
-          replaceSelections.value[replacePartType.value] = sn;
-          isReplacePartDropdownOpen.value = false;
-        };
-
-        const totalPartsToReplace = computed(() => {
-          let count = 0;
-          if (isProblemPart('15') && replaceSelections.value['15']) count++;
-          if (isProblemPart('1') && replaceSelections.value['1']) count++;
-          if (isProblemPart('12') && replaceSelections.value['12']) count++;
-          return count;
-        });
-
-        const loadAllAvailableReplaceParts = async () => {
-          const types = ['15', '1', '12'];
-          const curItem = selectedAssemblyItem.value || selectedHoldItem.value;
-          const curTrayId = curItem?.tray_id || '';
-          await Promise.all(types.map(async (t) => {
-            isLoadingPartsByType.value[t] = true;
-            try {
-              const url = `/master/available?type=${encodeURIComponent(t)}&limit=100${curTrayId ? `&tray_id=${encodeURIComponent(curTrayId)}` : ''}`;
-              const res = await fetchAPI(url);
-              if (res && res.ok && Array.isArray(res.data)) {
-                availableReplacePartsByType.value[t] = res.data;
-              } else {
-                availableReplacePartsByType.value[t] = [];
-              }
-            } catch (_) {
-              availableReplacePartsByType.value[t] = [];
-            } finally {
-              isLoadingPartsByType.value[t] = false;
-            }
-          }));
-        };
-
-        const openReregisterForPart = (partType, sn) => {
-          if (!sn || sn === '-') {
-            triggerToast('SN Tidak Valid', 'Nomor seri part tidak ditemukan atau belum terisi.', 'warn');
-            return;
-          }
-          const curItem = selectedAssemblyItem.value || selectedHoldItem.value || {};
-          const status = curItem.assembly_status || curItem.status || 'Hold';
-          const reason = getItemProblemReason(curItem) || curItem.assembly_reason || curItem.reason || '';
-
-          openReregisterModal({
-            part_type: String(partType),
-            sn: sn,
-            status: status,
-            assembly_reason: reason,
-            last_reason: reason,
-            is_replaced_from_assy: 1
-          });
-        };
-
-        const closeReplacePartModal = () => {
-          showReplacePartModal.value = false;
-          replaceSelections.value = { '15': '', '1': '', '12': '' };
-          replaceDropdownOpen.value = { '15': false, '1': false, '12': false };
-          replaceSearchQueries.value = { '15': '', '1': '', '12': '' };
-          replaceReason.value = '';
-        };
-
-        const openReplacePartSubModal = async () => {
-          showAllReplaceParts.value = false;
-          replaceOldStatus.value = 'Hold';
-          replaceSelections.value = { '15': '', '1': '', '12': '' };
-          replaceDropdownOpen.value = { '15': false, '1': false, '12': false };
-          replaceSearchQueries.value = { '15': '', '1': '', '12': '' };
-          const curItem = selectedAssemblyItem.value || selectedHoldItem.value;
-          replaceReason.value = getItemProblemReason(curItem) || curItem?.reason || curItem?.assembly_reason || '';
-          showReplacePartModal.value = true;
-          await loadAllAvailableReplaceParts();
-        };
-
-        const onSelectReplacePartType = async (type) => {
-          replacePartType.value = type;
-          toggleReplaceDropdown(type);
-        };
-
-        const openReplaceForPart = async (partType) => {
-          await openReplacePartSubModal();
-          if (partType && replaceDropdownOpen.value[String(partType)] !== undefined) {
-            replaceDropdownOpen.value[String(partType)] = true;
-          }
-        };
-
-        const submitReplacePartAction = async () => {
-          const curItem = selectedAssemblyItem.value || selectedHoldItem.value;
-          const targetAssemblyId = curItem?.assembly_id || curItem?.id;
-          if (!curItem || !targetAssemblyId) {
-            triggerToast('Validasi', 'Data rakitan tidak ditemukan!', 'warn');
-            return;
-          }
-
-          const reps = [];
-          if (isProblemPart('15') && replaceSelections.value['15']) {
-            reps.push({ part_type: '15', new_sn: replaceSelections.value['15'] });
-          }
-          if (isProblemPart('1') && replaceSelections.value['1']) {
-            reps.push({ part_type: '1', new_sn: replaceSelections.value['1'] });
-          }
-          if (isProblemPart('12') && replaceSelections.value['12']) {
-            reps.push({ part_type: '12', new_sn: replaceSelections.value['12'] });
-          }
-
-          if (reps.length === 0) {
-            triggerToast('Pilih Part', 'Silakan pilih minimal 1 part baru pengganti pada dropdown di atas!', 'warn');
-            return;
-          }
-
-          isSubmittingReplacePartAction.value = true;
-          try {
-            const res = await fetchAPI('/assembly/replace-part', {
-              method: 'POST',
-              body: JSON.stringify({
-                assembly_id: targetAssemblyId,
-                tray_id: curItem?.tray_id || undefined,
-                replacements: reps,
-                part_type: reps[0] ? reps[0].part_type : '',
-                new_sn: reps[0] ? reps[0].new_sn : '',
-                old_part_status: replaceOldStatus.value,
-                reason: replaceReason.value
-              })
-            });
-            if (res.ok) {
-              triggerToast('Berhasil', res.message || `${reps.length} part berhasil diganti! Menunggu verifikasi Admin.`, 'success');
-              // Realtime immediate local item mutation for open modal and background grid
-              const assyId = selectedHoldItem.value?.assembly_id || selectedAssemblyItem.value?.assembly_id;
-              const pendingState = {
-                replacement_pending: true,
-                has_pending_replacement: true,
-                pending_action_type: 'PENDING_GANTI_PART',
-                verified_status: 'PENDING_REPLACEMENT',
-                latest_replacement_status: 'PENDING'
-              };
-              if (selectedHoldItem.value) Object.assign(selectedHoldItem.value, pendingState);
-              if (selectedAssemblyItem.value) Object.assign(selectedAssemblyItem.value, pendingState);
-              if (assyId) {
-                (assemblyResults.value || []).forEach(tray => {
-                  (tray.items || []).forEach(it => {
-                    if (it.assembly_id === assyId) Object.assign(it, pendingState);
-                  });
-                });
-                (productionHoldList.value || []).forEach(it => {
-                  if (it.assembly_id === assyId) Object.assign(it, pendingState);
-                });
-              }
-              showReplacePartModal.value = false;
-              await loadAssemblyResults();
-              if (typeof loadProductionHoldItems === 'function') await loadProductionHoldItems();
-              if (typeof loadPendingVerifications === 'function') await loadPendingVerifications();
-            } else {
-              triggerToast('Gagal', res.error || res.message || 'Gagal melakukan penggantian part', 'error');
-            }
-          } catch (err) {
-            triggerToast('Error', err.message || 'Terjadi kesalahan sistem', 'error');
-          } finally {
-            isSubmittingReplacePartAction.value = false;
-          }
-        };
-
-        // --- PERAKITAN ULANG (RU) MODULE ---
-        const pendingReassemblyList = ref([]);
-        const selectedReassemblyIds = ref([]);
-        const selectedReassemblyOperator = ref('');
-        const isLoadingPendingReassembly = ref(false);
-        const isSubmittingReassemblyDispatch = ref(false);
-
-        const loadPendingReassembly = async (isSilent = false) => {
-          if (!isSilent && (!pendingReassemblyList.value || !pendingReassemblyList.value.length)) {
-            isLoadingPendingReassembly.value = true;
-          }
-          try {
-            const res = await fetchAPI('/assembly/pending-reassembly');
-            if (res && res.ok && Array.isArray(res.data)) {
-              pendingReassemblyList.value = res.data;
-            } else {
-              pendingReassemblyList.value = [];
-            }
-          } catch (e) {
-            console.error('Error loadPendingReassembly:', e);
-            pendingReassemblyList.value = [];
-          } finally {
-            isLoadingPendingReassembly.value = false;
-          }
-        };
-
-        const pendingReassemblyCount = computed(() => (pendingReassemblyList.value || []).length);
-
-        const toggleSelectReassembly = (id) => {
-          const idx = selectedReassemblyIds.value.indexOf(id);
-          if (idx >= 0) {
-            selectedReassemblyIds.value.splice(idx, 1);
-          } else {
-            selectedReassemblyIds.value.push(id);
-          }
-        };
-
-        const isReassemblySelected = (id) => {
-          return selectedReassemblyIds.value.includes(id);
-        };
-
-        const selectAllReassembly = () => {
-          selectedReassemblyIds.value = (pendingReassemblyList.value || []).map(x => x.id);
-        };
-
-        const clearSelectedReassembly = () => {
-          selectedReassemblyIds.value = [];
-        };
-
-        const submitReassemblyDispatch = async () => {
-          if (!selectedReassemblyIds.value || selectedReassemblyIds.value.length === 0) {
-            triggerToast('Validasi', 'Pilih minimal satu set untuk dirakit ulang!', 'warn');
-            return;
-          }
-          if (!selectedReassemblyOperator.value) {
-            triggerToast('Validasi', 'Silakan pilih Operator Assembly terlebih dahulu!', 'warn');
-            return;
-          }
-
-          isSubmittingReassemblyDispatch.value = true;
-          try {
-            const res = await fetchAPI('/assembly/dispatch-reassembly', {
-              method: 'POST',
-              body: JSON.stringify({
-                assembly_ids: selectedReassemblyIds.value,
-                operator_name: selectedReassemblyOperator.value
-              })
-            });
-            if (res && res.ok) {
-              triggerToast('Sukses Dispatched', res.message || 'Set berhasil ditugaskan ke operator assembly untuk perakitan ulang!', 'success');
-              selectedReassemblyIds.value = [];
-              selectedReassemblyOperator.value = '';
-              await loadPendingReassembly();
-              await loadTrays();
-              await loadAssemblyResults();
-            } else {
-              triggerToast('Gagal', res?.error || 'Gagal mengirim penugasan perakitan ulang', 'error');
-            }
-          } catch (e) {
-            triggerToast('Error', e.message || 'Terjadi kesalahan sistem', 'error');
-          } finally {
-            isSubmittingReassemblyDispatch.value = false;
-          }
-        };
-
-        const openReplaceForHoldItem = async (item) => {
-          selectedAssemblyItem.value = item;
-          selectedHoldItem.value = item;
-          if (item && item.tray_id) {
-            const foundTray = (traysList.value || []).find(t => t.id === item.tray_id || t.tray_code === item.tray_code);
-            selectedAssemblyTray.value = foundTray || { id: item.tray_id, tray_code: item.tray_code };
-            selectedHoldTray.value = selectedAssemblyTray.value;
-          }
-          await openReplacePartSubModal();
-        };
-
-        const loadProductionProducts = async () => {
-          try {
-            const res = await fetchAPI('/production/products');
-            if (res.ok && res.data) {
-              productionProductsList.value = res.data;
-            }
-          } catch (e) {
-            console.error('Failed to load production products', e);
-          }
-        };
-
-        const previousPendingHoldItemMap = ref(new Map());
-        const isHoldItemsInitialLoaded = ref(false);
-
-        const loadProductionHoldItems = async (isSilent = false) => {
-          if (!isSilent && (!productionHoldList.value || !productionHoldList.value.length)) {
-            isLoadingProductionHold.value = true;
-          }
-          try {
-            const res = await fetchAPI('/production/hold-items');
-            if (res.ok && res.data) {
-              const newItems = Array.isArray(res.data) ? res.data : [];
-              productionHoldList.value = newItems;
-
-              // Deteksi card / transaksi yang diverifikasi admin dan/atau hilang dari log kendala
-              isHoldItemsInitialLoaded.value = true;
-
-              if (selectedHoldItem.value && selectedHoldItem.value.assembly_id) {
-                const found = (productionHoldList.value || []).find(it => it.assembly_id === selectedHoldItem.value.assembly_id);
-                if (found) {
-                  Object.assign(selectedHoldItem.value, found);
-                  if (selectedAssemblyItem.value) Object.assign(selectedAssemblyItem.value, found);
-                }
-              }
-            }
-          } catch (e) {
-            console.error('Failed to load production hold items', e);
-          } finally {
-            isLoadingProductionHold.value = false;
-          }
-        };
-
-        const isItemInReassemblyProcess = (item) => {
-          if (!item) return false;
-          if (Boolean(item.is_declined) || String(item.status || '').toLowerCase() === 'declined' || String(item.verified_status || '').toUpperCase() === 'DECLINED') {
-            return false;
-          }
-          if (typeof isReassemblySet === 'function' && isReassemblySet(item)) return true;
-          const st = String(item.assembly_status || item.status || '').trim().toLowerCase();
-          const vStat = String(item.verified_status || '').trim().toUpperCase();
-          const assyTestSt = String(item.assy_test_status || '').trim().toUpperCase();
-          const qcSt = String(item.qc_status || '').trim().toUpperCase();
-          if (st === 'dirakit ulang' || st === 'ru' || assyTestSt === 'RU' || qcSt === 'RU') return true;
-          // Hanya jika admin SUDAH MENYETUJUI (bukan saat masih pending verifikasi admin):
-          if (['WAITING_REASSEMBLY', 'COMPLETED_PU', 'APPROVED_REREG', 'APPROVED', 'APPROVED_QC'].includes(vStat)) return true;
-          if (item.latest_replacement_status === 'APPROVED') return true;
-          if (item.rework_reason && item.rework_reason.includes('Ganti Part') && ['WAITING_REASSEMBLY', 'COMPLETED_PU', 'APPROVED'].includes(vStat)) return true;
-          return false;
-        };
-
-        const baseProductionHoldList = computed(() => {
-          let list = productionHoldList.value || [];
-          // Cut-Off Tahapan: Unit yang gagal di perakitan murni (Hold Perakitan) tidak boleh masuk ke riwayat/antrean Test Functional
-          list = list.filter(item => {
-            const isRU = isItemInReassemblyProcess(item);
-            if (isRU) return true;
-            const hasTestingRecord = Boolean(item.assy_failure_reasons || item.qc_failure_reasons || item.assy_test_checklist || item.qc_test_checklist || item.qc_tested_at || item.assy_tested_at);
-            const hasAssyProblem = Boolean(item.assembly_reason || item.reason);
-            if (hasAssyProblem && !item.assy_failure_reasons && !item.qc_failure_reasons) {
-              return false;
-            }
-            return hasTestingRecord;
-          });
-          if (selectedProductionProduct.value && selectedProductionProduct.value !== 'ALL') {
-            list = list.filter(item => (item.product_type || 'Nanggala P9') === selectedProductionProduct.value);
-          }
-          if (productionSearchQuery.value) {
-            const q = productionSearchQuery.value.trim().toLowerCase();
-            list = list.filter(item => {
-              return (item.part15_sn && item.part15_sn.toLowerCase().includes(q)) ||
-                (item.part12_sn && item.part12_sn.toLowerCase().includes(q)) ||
-                (item.part1_sn && item.part1_sn.toLowerCase().includes(q)) ||
-                (item.tray_code && item.tray_code.toLowerCase().includes(q)) ||
-                (item.source_document_mo && item.source_document_mo.toLowerCase().includes(q)) ||
-                (item.display_reason && item.display_reason.toLowerCase().includes(q)) ||
-                (item.qc_failure_reasons && item.qc_failure_reasons.toLowerCase().includes(q)) ||
-                (item.assy_failure_reasons && item.assy_failure_reasons.toLowerCase().includes(q));
-            });
-          }
-          return list;
-        });
-
-        const productionHoldCounts = computed(() => {
-          const all = baseProductionHoldList.value || [];
-          const reregistered = all.filter(isItemInReassemblyProcess).length;
-          const active_hold = all.filter(i => !isItemInReassemblyProcess(i)).length;
-          const active_assy = all.filter(i => !isItemInReassemblyProcess(i) && (i.hold_source === 'TESTER_ASSEMBLY' || i.hold_source === 'ASSY')).length;
-          const active_qc = all.filter(i => !isItemInReassemblyProcess(i) && i.hold_source === 'QC').length;
-          return {
-            total: all.length,
-            active_hold,
-            active_assy,
-            active_qc,
-            assy: active_assy,
-            qc: active_qc,
-            ru: reregistered,
-            reregistered
-          };
-        });
-
-        const filteredProductionHoldList = computed(() => {
-          let list = baseProductionHoldList.value || [];
-          if (productionSourceFilter.value && productionSourceFilter.value !== 'ALL') {
-            list = list.filter(item => {
-              if (productionSourceFilter.value === 'ASSY' || productionSourceFilter.value === 'TESTER_ASSEMBLY') {
-                return (item.hold_source === 'ASSY' || item.hold_source === 'TESTER_ASSEMBLY') && !isItemInReassemblyProcess(item);
-              }
-              if (productionSourceFilter.value === 'QC') {
-                return item.hold_source === 'QC' && !isItemInReassemblyProcess(item);
-              }
-              if (productionSourceFilter.value === 'RU' || productionSourceFilter.value === 'REREGISTERED') {
-                return isItemInReassemblyProcess(item);
-              }
-              return item.hold_source === productionSourceFilter.value;
-            });
-          }
-          return list;
-        });
-
-        const productionHoldCount = computed(() => productionHoldCounts.value.active_hold);
+        }
+
+        // Bridge holdsModule methods & state for internal app.js usage
+        const {
+          isReassemblySet: holdsIsReassemblySet,
+          isTravelerItemAssembled,
+          getTravelerItemActualStatus,
+          getAssemblyStageStatus,
+          getItemStartTime,
+          getItemFinishTime,
+          assemblyResults,
+          isLoadingAssemblyResults,
+          assemblyResultsStatusFilter,
+          selectedProductionOperator,
+          selectedProductionDocAssy,
+          productionSearchQuery,
+          productionViewMode,
+          loadAssemblyResults,
+          assemblyResultsSummary,
+          distinctAssemblyOperators,
+          distinctAssyDocNumbers,
+          isAssyDocDropdownOpen: holdsIsAssyDocDropdownOpen,
+          assyDocSearchText,
+          toggleAssyDocDropdown,
+          selectAssyDocFromDropdown,
+          filteredAssyDocNumbers,
+          calculateAssemblyDuration,
+          filteredGroupedAssemblyResults,
+          flatFilteredAssemblyResults,
+          filteredAssemblyResults,
+          pagedAssemblyResults,
+          totalPgAssemblyResults,
+          productionHoldList,
+          productionProductsList,
+          selectedProductionProduct,
+          productionSourceFilter,
+          functionalHoldViewMode,
+          isLoadingProductionHold,
+          loadProductionProducts,
+          loadProductionHoldItems: holdsLoadProductionHoldItems,
+          isItemInReassemblyProcess,
+          baseProductionHoldList,
+          productionHoldCounts,
+          filteredProductionHoldList,
+          productionHoldCount,
+          pagedProductionHoldList,
+          totalPgProductionHold,
+          isAllProblematicPartsReplaced,
+          getHoldProceedButtonLabel,
+          getHoldProceedButtonTitle,
+          getItemPendingLabel,
+          isItemPendingAdmin,
+          isFunctionalHoldItem,
+          proceedHoldItem,
+          showAssemblyDetailModal,
+          selectedAssemblyItem,
+          selectedAssemblyTray,
+          showHoldDetailModal,
+          selectedHoldItem,
+          selectedHoldTray,
+          openAssemblyDetailModal,
+          openHoldDetailModal,
+          transferSingleSetToWarehouse,
+          confirmReturnTrayToWarehouse,
+          showReregisterSubModal,
+          reregisterTargetStatus,
+          reregOperator,
+          reregisterReason,
+          isSubmittingReregisterSetAction,
+          availableReregisterStatuses,
+          openReregisterSubModal,
+          submitReregisterSetAction,
+          showReplacePartModal,
+          replaceOldStatus,
+          replaceReason,
+          isSubmittingReplacePartAction,
+          showAllReplaceParts,
+          replaceSelections,
+          replaceDropdownOpen,
+          replaceSearchQueries,
+          availableReplacePartsByType,
+          isLoadingPartsByType,
+          replacePartType,
+          replaceNewSN,
+          availableReplaceParts,
+          isLoadingReplaceParts,
+          isReplacePartDropdownOpen,
+          replacePartSearchQuery,
+          problematicPartTypes,
+          isProblemPart,
+          hasNonProblematicParts,
+          getParsedReplacementHistory,
+          getItemProblemReason,
+          getFilteredPartsForType,
+          filteredReplaceParts,
+          selectReplaceSNForPart,
+          clearReplaceSNForPart,
+          toggleReplaceDropdown,
+          closeAllReplaceDropdowns,
+          selectReplaceNewSN,
+          totalPartsToReplace,
+          loadAllAvailableReplaceParts,
+          openReregisterForPart,
+          closeReplacePartModal,
+          openReplacePartSubModal,
+          onSelectReplacePartType,
+          openReplaceForPart,
+          submitReplacePartAction,
+          pendingReassemblyList,
+          selectedReassemblyIds,
+          selectedReassemblyOperator,
+          isLoadingPendingReassembly,
+          isSubmittingReassemblyDispatch,
+          loadPendingReassembly,
+          pendingReassemblyCount,
+          toggleSelectReassembly,
+          isReassemblySelected,
+          selectAllReassembly,
+          clearSelectedReassembly,
+          submitReassemblyDispatch,
+          openReplaceForHoldItem
+        } = holdsModule;
+
+        // Reassign hoisted forward references
+        if (holdsIsReassemblySet) isReassemblySet = holdsIsReassemblySet;
+        if (holdsLoadProductionHoldItems) loadProductionHoldItems = holdsLoadProductionHoldItems;
+        if (holdsIsAssyDocDropdownOpen) isAssyDocDropdownOpen = holdsIsAssyDocDropdownOpen;
 
         // 3. Warehouse QC Receipt Verification
         const warehouseReceiptCounts = computed(() => {
@@ -11449,6 +8488,7 @@
               body: JSON.stringify({
                 assembly_id: warehouseQCForm.value.assembly_id,
                 action: warehouseQCForm.value.action,
+                operator: userFullName.value || userName.value || 'Administrator NKRI',
                 notes: warehouseQCForm.value.notes
               })
             });
@@ -11582,6 +8622,7 @@
                 body: JSON.stringify({
                   assembly_id: it.assembly_id || it.id,
                   action: 'ACCEPT',
+                  operator: userFullName.value || userName.value || 'Administrator NKRI',
                   notes: 'Batch ACC Penerimaan Fisik Gudang'
                 })
               });
@@ -12536,27 +9577,28 @@
                   ? it.assy_doc_number
                   : getFormattedDocCode(it.tray_code, 'assy'));
               originDoc = getFormattedDocCode(it.tray_code, 'wo');
-              operator = getOperatorFullName(it.pic_assembly) || it.pic_assembly || '-';
-              timestamp = it.finished_at || it.tray_created_at;
+              operator = getOperatorFullName(it.pic_assembly_name || it.pic_assembly || it.operator || it.assigned_operator);
+              timestamp = it.finished_at || it.started_at || it.tray_created_at || it.created_at;
               status = it.assembly_status || it.status || 'Good';
             } else if (sub === 'assy_test') {
               docCode = (it.doc_number && it.doc_number !== '-') ? it.doc_number : getFormattedDocCode(it.tray_code, 'tf1');
               originDoc = (it.assy_doc_number && it.assy_doc_number !== '-') ? it.assy_doc_number : getFormattedDocCode(it.tray_code, 'assy');
-              operator = getOperatorFullName(it.tester_username) || it.tester_full_name || it.tester_username || '-';
-              timestamp = it.created_at;
+              operator = getOperatorFullName(it.tester_full_name || it.tester_username || it.pic_assembly);
+              timestamp = it.created_at || it.tested_at;
               status = it.status || 'OK';
             } else if (sub === 'qc_test') {
               docCode = (it.doc_number && it.doc_number !== '-') ? it.doc_number : getFormattedDocCode(it.tray_code, 'qc');
               originDoc = (it.tf1_doc_number && it.tf1_doc_number !== '-') ? it.tf1_doc_number : getFormattedDocCode(it.tray_code, 'tf1');
-              operator = getOperatorFullName(it.tester_username) || it.tester_full_name || it.tester_username || '-';
-              timestamp = it.created_at;
+              operator = getOperatorFullName(it.qc_tester_name || it.tester_full_name || it.tester_username || it.pic_qc);
+              timestamp = it.created_at || it.qc_tested_at || it.tested_at;
               status = it.status || 'Good';
             } else if (sub === 'warehouse_receipt') {
               docCode = (it.warehouse_doc_number && it.warehouse_doc_number !== '-') ? it.warehouse_doc_number : getFormattedDocCode(it.tray_code, 'wh_gr');
-              originDoc = getFormattedDocCode(it.tray_code, 'wo');
-              operator = getOperatorFullName(it.verified_by_user) || it.verified_by_user || it.warehouse_receipt_by || '-';
-              timestamp = it.verified_at || it.warehouse_receipt_at || it.created_at;
-              status = it.verified_status || it.status || 'Verified';
+              originDoc = (it.tray_code && it.tray_code.toUpperCase().startsWith('WH/ASSY')) ? it.tray_code : getFormattedDocCode(it.tray_code, 'assy');
+              const rawOp = it.warehouse_receipt_by_name || it.warehouse_receipt_by || it.verified_by_user || it.pic_warehouse;
+              operator = rawOp ? getOperatorFullName(rawOp) : '-';
+              timestamp = it.warehouse_receipt_at || it.effective_warehouse_receipt_at || it.verified_at || it.created_at || it.finished_at || null;
+              status = it.warehouse_receipt_status || it.status || 'Verified';
             }
 
             const key = docCode || it.tray_code || 'UNKNOWN';
@@ -12603,11 +9645,32 @@
                 g.rework_count++;
               }
             }
+
+            // Sinkronisasi data operator & waktu jika dokumen induk belum terisi
+            if (operator && operator !== '-' && (!g.operator || g.operator === '-')) {
+              g.operator = operator;
+            }
+            if (timestamp && (!g.timestamp || g.timestamp === '-')) {
+              g.timestamp = timestamp;
+            }
           });
 
-          // Urutkan rapi unit di setiap dokumen berdasarkan nomor set
+          // Urutkan rapi unit di setiap dokumen berdasarkan nomor set & pastikan metadata terisi
           groupsMap.forEach(g => {
             g.items.sort((a, b) => (Number(a.set_number) || 0) - (Number(b.set_number) || 0));
+            if (!g.operator || g.operator === '-') {
+              const itemWithOp = g.items.find(it => it.warehouse_receipt_by_name || it.warehouse_receipt_by || it.verified_by_user || it.pic_warehouse || it.pic_assembly_name || it.pic_assembly || it.tester_full_name || it.tester_username || it.operator);
+              if (itemWithOp) {
+                const op = itemWithOp.warehouse_receipt_by_name || itemWithOp.warehouse_receipt_by || itemWithOp.verified_by_user || itemWithOp.pic_warehouse || itemWithOp.pic_assembly_name || itemWithOp.pic_assembly || itemWithOp.tester_full_name || itemWithOp.tester_username || itemWithOp.operator;
+                g.operator = getOperatorFullName(op);
+              }
+            }
+            if (!g.timestamp || g.timestamp === '-') {
+              const itemWithTime = g.items.find(it => it.warehouse_receipt_at || it.effective_warehouse_receipt_at || it.verified_at || it.qc_tested_at || it.finished_at || it.started_at || it.created_at);
+              if (itemWithTime) {
+                g.timestamp = itemWithTime.warehouse_receipt_at || itemWithTime.effective_warehouse_receipt_at || itemWithTime.verified_at || itemWithTime.qc_tested_at || itemWithTime.finished_at || itemWithTime.started_at || itemWithTime.created_at;
+              }
+            }
           });
 
           return Array.from(groupsMap.values());
@@ -12966,14 +10029,17 @@
         // UNIVERSAL BACK BUTTON & MULTI-LAYER NAVIGATION SYSTEM
         // Mobile / Tablet / Hardware & Gesture Back Button Handler
         // -------------------------------------------------------------------
-        const getCurrentTabHash = () => {
+        const getCurrentTabCleanUrl = () => {
           if (currentTab.value === 'users') {
-            return '#users/' + (adminSubTab.value || 'verify_set');
+            return '/verifikasi';
           }
           if (currentTab.value === 'report') {
-            return '#report/' + (reportSubTab.value || 'wo');
+            return '/history';
           }
-          return '#' + (currentTab.value || defaultTab.value || 'assembly');
+          return TAB_CLEAN_URLS[currentTab.value] || ('/' + (currentTab.value || 'perakitan'));
+        };
+        const getCurrentTabHash = () => {
+          return getCurrentTabCleanUrl();
         };
 
         // 1. Unified Registry for All 28 Modals
@@ -13172,7 +10238,7 @@
           exitGuardArmed = true;
           // Re-push root_sentinel agar kedalaman stack tetap konstan 2 entri (net 0)
           try {
-            window.history.pushState({ type: 'root_sentinel' }, '', getCurrentTabHash());
+            window.history.pushState({ type: 'root_sentinel' }, '', (TAB_CLEAN_URLS[currentTab.value] || ('/' + currentTab.value)));
           } catch (_) { }
           triggerToast('Keluar Aplikasi', 'Tekan sekali lagi untuk keluar dari sistem.', 'warn');
           clearTimeout(exitGuardTimer);
@@ -13182,3148 +10248,10 @@
         };
 
         // ===================================================================
+        // ===================================================================
         // MODULE: DELIVERY ORDER (DO) & PACKING LIST (PL) & PELABELAN
+        // (Modularized to public/js/modules/delivery.js in Fase 2)
         // ===================================================================
-        const nkriEmblemBase64 = 'data:image/png;base64,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';
-        const nkriLogoBase64 = 'data:image/png;base64,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';
-        const nkriLabelLogoBase64 = 'data:image/png;base64,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';
-        const doSubTab = ref('history');
-        const doTableDisplayMode = ref('pdf_exact'); // 'pdf_exact' (4 rows) or 'all_crates'
-        const doSJCurrentPage = ref(1);
-
-        const getSuratJalanVisibleCrates = () => {
-          if (!previewDOData.value || !previewDOData.value.crates || previewDOData.value.crates.length === 0) {
-            return [{}, {}, {}, {}];
-          }
-          if (doTableDisplayMode.value === 'all_crates') {
-            return previewDOData.value.crates;
-          }
-          // 'pdf_exact' mode: 4 crates per page matching PDF 1 exactly
-          const start = (doSJCurrentPage.value - 1) * 4;
-          const sliced = previewDOData.value.crates.slice(start, start + 4);
-          // Pad with empty objects if fewer than 4 to preserve exact table height
-          while (sliced.length < 4) {
-            sliced.push({});
-          }
-          return sliced;
-        }; // 'preview', 'form', 'history', 'settings', 'customers', 'detail'
-        const doSettings = ref({
-          company_name: 'PT Nanggala Kencana Rekatama Indonesia',
-          company_logo: '',
-          head_office: 'Jalan Mendawai I No. 11 Kramat Pela, Jakarta Selatan, 12130',
-          factory_address: 'Jalan Gempol No. 9, Mekar Mulya, Bandung, 40292',
-          contact_email: 'info@nanggala.co.id',
-          tracking_base_url: '',
-          auto_base_url: '',
-          default_customer_name: 'KEMHAN RI',
-          default_customer_address: 'Jl. Tanah Abang Timur No. 6 - 7, Jakarta, 10110, Indonesia',
-          default_contract_number: 'TRAK/2509/APBN/XI/2025/KEMHAN',
-          default_program_name: 'Modernisasi Alutsista, Non Alutsista dan Sarpras Pertahanan TA 2025',
-          default_issuer_name: 'Rezka Rachdana',
-          default_issuer_title: 'Staf',
-          do_prefix: '/SJ/PPIC/',
-          pl_prefix: '/PL/PPIC/',
-          crate_prefix: '2610-',
-          crate_capacity: 20,
-          box_capacity: 10,
-          do_sequence_offset: 4,
-          do_offset_month: '10/2026',
-          cloudinary: {
-            configured: false,
-            cloud_name: '',
-            folder: 'nkri-pl',
-            api_key_masked: '',
-            has_secret: false,
-            base_delivery_url: ''
-          }
-        });
-        const isSavingDOSettings = ref(false);
-        const cloudForm = ref({
-          cloud_name: '',
-          api_key: '',
-          api_secret: '',
-          folder: 'nkri-pl'
-        });
-        const showCloudSecret = ref(false);
-        const isTestingCloud = ref(false);
-        const cloudTestResult = ref(null);
-        const isSavingCloudSettings = ref(false);
-        const isUploadingCloudPdf = ref({});
-        const isBatchSyncingCloud = ref(false);
-        const batchSyncProgress = ref({ total: 0, current: 0, success: 0, fail: 0 });
-
-        // ===================================================================
-        // STANDALONE PACKING LABELS (LABEL PACKING LIST MANDIRI)
-        // ===================================================================
-        const standaloneLabelsList = ref([]);
-        const labelSearchText = ref('');
-        const labelDocFilter = ref('');
-        const labelPackageFilter = ref('');
-        const labelStartDate = ref('');
-        const labelEndDate = ref('');
-
-        const distinctPLLabelNumbers = computed(() => {
-          const set = new Set();
-          (standaloneLabelsList.value || []).forEach(lbl => {
-            if (lbl.pl_number) set.add(lbl.pl_number);
-            else if (lbl.label_batch_id) set.add(lbl.label_batch_id);
-          });
-          return Array.from(set).sort();
-        });
-
-        const resetLabelFilter = () => {
-          labelSearchText.value = '';
-          labelDocFilter.value = '';
-          labelPackageFilter.value = '';
-          labelStartDate.value = '';
-          labelEndDate.value = '';
-          if (pgState.labelsHistory) pgState.labelsHistory.page = 1;
-        };
-
-        const getLabelDateKey = (lbl) => {
-          if (!lbl) return '';
-          if (lbl.created_at) {
-            const s = String(lbl.created_at).trim();
-            if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
-              return s.substring(0, 10);
-            }
-          }
-          return '';
-        };
-
-        const isLoadingStandaloneLabels = ref(false);
-        const isSavingStandaloneLabel = ref(false);
-        const activeLabelCrateIndex = ref(0);
-        const lastSavedPLInfo = ref(null);
-        const labelForm = ref({
-          date: getNowWIBDateString(),
-          package_type: 'crate',
-          package_count: 1,
-          batch_number: 1,
-          product_name: 'Nanggala P9',
-          notes: '',
-          crates: []
-        });
-
-        const previewDOId = ref(null);
-        const previewDocType = ref('surat_jalan'); // 'surat_jalan', 'packing_list', 'label_peti', 'label_dus'
-        const previewCrateIndex = ref(0);
-        const previewDOData = ref(null);
-        const isLoadingPreviewDO = ref(false);
-
-        const previewCurrentCrate = computed(() => {
-          if (!previewDOData.value || !previewDOData.value.crates || previewDOData.value.crates.length === 0) {
-            return {};
-          }
-          const idx = Math.min(Math.max(0, previewCrateIndex.value), previewDOData.value.crates.length - 1);
-          return previewDOData.value.crates[idx] || {};
-        });
-
-        const previewPackingListSheets = computed(() => {
-          if (!previewDOData.value || !previewDOData.value.crates || previewDOData.value.crates.length === 0) return [];
-          const crates = previewDOData.value.crates;
-          const sheets = [];
-          for (let i = 0; i < crates.length; i += 2) {
-            sheets.push({
-              sheetIndex: Math.floor(i / 2) + 1,
-              totalSheets: Math.ceil(crates.length / 2),
-              crate1: crates[i],
-              crate2: crates[i + 1] || null
-            });
-          }
-          return sheets;
-        });
-
-        const previewPackingListSheetIndex = ref(0);
-
-        const previewCurrentPackingListSheet = computed(() => {
-          const sheets = previewPackingListSheets.value;
-          if (!sheets || sheets.length === 0) return { crate1: null, crate2: null, sheetIndex: 1, totalSheets: 1 };
-          const idx = Math.min(Math.max(0, previewPackingListSheetIndex.value), sheets.length - 1);
-          return sheets[idx] || { crate1: null, crate2: null, sheetIndex: 1, totalSheets: 1 };
-        });
-
-        const printPackingListSheets = computed(() => {
-          if (!activePrintDO.value || !activePrintDO.value.crates || activePrintDO.value.crates.length === 0) return [];
-          const crates = activePrintDO.value.crates;
-          const sheets = [];
-          for (let i = 0; i < crates.length; i += 2) {
-            sheets.push({
-              sheetIndex: Math.floor(i / 2) + 1,
-              totalSheets: Math.ceil(crates.length / 2),
-              crate1: crates[i],
-              crate2: crates[i + 1] || null
-            });
-          }
-          return sheets;
-        });
-
-        // Helper untuk mendapatkan nomor Packing List yang berurutan per lembar kertas fisik
-        const getSheetPLNumber = (sheet, doData) => {
-          if (!sheet) return '-';
-          const c1PL = sheet.crate1?.pl_number || sheet.crate1?.packing_list_number;
-          const basePL = (doData?.crates && doData.crates[0]?.pl_number)
-            || doData?.pl_number
-            || (doData?.do_number ? doData.do_number.replace(/\/SJ\//g, '/PL/') : '')
-            || c1PL
-            || '001/PL/PPIC/10/2026';
-          const m = String(basePL).match(/^(\d+)(\/PL\/.*)$/);
-          if (m) {
-            const sheetIdx = Math.max(0, (sheet.sheetIndex || 1) - 1);
-            const seq = parseInt(m[1], 10) + sheetIdx;
-            return `${String(seq).padStart(3, '0')}${m[2]}`;
-          }
-          return c1PL || basePL;
-        };
-
-        // Tanggal cetak real-time untuk footer dokumen resmi Surat Jalan & Packing List
-        const currentRealtimePrintDate = ref('');
-        const updateRealtimePrintDate = () => {
-          const now = getNowWIBDate();
-          const months = [
-            'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-            'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-          ];
-          const day = now.getDate();
-          const month = months[now.getMonth()];
-          const year = now.getFullYear();
-          const hours = String(now.getHours()).padStart(2, '0');
-          const minutes = String(now.getMinutes()).padStart(2, '0');
-          currentRealtimePrintDate.value = `${day} ${month} ${year}, ${hours}:${minutes} WIB`;
-        };
-        updateRealtimePrintDate();
-
-        // Helper untuk mengekstrak seluruh Serial Number secara mengurut kebawah untuk kemasan satuan
-        const getDOSerialNumbers = (doObj) => {
-          if (!doObj) return [];
-          const snList = [];
-          if (doObj.crates && Array.isArray(doObj.crates)) {
-            for (const crate of doObj.crates) {
-              if (crate.boxes && Array.isArray(crate.boxes)) {
-                for (const box of crate.boxes) {
-                  if (box.items && Array.isArray(box.items)) {
-                    for (const it of box.items) {
-                      const sn = (typeof it === 'string' ? it : it?.serial_number) || '';
-                      if (sn && !snList.includes(sn)) {
-                        snList.push(sn);
-                      }
-                    }
-                  }
-                }
-              }
-              if (crate.serial_number && !snList.includes(crate.serial_number)) {
-                snList.push(crate.serial_number);
-              }
-              if (doObj.package_type === 'unit' && crate.crate_id && !snList.includes(crate.crate_id)) {
-                snList.push(crate.crate_id);
-              }
-            }
-          }
-          if (snList.length === 0 && doObj.items && Array.isArray(doObj.items)) {
-            for (const it of doObj.items) {
-              const sn = (typeof it === 'string' ? it : it?.serial_number) || '';
-              if (sn && !snList.includes(sn)) {
-                snList.push(sn);
-              }
-            }
-          }
-          return snList;
-        };
-
-        const getDOCrateCount = (doObj) => {
-          if (!doObj) return 0;
-          if (doObj.crates && Array.isArray(doObj.crates) && doObj.crates.length > 0) {
-            return doObj.crates.length;
-          }
-          const qty = parseInt(doObj.total_quantity) || 0;
-          return Math.ceil(qty / 20) || 0;
-        };
-
-        const getDOBoxCount = (doObj) => {
-          if (!doObj) return 0;
-          if (doObj.crates && Array.isArray(doObj.crates) && doObj.crates.length > 0) {
-            let bCount = 0;
-            doObj.crates.forEach(c => {
-              if (c.boxes && Array.isArray(c.boxes)) {
-                bCount += c.boxes.length;
-              }
-            });
-            if (bCount > 0) return bCount;
-          }
-          const qty = parseInt(doObj.total_quantity) || 0;
-          return Math.ceil(qty / 10) || 0;
-        };
-
-        const buildPLCloudSlug = (doNumber) => {
-          const base = (doNumber || '').trim().replace(/\/SJ\//g, '/PL/');
-          const slug = base.replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
-          return slug || 'packing-list';
-        };
-
-        const getDOTrackingFullUrl = (doItemOrNumber) => {
-          let doNumber = '';
-          let cloudUrl = '';
-          if (typeof doItemOrNumber === 'object' && doItemOrNumber !== null) {
-            doNumber = doItemOrNumber.do_number || '';
-            cloudUrl = doItemOrNumber.cloud_pdf_url || doItemOrNumber.cloud_qr_url || '';
-          } else {
-            doNumber = (doItemOrNumber || '').trim();
-          }
-
-          // Coba cari cloudUrl dari objek aktif jika yang dikirim hanya nomor DO
-          if (!cloudUrl && doNumber) {
-            if (previewDOData.value?.do_number === doNumber && previewDOData.value?.cloud_pdf_url) {
-              cloudUrl = previewDOData.value.cloud_pdf_url;
-            } else if (activePrintDO.value?.do_number === doNumber && activePrintDO.value?.cloud_pdf_url) {
-              cloudUrl = activePrintDO.value.cloud_pdf_url;
-            } else if (Array.isArray(doList.value)) {
-              const matched = doList.value.find(d => d.do_number === doNumber);
-              if (matched?.cloud_pdf_url) {
-                cloudUrl = matched.cloud_pdf_url;
-              }
-            }
-          }
-
-          if (!doNumber && !cloudUrl) return '/tracking_pl.html';
-
-          // 1. Prioritaskan URL file PDF di Cloudinary jika sudah ada atau terkonfigurasi
-          if (cloudUrl) return cloudUrl;
-
-          const cld = doSettings.value?.cloudinary;
-          if (cld && cld.configured && cld.cloud_name) {
-            const folder = (cld.folder || 'nkri-pl').replace(/^\/+|\/+$/g, '');
-            const slug = buildPLCloudSlug(doNumber);
-            return `https://res.cloudinary.com/${cld.cloud_name}/image/upload/${folder}/${slug}.pdf`;
-          }
-
-          // 2. Fallback ke URL LAN / WAN tracking
-          let baseUrl = (doSettings.value?.tracking_base_url || '').trim();
-          if (!baseUrl) {
-            const port = window.location.port || '8000';
-            const detectedIp = doSettings.value?.detected_ip || '';
-            // Jangan pernah gunakan localhost/127.0.0.1 dalam QR code jika IP LAN terdeteksi
-            if (detectedIp && detectedIp !== '127.0.0.1') {
-              baseUrl = `http://${detectedIp}:${port}`;
-            } else if (doSettings.value?.auto_base_url && !doSettings.value.auto_base_url.includes('127.0.0.1') && !doSettings.value.auto_base_url.includes('localhost')) {
-              baseUrl = doSettings.value.auto_base_url;
-            } else if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-              baseUrl = window.location.origin;
-            } else {
-              baseUrl = `http://${window.location.hostname}:${port}`;
-            }
-          }
-          baseUrl = (baseUrl || '').replace(/\/+$/, '');
-          return `${baseUrl}/tracking_pl.html?do=${encodeURIComponent(doNumber)}`;
-        };
-
-        const renderDOTrackingQRCode = (elementId, doItemOrNumber) => {
-          const container = document.getElementById(elementId);
-          if (!container) return;
-          container.innerHTML = '';
-
-          const trackingUrl = getDOTrackingFullUrl(doItemOrNumber);
-          if (!trackingUrl) return;
-
-          // Render High-Resolution QR Code dengan Error Correction L agar modul balok lebih besar & cepat di-scan di ukuran kecil
-          if (window.QRCode) {
-            try {
-              new window.QRCode(container, {
-                text: trackingUrl,
-                width: 140,
-                height: 140,
-                colorDark: "#000000",
-                colorLight: "#ffffff",
-                correctLevel: window.QRCode.CorrectLevel.L
-              });
-              const canvas = container.querySelector('canvas');
-              if (canvas) {
-                canvas.style.display = 'block';
-                canvas.style.width = '100%';
-                canvas.style.height = '100%';
-                canvas.style.objectFit = 'contain';
-                canvas.style.imageRendering = 'pixelated';
-                canvas.style.margin = '0 auto';
-              }
-              const img = container.querySelector('img');
-              if (img) {
-                img.style.width = '100%';
-                img.style.height = '100%';
-                img.style.objectFit = 'contain';
-                img.style.imageRendering = 'pixelated';
-                img.style.margin = '0 auto';
-                if (canvas) img.style.display = 'none';
-                else img.style.display = 'block';
-              }
-              return;
-            } catch (e) {
-              console.error('Local QRCode error:', e);
-            }
-          }
-          const img = document.createElement('img');
-          img.src = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(trackingUrl)}&ecc=L`;
-          img.style.width = '100%';
-          img.style.height = '100%';
-          img.style.objectFit = 'contain';
-          img.style.imageRendering = 'pixelated';
-          img.style.display = 'block';
-          img.style.margin = '0 auto';
-          img.alt = 'QR Tracking';
-          container.appendChild(img);
-        };
-
-        const renderSNLabelQRCode = (elementId, snText) => {
-          if (!snText) return;
-          const container = document.getElementById(elementId);
-          if (!container) return;
-          container.innerHTML = '';
-          if (window.QRCode) {
-            try {
-              new window.QRCode(container, {
-                text: snText,
-                width: 120,
-                height: 120,
-                colorDark: "#000000",
-                colorLight: "#ffffff",
-                correctLevel: window.QRCode.CorrectLevel.M
-              });
-              const canvas = container.querySelector('canvas');
-              if (canvas) {
-                canvas.style.display = 'block';
-                canvas.style.width = '100%';
-                canvas.style.height = '100%';
-                canvas.style.objectFit = 'contain';
-                canvas.style.imageRendering = 'pixelated';
-                canvas.style.margin = '0 auto';
-              }
-              const img = container.querySelector('img');
-              if (img) {
-                img.style.width = '100%';
-                img.style.height = '100%';
-                img.style.objectFit = 'contain';
-                img.style.imageRendering = 'pixelated';
-                img.style.margin = '0 auto';
-                if (canvas) img.style.display = 'none';
-                else img.style.display = 'block';
-              }
-              return;
-            } catch (e) {
-              console.error('Local QRCode error:', e);
-            }
-          }
-          const img = document.createElement('img');
-          img.src = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(snText)}`;
-          img.style.width = '100%';
-          img.style.height = '100%';
-          img.style.objectFit = 'contain';
-          img.style.imageRendering = 'pixelated';
-          img.style.display = 'block';
-          img.style.margin = '0 auto';
-          img.alt = 'QR Code';
-          container.appendChild(img);
-        };
-
-        const buildPackingListHTMLString = (data) => {
-          if (!data) return '';
-          const crates = data.crates || [];
-          const settings = doSettings.value || {};
-          const companyName = settings.company_name || 'PT Nanggala Kencana Rekatama Indonesia';
-          const headOffice = settings.head_office || 'Jalan Mendawai I No. 11 Kramat Pela\nJakarta Selatan, 12130';
-          const factory = settings.factory_address || 'Jalan Gempol No. 9, Mekar Mulya\nBandung, 40292';
-          const contactEmail = settings.contact_email || 'info@nanggala.co.id';
-          const plNumber = data.pl_number || (data.do_number ? data.do_number.replace(/\/SJ\//g, '/PL/') : '001/PL/PPIC/09/2026');
-
-          const now = new Date();
-          const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-          const printDateStr = `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}, ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} WIB`;
-
-          let sheets = [];
-          if (data.package_type === 'unit' || crates.length === 0) {
-            sheets.push({
-              sheetIndex: 1,
-              totalSheets: 1,
-              crate1: { crate_id: 'Kemasan Satuan', crate_number: 1, boxes: [] },
-              crate2: null,
-              isUnit: true
-            });
-          } else {
-            for (let i = 0; i < crates.length; i += 2) {
-              sheets.push({
-                sheetIndex: Math.floor(i / 2) + 1,
-                totalSheets: Math.ceil(crates.length / 2),
-                crate1: crates[i],
-                crate2: crates[i + 1] || null,
-                isUnit: false
-              });
-            }
-          }
-
-          const getSN = (crate, boxIdx, slotIdx) => {
-            if (!crate || !crate.boxes || !crate.boxes[boxIdx]) return '';
-            const items = crate.boxes[boxIdx].items || [];
-            const it = items[slotIdx];
-            if (!it) return '';
-            return typeof it === 'string' ? it : (it.serial_number || '');
-          };
-
-          const renderRows = (crate, boxIdx) => {
-            let rows = '';
-            for (let s = 1; s <= 10; s++) {
-              const sn = getSN(crate, boxIdx, s - 1);
-              rows += `
-                <tr style="border-bottom: 1px solid #000000; height: 18.5px;">
-                  <td style="border-right: 1.5px solid #000000; padding: 1.5px 6px; text-align: center; font-weight: 700; font-size: 11.5px;">${s}</td>
-                  <td style="padding: 1.5px 8px; font-family: 'Roboto', Arial, sans-serif; font-weight: 700; letter-spacing: 0.3px; font-size: 12px;">${sn}</td>
-                </tr>
-              `;
-            }
-            return rows;
-          };
-
-          const renderTables = (sheet) => {
-            const c1 = sheet.crate1;
-            const c2 = sheet.crate2;
-            const c1b1_id = c1?.boxes?.[0]?.box_id || (c1?.crate_id ? c1.crate_id + '-01' : 'Dus 1');
-            const c1b2_id = c1?.boxes?.[1]?.box_id || (c1?.crate_id ? c1.crate_id + '-02' : 'Dus 2');
-            const c1_label = c1?.crate_id || c1?.crate_number || '1';
-
-            const c2b1_id = c2 ? (c2.boxes?.[0]?.box_id || (c2.crate_id ? c2.crate_id + '-01' : 'Dus 1')) : '-';
-            const c2b2_id = c2 ? (c2.boxes?.[1]?.box_id || (c2.crate_id ? c2.crate_id + '-02' : 'Dus 2')) : '-';
-            const c2_label = c2 ? (c2.crate_id || c2.crate_number || '2') : '';
-
-            return `
-              <table style="width: 100%; border-collapse: separate; border-spacing: 16px 12px; margin: 4px 0; border: none; font-family: 'Roboto', Arial, sans-serif;">
-                <tbody>
-                  <tr>
-                    <!-- Tabel 1: Peti 1 - Pak 1 -->
-                    <td style="width: 50%; vertical-align: top; padding: 0;">
-                      <div style="margin-bottom: 4px; font-weight: bold; font-size: 12.5px;">
-                        No. Pak : <strong>${c1b1_id}</strong>
-                        <span style="font-size: 11px; color: #64748b; font-weight: normal; margin-left: 4px;">(Peti ${c1_label})</span>
-                      </div>
-                      <table style="border-collapse: collapse; border: 1.5px solid #000000; width: 100%; font-size: 11.5px;">
-                        <thead>
-                          <tr style="border-bottom: 1.5px solid #000000; font-weight: 700;">
-                            <th style="border-right: 1.5px solid #000000; padding: 3px 6px; text-align: center; width: 42px; font-size: 12px;">No</th>
-                            <th style="padding: 3px 8px; text-align: left; font-size: 12px;">Serial Number</th>
-                          </tr>
-                        </thead>
-                        <tbody>${renderRows(c1, 0)}</tbody>
-                      </table>
-                    </td>
-
-                    <!-- Tabel 2: Peti 1 - Pak 2 -->
-                    <td style="width: 50%; vertical-align: top; padding: 0;">
-                      <div style="margin-bottom: 4px; font-weight: bold; font-size: 12.5px;">
-                        No. Pak : <strong>${c1b2_id}</strong>
-                        <span style="font-size: 11px; color: #64748b; font-weight: normal; margin-left: 4px;">(Peti ${c1_label})</span>
-                      </div>
-                      <table style="border-collapse: collapse; border: 1.5px solid #000000; width: 100%; font-size: 11.5px;">
-                        <thead>
-                          <tr style="border-bottom: 1.5px solid #000000; font-weight: 700;">
-                            <th style="border-right: 1.5px solid #000000; padding: 3px 6px; text-align: center; width: 42px; font-size: 12px;">No</th>
-                            <th style="padding: 3px 8px; text-align: left; font-size: 12px;">Serial Number</th>
-                          </tr>
-                        </thead>
-                        <tbody>${renderRows(c1, 1)}</tbody>
-                      </table>
-                    </td>
-                  </tr>
-
-                  <tr>
-                    <!-- Tabel 3: Peti 2 - Pak 1 -->
-                    <td style="width: 50%; vertical-align: top; padding: 0;">
-                      <div style="margin-bottom: 4px; font-weight: bold; font-size: 12.5px;">
-                        No. Pak : <strong>${c2b1_id}</strong>
-                        ${c2 ? `<span style="font-size: 11px; color: #64748b; font-weight: normal; margin-left: 4px;">(Peti ${c2_label})</span>` : ''}
-                      </div>
-                      <table style="border-collapse: collapse; border: 1.5px solid #000000; width: 100%; font-size: 11.5px;">
-                        <thead>
-                          <tr style="border-bottom: 1.5px solid #000000; font-weight: 700;">
-                            <th style="border-right: 1.5px solid #000000; padding: 3px 6px; text-align: center; width: 42px; font-size: 12px;">No</th>
-                            <th style="padding: 3px 8px; text-align: left; font-size: 12px;">Serial Number</th>
-                          </tr>
-                        </thead>
-                        <tbody>${renderRows(c2, 0)}</tbody>
-                      </table>
-                    </td>
-
-                    <!-- Tabel 4: Peti 2 - Pak 2 -->
-                    <td style="width: 50%; vertical-align: top; padding: 0;">
-                      <div style="margin-bottom: 4px; font-weight: bold; font-size: 12.5px;">
-                        No. Pak : <strong>${c2b2_id}</strong>
-                        ${c2 ? `<span style="font-size: 11px; color: #64748b; font-weight: normal; margin-left: 4px;">(Peti ${c2_label})</span>` : ''}
-                      </div>
-                      <table style="border-collapse: collapse; border: 1.5px solid #000000; width: 100%; font-size: 11.5px;">
-                        <thead>
-                          <tr style="border-bottom: 1.5px solid #000000; font-weight: 700;">
-                            <th style="border-right: 1.5px solid #000000; padding: 3px 6px; text-align: center; width: 42px; font-size: 12px;">No</th>
-                            <th style="padding: 3px 8px; text-align: left; font-size: 12px;">Serial Number</th>
-                          </tr>
-                        </thead>
-                        <tbody>${renderRows(c2, 1)}</tbody>
-                      </table>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            `;
-          };
-
-          let fullHtml = '<div style="background:#ffffff; color:#000000; width: 794px; margin: 0; padding: 0;">';
-          sheets.forEach((sheet, sheetIdx) => {
-            const c1 = sheet.crate1;
-            const c2 = sheet.crate2;
-            const idPetiStr = [
-              c1 ? (c1.crate_id || c1.crate_number) : null,
-              c2 ? (c2.crate_id || c2.crate_number) : null
-            ].filter(Boolean).join(' & ') || '-';
-
-            const sheetPLNumber = (() => {
-              const basePL = (data.crates && data.crates[0]?.pl_number) || (data.crates && data.crates[0]?.packing_list_number) || data.pl_number || plNumber || '001/PL/PPIC/10/2026';
-              const m = String(basePL).match(/^(\d+)(\/PL\/.*)$/);
-              if (m) {
-                const sIdx = Math.max(0, (sheet.sheetIndex || (sheetIdx + 1)) - 1);
-                return `${String(parseInt(m[1], 10) + sIdx).padStart(3, '0')}${m[2]}`;
-              }
-              return c1?.pl_number || c1?.packing_list_number || basePL;
-            })();
-
-            fullHtml += `
-              <div style="width: 794px; min-height: 1123px; max-height: 1123px; padding: 0 45px; box-sizing: border-box; font-family: 'Roboto', Arial, sans-serif; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; page-break-after: always; break-after: page; background: #ffffff;">
-                <div>
-                  <!-- Header Polygon Pink -->
-                  <div style="position: relative; margin-left: -45px; margin-right: -45px; width: 794px; height: 124px; box-sizing: border-box; overflow: hidden; margin-bottom: 18px;">
-                    <svg style="position: absolute; top: 0; left: 0; width: 794px; height: 124px; display: block; z-index: 0;" viewBox="0 0 794 124" preserveAspectRatio="none">
-                      <polygon points="0,0 794,0 794,68 395,68 360,124 0,124" fill="#F7EAEB" />
-                    </svg>
-                    <div style="position: relative; z-index: 1; height: 100%; padding: 0 45px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between;">
-                      <div style="height: 68px; padding-top: 14px; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between;">
-                        <div style="display: flex; align-items: center; padding-top: 10px;">
-                          <img src="${nkriLogoBase64 || nkriLabelLogoBase64 || '/nkri-logo.png'}" alt="NKRI" style="height: 38px; width: auto;" />
-                        </div>
-                        <div style="text-align: right;">
-                          <span style="font-weight: 700; font-size: 15px; color: #000000; letter-spacing: -0.2px;">${companyName}</span>
-                        </div>
-                      </div>
-                      <div style="height: 56px;"></div>
-                    </div>
-                  </div>
-
-                  <!-- Metadata Grid -->
-                  <div style="font-size: 13px; color: #000000; line-height: 1.45; margin-bottom: 12px;">
-                    <table style="border-collapse: collapse; border: none; width: 100%;">
-                      <tbody>
-                        <tr>
-                          <td style="font-weight: 700; padding: 2.5px 0; width: 130px; vertical-align: top; font-size: 13px;">No. Packing List</td>
-                          <td style="font-weight: 400; padding: 2.5px 0; vertical-align: top; font-size: 13px;">: ${sheetPLNumber}</td>
-                        </tr>
-                        <tr>
-                          <td style="font-weight: 700; padding: 2.5px 0; vertical-align: top; font-size: 13px;">Tanggal</td>
-                          <td style="font-weight: 400; padding: 2.5px 0; vertical-align: top; font-size: 13px;">: ${data.do_date || '-'}</td>
-                        </tr>
-                        <tr>
-                          <td style="font-weight: 700; padding: 2.5px 0; vertical-align: top; font-size: 13px;">ID Peti</td>
-                          <td style="font-weight: 700; padding: 2.5px 0; vertical-align: top; font-size: 13px;">: ${idPetiStr}</td>
-                        </tr>
-                        <tr>
-                          <td style="font-weight: 700; padding: 2.5px 0; vertical-align: top; font-size: 13px;">Nama Produk</td>
-                          <td style="font-weight: 400; padding: 2.5px 0; vertical-align: top; font-size: 13px;">: ${data.product_name || 'Nanggala P9'}</td>
-                        </tr>
-                        <tr>
-                          <td style="font-weight: 700; padding: 2.5px 0; vertical-align: top; font-size: 13px;">Nomor</td>
-                          <td style="font-weight: 400; padding: 2.5px 0; vertical-align: top; font-size: 13px;">: ${data.contract_number || '-'}</td>
-                        </tr>
-                        <tr>
-                          <td style="font-weight: 700; padding: 2.5px 0; vertical-align: top; font-size: 13px;">Program</td>
-                          <td style="font-weight: 400; padding: 2.5px 0; vertical-align: top; max-width: 440px; line-height: 1.4; font-size: 13px;">: ${data.program_name || '-'}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-
-                    <div style="margin-top: 10px;">
-                      <div style="font-weight: 700; font-size: 13px;">Penerima :</div>
-                      <div style="margin-top: 2px; line-height: 1.4; font-size: 13px;">
-                        <div style="font-weight: 400;">${data.customer_name || '-'}</div>
-                        <div style="white-space: pre-line;">${data.customer_address || '-'}</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- 4 Tables -->
-                  ${renderTables(sheet)}
-                </div>
-
-                <!-- Bottom Footer -->
-                <div style="margin-top: auto;">
-                  <div style="display: flex; justify-content: space-between; font-size: 11px; color: #64748b; font-weight: bold; margin-bottom: 6px;">
-                    <span>Tanggal Akses Dokumen: ${printDateStr}</span>
-                    <span>Lembar ${sheet.sheetIndex} dari ${sheet.totalSheets}</span>
-                  </div>
-                  <div style="background-color: #F7EAEB; margin-left: -45px; margin-right: -45px; padding: 14px 45px 36px 45px; width: 794px; box-sizing: border-box;">
-                    <div style="display: flex; justify-content: space-between; font-size: 11px;">
-                      <div style="max-width: 240px;">
-                        <div style="font-weight: 700; font-size: 11.5px; color: #CC0000; margin-bottom: 2px;">Head Office :</div>
-                        <div style="font-weight: 400; color: #000000; line-height: 1.35; white-space: pre-line;">${headOffice}</div>
-                      </div>
-                      <div style="max-width: 240px;">
-                        <div style="font-weight: 700; font-size: 11.5px; color: #CC0000; margin-bottom: 2px;">Factory :</div>
-                        <div style="font-weight: 400; color: #000000; line-height: 1.35; white-space: pre-line;">${factory}</div>
-                      </div>
-                      <div style="text-align: left;">
-                        <div style="font-weight: 700; font-size: 11.5px; color: #CC0000; margin-bottom: 2px;">Kontak :</div>
-                        <div style="font-weight: 400; color: #000000; line-height: 1.35;">${contactEmail}</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            `;
-          });
-          fullHtml += '</div>';
-          return fullHtml;
-        };
-
-        const uploadDOPackingListToCloud = async (doItemOrId) => {
-          let doData = null;
-          let doId = null;
-          if (typeof doItemOrId === 'object' && doItemOrId !== null) {
-            doData = doItemOrId;
-            doId = doItemOrId.id;
-          } else {
-            doId = doItemOrId;
-          }
-          if (!doId) return false;
-
-          isUploadingCloudPdf.value[doId] = true;
-          try {
-            // Ambil detail lengkap jika crates belum ada
-            if (!doData || !doData.crates || doData.crates.length === 0) {
-              const res = await fetchAPI(`/delivery-orders/detail?id=${doId}`);
-              if (res && res.data) {
-                doData = res.data;
-              }
-            }
-            if (!doData) throw new Error('Data DO tidak ditemukan');
-
-            // Kirim permintaan upload langsung ke backend (backend akan menghasilkan PDF resmi via ReportLab langsung dari database)
-            const uploadRes = await fetchAPI('/delivery-orders/cloud-pdf', {
-              method: 'POST',
-              body: JSON.stringify({
-                do_id: doId
-              })
-            });
-
-            if (uploadRes && uploadRes.ok) {
-              triggerToast('Cloudinary Tersinkron', `PDF Packing List ${doData.do_number} berhasil diunggah (${Math.round((uploadRes.bytes || 0) / 1024)} KB)!`, 'success');
-              // Update status lokal
-              if (doData) {
-                doData.cloud_pdf_url = uploadRes.cloud_pdf_url;
-                doData.cloud_version = uploadRes.cloud_version;
-                doData.cloud_public_id = uploadRes.cloud_public_id;
-              }
-              if (previewDOData.value && previewDOData.value.id === doId) {
-                previewDOData.value.cloud_pdf_url = uploadRes.cloud_pdf_url;
-                renderDOTrackingQRCode('do-sj-qr-preview', previewDOData.value);
-              }
-              await loadDeliveryOrders();
-              return true;
-            } else {
-              triggerToast('Gagal Unggah Cloud', uploadRes?.error || 'Gagal mengunggah file ke Cloudinary', 'error');
-              return false;
-            }
-          } catch (err) {
-            console.error('Upload to Cloudinary error:', err);
-            triggerToast('Error Cloudinary', err.message || 'Gagal memproses upload PDF', 'error');
-            return false;
-          } finally {
-            isUploadingCloudPdf.value[doId] = false;
-          }
-        };
-
-        const syncAllDOsToCloud = async () => {
-          if (!doSettings.value?.cloudinary?.configured) {
-            triggerToast('Perhatian', 'Kredensial Cloudinary belum dikonfigurasi. Silakan isi di tab Pengaturan terlebih dahulu.', 'warn');
-            doSubTab.value = 'settings';
-            return;
-          }
-
-          let pendingDOs = (doList.value || []).filter(d => !d.cloud_pdf_url);
-          let isReSync = false;
-          if (pendingDOs.length === 0) {
-            const reOk = await showConfirmCard({
-              title: 'Unggah Ulang Semua ke Cloudinary',
-              message: 'Semua dokumen Surat Jalan sudah memiliki link cloud. Apakah Anda ingin mengunggah ulang (refresh/update) seluruh dokumen ke Cloudinary agar PDF terbarui?',
-              icon: 'fa-solid fa-rotate',
-              iconBg: 'bg-indigo-100 text-indigo-700',
-              confirmText: 'Ya, Unggah Ulang Semua',
-              confirmBtnClass: 'bg-indigo-600 hover:bg-indigo-700 text-white'
-            });
-            if (!reOk) return;
-            pendingDOs = doList.value || [];
-            isReSync = true;
-          } else {
-            const ok = await showConfirmCard({
-              title: 'Sinkronisasi Massal ke Cloudinary',
-              message: `Ditemukan ${pendingDOs.length} dokumen yang belum diunggah ke Cloudinary. Proses ini akan mengunggah seluruh dokumen secara berurutan agar dokumen Packing List dapat diakses publik dari luar jaringan. Lanjutkan?`,
-              icon: 'fa-solid fa-cloud-arrow-up',
-              iconBg: 'bg-indigo-100 text-indigo-700',
-              confirmText: 'Ya, Sinkronkan Sekarang',
-              confirmBtnClass: 'bg-indigo-600 hover:bg-indigo-700 text-white'
-            });
-            if (!ok) return;
-          }
-
-          isBatchSyncingCloud.value = true;
-          batchSyncProgress.value = { total: pendingDOs.length, current: 0, success: 0, fail: 0 };
-
-          for (const item of pendingDOs) {
-            batchSyncProgress.value.current++;
-            try {
-              const s = await uploadDOPackingListToCloud(item);
-              if (s) batchSyncProgress.value.success++;
-              else batchSyncProgress.value.fail++;
-            } catch (syncErr) {
-              console.error('Error saat sinkronisasi cloud:', syncErr);
-              batchSyncProgress.value.fail++;
-            }
-          }
-
-          isBatchSyncingCloud.value = false;
-          if (batchSyncProgress.value.success > 0) {
-            triggerToast('Sinkronisasi Selesai', `Berhasil mengunggah ${batchSyncProgress.value.success} dari ${pendingDOs.length} dokumen ke Cloudinary!`, 'success');
-          } else {
-            triggerToast('Gagal Sinkronisasi', `Gagal mengunggah dokumen ke Cloudinary. Periksa koneksi internet atau kredensial Cloudinary.`, 'error');
-          }
-          await loadDeliveryOrders();
-        };
-
-        const testCloudinaryConnection = async () => {
-          isTestingCloud.value = true;
-          cloudTestResult.value = null;
-          try {
-            const res = await fetchAPI('/cloudinary/test', {
-              method: 'POST',
-              body: JSON.stringify(cloudForm.value)
-            });
-            cloudTestResult.value = res;
-            if (res && res.ok) {
-              if (res.delivery_ok) {
-                triggerToast('Koneksi Berhasil!', res.note || 'Cloudinary aktif dan dapat diakses publik.', 'success');
-              } else {
-                triggerToast('Perhatian Pengaturan Akun', res.note || 'Upload berhasil, namun pengiriman PDF masih diblokir oleh Cloudinary.', 'warn');
-              }
-              await loadDOSettings();
-            } else {
-              triggerToast('Uji Koneksi Gagal', res?.error || 'Gagal menghubungi Cloudinary', 'error');
-            }
-          } catch (err) {
-            cloudTestResult.value = { ok: false, error: err.message };
-            triggerToast('Error Koneksi', err.message, 'error');
-          } finally {
-            isTestingCloud.value = false;
-          }
-        };
-
-        const saveCloudinarySettings = async () => {
-          isSavingCloudSettings.value = true;
-          try {
-            const res = await fetchAPI('/cloudinary/settings', {
-              method: 'POST',
-              body: JSON.stringify(cloudForm.value)
-            });
-            if (res && res.ok) {
-              triggerToast('Sukses', 'Pengaturan Cloudinary berhasil disimpan!', 'success');
-              if (res.data) {
-                doSettings.value.cloudinary = res.data;
-              }
-              await loadDOSettings();
-            } else {
-              triggerToast('Gagal', res?.error || 'Gagal menyimpan pengaturan Cloudinary', 'error');
-            }
-          } catch (err) {
-            triggerToast('Error', err.message, 'error');
-          } finally {
-            isSavingCloudSettings.value = false;
-          }
-        };
-
-        const loadDOSettings = async () => {
-          try {
-            const res = await fetchAPI('/delivery-orders/settings');
-            if (res && (res.data || res.settings)) {
-              const data = res.data || res.settings;
-              doSettings.value = { ...doSettings.value, ...data };
-              if (data.cloudinary) {
-                doSettings.value.cloudinary = data.cloudinary;
-                cloudForm.value.cloud_name = data.cloudinary.cloud_name || '';
-                cloudForm.value.folder = data.cloudinary.folder || 'nkri-pl';
-              }
-            }
-          } catch (e) {
-            console.error('Failed to load DO settings:', e);
-          }
-        };
-
-        const saveDOSettings = async () => {
-          isSavingDOSettings.value = true;
-          try {
-            const res = await fetchAPI('/delivery-orders/settings', {
-              method: 'POST',
-              body: JSON.stringify(doSettings.value)
-            });
-            if (res && (res.success || res.ok)) {
-              triggerToast('Sukses', 'Pengaturan Surat Jalan & Packing List berhasil disimpan.', 'success');
-              await loadDOSettings();
-              await loadNextDOMeta();
-            } else {
-              triggerToast('Gagal', res?.message || 'Gagal menyimpan pengaturan.', 'error');
-            }
-          } catch (e) {
-            triggerToast('Error', e.message, 'error');
-          } finally {
-            isSavingDOSettings.value = false;
-          }
-        };
-
-        // ===================================================================
-        // STANDALONE PACKING LABELS METHODS
-        // ===================================================================
-        const syncLabelPackagingStructure = (forceBlank = false) => {
-          const type = labelForm.value.package_type || 'crate';
-          const count = Math.max(1, parseInt(labelForm.value.package_count) || 1);
-          const batchNum = Math.max(1, parseInt(labelForm.value.batch_number) || 1);
-          const crates = [];
-
-          const targetDate = labelForm.value.date || getNowWIBDateString();
-          const parsed = getYearMonthFromDate(targetDate);
-          const yy = parsed.yy;
-          const mm = parsed.mm;
-          const prefix = `${yy}${mm}-${batchNum}`;
-
-          let startSeq = 1;
-          if (type === 'crate') {
-            let maxFound = 0;
-            const scanCrates = (list) => {
-              (list || []).forEach(item => {
-                let arr = [];
-                if (Array.isArray(item.crates)) arr = item.crates;
-                else if (typeof item.crates_json === 'string') {
-                  try { arr = JSON.parse(item.crates_json); } catch (_) { }
-                }
-                arr.forEach(c => {
-                  const cid = String(c.crate_id || '').trim();
-                  if (cid.startsWith(prefix)) {
-                    const s = parseInt(cid.substring(prefix.length), 10);
-                    if (!isNaN(s)) maxFound = Math.max(maxFound, s);
-                  }
-                });
-              });
-            };
-            scanCrates(standaloneLabelsList.value);
-            scanCrates(doList.value);
-            startSeq = maxFound + 1;
-
-            for (let c = 0; c < count; c++) {
-              const crateSeq = startSeq + c;
-              const crateId = `${prefix}${String(crateSeq).padStart(3, '0')}`;
-              const boxes = [];
-              for (let b = 1; b <= 2; b++) {
-                const boxId = `${crateId}-${String(b).padStart(2, '0')}`;
-                const items = [];
-                for (let s = 1; s <= 10; s++) {
-                  items.push({ slot_number: s, serial_number: '' });
-                }
-                boxes.push({ box_number: b, box_id: boxId, items });
-              }
-              crates.push({ crate_number: c + 1, crate_id: crateId, total_quantity: 20, boxes });
-            }
-          } else if (type === 'box') {
-            const parentCrateId = `${yy}${mm}-${batchNum}000`;
-            const boxPrefix = `${parentCrateId}-`;
-            let maxFound = 0;
-            const scanBoxes = (list) => {
-              (list || []).forEach(item => {
-                let arr = [];
-                if (Array.isArray(item.crates)) arr = item.crates;
-                else if (typeof item.crates_json === 'string') {
-                  try { arr = JSON.parse(item.crates_json); } catch (_) { }
-                }
-                arr.forEach(c => {
-                  (c.boxes || []).forEach(b => {
-                    const bid = String(b.box_id || c.box_id || '').trim();
-                    if (bid.startsWith(boxPrefix)) {
-                      const s = parseInt(bid.substring(boxPrefix.length), 10);
-                      if (!isNaN(s)) maxFound = Math.max(maxFound, s);
-                    }
-                  });
-                });
-              });
-            };
-            scanBoxes(standaloneLabelsList.value);
-            scanBoxes(doList.value);
-            startSeq = maxFound + 1;
-
-            for (let b = 0; b < count; b++) {
-              const boxSeq = startSeq + b;
-              const boxId = `${parentCrateId}-${String(boxSeq).padStart(2, '0')}`;
-              const items = [];
-              for (let s = 1; s <= 10; s++) {
-                items.push({ slot_number: s, serial_number: '' });
-              }
-              crates.push({
-                crate_number: b + 1,
-                crate_id: parentCrateId,
-                box_id: boxId,
-                total_quantity: 10,
-                boxes: [{ box_number: 1, box_id: boxId, items }]
-              });
-            }
-          } else {
-            for (let u = 1; u <= count; u++) {
-              crates.push({
-                crate_number: u,
-                crate_id: '',
-                total_quantity: 1,
-                boxes: [{
-                  box_number: 1,
-                  box_id: '',
-                  items: [{ slot_number: 1, serial_number: '' }]
-                }]
-              });
-            }
-          }
-
-          // Preserve existing serial numbers unless forceBlank is true
-          if (!forceBlank) {
-            const oldCrates = labelForm.value.crates || [];
-            crates.forEach((c, cIdx) => {
-              const oldC = oldCrates[cIdx];
-              if (oldC && oldC.boxes) {
-                c.boxes.forEach((b, bIdx) => {
-                  const oldB = oldC.boxes[bIdx];
-                  if (oldB && oldB.items) {
-                    b.items.forEach((it, sIdx) => {
-                      const oldIt = oldB.items[sIdx];
-                      if (oldIt && oldIt.serial_number) {
-                        it.serial_number = oldIt.serial_number;
-                      }
-                    });
-                  }
-                });
-              }
-            });
-          }
-
-          labelForm.value.crates = crates;
-          if (activeLabelCrateIndex.value >= crates.length) {
-            activeLabelCrateIndex.value = Math.max(0, crates.length - 1);
-          }
-        };
-
-        const getLabelFormFilledCount = () => {
-          let count = 0;
-          (labelForm.value.crates || []).forEach(c => {
-            (c.boxes || []).forEach(b => {
-              (b.items || []).forEach(it => {
-                if (it.serial_number && String(it.serial_number).trim()) count++;
-              });
-            });
-          });
-          return count;
-        };
-
-        const getLabelFormRequiredCount = () => {
-          let count = 0;
-          (labelForm.value.crates || []).forEach(c => {
-            (c.boxes || []).forEach(b => {
-              count += (b.items || []).length;
-            });
-          });
-          if (count === 0) {
-            const type = labelForm.value.package_type || 'crate';
-            const pkgCount = Math.max(1, parseInt(labelForm.value.package_count) || 1);
-            return type === 'crate' ? pkgCount * 20 : (type === 'box' ? pkgCount * 10 : pkgCount);
-          }
-          return count;
-        };
-
-        const getLabelCrateFilledCount = (crate) => {
-          if (!crate || !crate.boxes) return 0;
-          let count = 0;
-          crate.boxes.forEach(b => {
-            (b.items || []).forEach(it => {
-              if (it.serial_number && String(it.serial_number).trim()) count++;
-            });
-          });
-          return count;
-        };
-
-        const getLabelCrateRequiredCount = (crate) => {
-          if (!crate || !crate.boxes) return 0;
-          let count = 0;
-          crate.boxes.forEach(b => {
-            count += (b.items || []).length;
-          });
-          return count;
-        };
-
-        const isLabelFormComplete = computed(() => {
-          const crates = labelForm.value.crates || [];
-          if (!crates || crates.length === 0) return false;
-          let totalSlots = 0;
-          let filledSlots = 0;
-          for (const c of crates) {
-            const boxes = c.boxes || [];
-            if (!boxes || boxes.length === 0) return false;
-            for (const b of boxes) {
-              const items = b.items || [];
-              if (!items || items.length === 0) return false;
-              for (const it of items) {
-                totalSlots++;
-                if (it.serial_number && String(it.serial_number).trim()) {
-                  filledSlots++;
-                }
-              }
-            }
-          }
-          return totalSlots > 0 && filledSlots === totalSlots;
-        });
-
-        const resetLabelForm = async (customBatch = null) => {
-          let nextB = customBatch;
-          if (!nextB) {
-            try {
-              const res = await fetchAPI('/packing-labels');
-              if (res && res.next_batch) nextB = res.next_batch;
-            } catch (_) { }
-          }
-          if (!nextB) {
-            const maxExisting = (standaloneLabelsList.value || []).reduce((max, l) => Math.max(max, parseInt(l.batch_number) || 0), 0);
-            nextB = maxExisting >= 1 ? maxExisting + 1 : 1;
-          }
-          labelForm.value = {
-            date: getNowWIBDateString(),
-            package_type: 'crate',
-            package_count: 1,
-            batch_number: nextB,
-            product_name: doSettings.value.default_product_name || 'Nanggala P9',
-            notes: '',
-            crates: []
-          };
-          activeLabelCrateIndex.value = 0;
-          syncLabelPackagingStructure(true);
-        };
-
-        const confirmResetLabelForm = async () => {
-          const hasFilled = (labelForm.value.crates || []).some(c => (c.boxes || []).some(b => (b.items || []).some(it => it.serial_number)));
-          if (hasFilled) {
-            const ok = await showConfirmCard({
-              title: 'Reset Form Packing List',
-              message: 'Apakah Anda yakin ingin mengosongkan form? Nomor Serial Number yang sudah diisi akan dibersihkan kembali dari awal.',
-              icon: 'fa-solid fa-arrow-rotate-left',
-              iconBg: 'bg-amber-100 text-amber-600',
-              confirmText: 'Ya, Kosongkan Form',
-              confirmBtnClass: 'bg-amber-600 hover:bg-amber-700 text-white'
-            });
-            if (!ok) return;
-          }
-          await resetLabelForm();
-          triggerToast('Form Direset', 'Form Packing List telah dikosongkan kembali dari awal.', 'info');
-        };
-
-        const autoFillAvailableSNsForLabel = () => {
-          if (!availableFinishedSNs.value || availableFinishedSNs.value.length === 0) {
-            triggerToast('Perhatian', 'Tidak ada Serial Number yang berstatus lulus QC di gudang', 'warning');
-            return;
-          }
-          let snIdx = 0;
-          let filledCount = 0;
-          (labelForm.value.crates || []).forEach(c => {
-            (c.boxes || []).forEach(b => {
-              (b.items || []).forEach(it => {
-                if (!it.serial_number && snIdx < availableFinishedSNs.value.length) {
-                  it.serial_number = availableFinishedSNs.value[snIdx];
-                  snIdx++;
-                  filledCount++;
-                }
-              });
-            });
-          });
-          if (filledCount > 0) {
-            triggerToast('Berhasil', `${filledCount} Serial Number berhasil diisi otomatis ke dalam label!`, 'success');
-          } else {
-            triggerToast('Info', 'Seluruh slot Serial Number sudah terisi.', 'info');
-          }
-        };
-
-        const loadStandaloneLabels = async () => {
-          isLoadingStandaloneLabels.value = true;
-          try {
-            const res = await fetchAPI('/packing-labels');
-            if (res && res.data) {
-              standaloneLabelsList.value = res.data;
-              if (res.next_batch) {
-                const isFormUntouched = !(labelForm.value.crates || []).some(c => (c.boxes || []).some(b => (b.items || []).some(it => it.serial_number)));
-                if (isFormUntouched) {
-                  labelForm.value.batch_number = res.next_batch;
-                  syncLabelPackagingStructure();
-                }
-              }
-            }
-          } catch (e) {
-            console.error('Failed to load standalone labels:', e);
-          } finally {
-            isLoadingStandaloneLabels.value = false;
-          }
-        };
-
-        const openStandaloneLabelsHistory = () => {
-          doSubTab.value = 'labels_history';
-          loadStandaloneLabels();
-        };
-
-        const saveStandaloneLabel = async (printType = null) => {
-          if (!isLabelFormComplete.value) {
-            const filled = getLabelFormFilledCount();
-            const req = getLabelFormRequiredCount();
-            triggerToast('Kemasan Belum Lengkap', `Seluruh slot Serial Number harus terisi penuh (${filled} dari ${req} SN terisi) sebelum dapat disimpan dan dicetak label.`, 'warn');
-            return;
-          }
-
-          // Cek Serial Number duplikat dalam pengisian
-          const allSNs = [];
-          (labelForm.value.crates || []).forEach(c => {
-            (c.boxes || []).forEach(b => {
-              (b.items || []).forEach(it => {
-                const sn = String(it.serial_number || '').trim();
-                if (sn) allSNs.push(sn);
-              });
-            });
-          });
-          const seen = new Set();
-          const duplicates = [];
-          for (const sn of allSNs) {
-            if (seen.has(sn)) {
-              if (!duplicates.includes(sn)) duplicates.push(sn);
-            } else {
-              seen.add(sn);
-            }
-          }
-          if (duplicates.length > 0) {
-            triggerToast('Serial Number Duplikat', `Terdapat SN ganda pada kemasan: ${duplicates.join(', ')}. Setiap slot harus memiliki Serial Number unik.`, 'error');
-            return;
-          }
-
-          isSavingStandaloneLabel.value = true;
-          try {
-            const labelDate = labelForm.value.date || getNowWIBDateString();
-            const payload = {
-              package_type: labelForm.value.package_type,
-              batch_number: labelForm.value.batch_number,
-              product_name: labelForm.value.product_name || doSettings.value.default_product_name || 'Nanggala P9',
-              notes: labelForm.value.notes,
-              crates: labelForm.value.crates,
-              date: labelDate
-            };
-            const res = await fetchAPI('/packing-labels', {
-              method: 'POST',
-              body: JSON.stringify(payload)
-            });
-            if (res && (res.ok || res.success)) {
-              triggerToast('Sukses Disimpan', res.message || 'Label Packing List berhasil disimpan!', 'success');
-
-              const savedBatch = payload.batch_number;
-              const savedDoc = res.pl_number || res.label_batch_id;
-              const printObj = {
-                id: res.id,
-                do_number: savedDoc,
-                do_date: formatIndoDate(labelDate),
-                program_name: doSettings.value.default_program_name || 'Modernisasi Alutsista, Non Alutsista dan Sarpras Pertahanan TA 2025',
-                contract_number: doSettings.value.default_contract_number || 'TRAK/2509/APBN/XI/2025/KEMHAN',
-                product_name: payload.product_name,
-                customer_name: doSettings.value.default_customer_name || 'KEMHAN RI',
-                customer_address: doSettings.value.default_customer_address || 'BADAN LOGISTIK PERTAHANAN\nJL. TANAH ABANG TIMUR NO. 6 – 7\nJAKARTA, 10110',
-                package_type: payload.package_type,
-                crates: res.crates || payload.crates
-              };
-
-              lastSavedPLInfo.value = {
-                pl_number: savedDoc,
-                batch_number: savedBatch,
-                total_containers: (payload.crates || []).length,
-                total_qty: (payload.crates || []).reduce((acc, c) => acc + (c.total_quantity || 0), 0),
-                saved_at: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-              };
-
-              await loadStandaloneLabels();
-              if (typeof loadAvailableFinishedSNs === 'function') {
-                loadAvailableFinishedSNs();
-              }
-
-              // Otomatis reset form dari awal dengan batch berikutnya
-              const nextBatch = res.next_batch || (parseInt(savedBatch) + 1) || 6;
-              await resetLabelForm(nextBatch);
-
-              if (printType) {
-                openDODetailAndPrint(printObj, printType);
-              }
-            } else {
-              triggerToast('Gagal', res?.error || 'Gagal menyimpan label.', 'error');
-            }
-          } catch (e) {
-            triggerToast('Error', e.message, 'error');
-          } finally {
-            isSavingStandaloneLabel.value = false;
-          }
-        };
-
-        const printStandaloneLabel = (labelObj, printType = 'label_peti') => {
-          let crates = [];
-          if (Array.isArray(labelObj.crates) && labelObj.crates.length > 0) {
-            crates = labelObj.crates;
-          } else if (typeof labelObj.crates_json === 'string') {
-            try { crates = JSON.parse(labelObj.crates_json); } catch (e) { crates = []; }
-          }
-          const printObj = {
-            id: labelObj.id,
-            do_number: labelObj.pl_number || labelObj.label_batch_id,
-            do_date: labelObj.created_at ? labelObj.created_at.substring(0, 10) : formatIndoDate(),
-            program_name: labelObj.program_name || doSettings.value.default_program_name || 'Modernisasi Alutsista, Non Alutsista dan Sarpras Pertahanan TA 2025',
-            contract_number: labelObj.contract_number || doSettings.value.default_contract_number || 'TRAK/2509/APBN/XI/2025/KEMHAN',
-            product_name: labelObj.product_name || doSettings.value.default_product_name || 'Nanggala P9',
-            customer_name: labelObj.customer_name || doSettings.value.default_customer_name || 'KEMHAN RI',
-            customer_address: labelObj.customer_address || doSettings.value.default_customer_address || 'BADAN LOGISTIK PERTAHANAN\nJL. TANAH ABANG TIMUR NO. 6 – 7\nJAKARTA, 10110',
-            package_type: labelObj.package_type || 'crate',
-            crates: crates
-          };
-          openDODetailAndPrint(printObj, printType);
-        };
-
-        const deleteStandaloneLabel = async (id, labelBatchId) => {
-          const ok = await showConfirmCard({
-            title: 'Hapus Label Packing List',
-            message: `Apakah Anda yakin ingin menghapus arsip label "${labelBatchId}"?`,
-            icon: 'fa-solid fa-trash',
-            iconBg: 'bg-red-100 text-red-600',
-            confirmText: 'Ya, Hapus Label',
-            confirmBtnClass: 'bg-red-600 hover:bg-red-700 text-white'
-          });
-          if (!ok) return;
-          try {
-            const res = await fetchAPI('/packing-labels/delete', {
-              method: 'POST',
-              body: JSON.stringify({ id })
-            });
-            if (res && (res.ok || res.success)) {
-              triggerToast('Sukses', 'Label Packing List berhasil dihapus!', 'success');
-              loadStandaloneLabels();
-            } else {
-              triggerToast('Gagal', res?.error || 'Gagal menghapus label.', 'error');
-            }
-          } catch (e) {
-            triggerToast('Error', e.message, 'error');
-          }
-        };
-
-        const applySettingsToNewDOForm = () => {
-          if (doSettings.value) {
-            doForm.value.customer_name = doSettings.value.default_customer_name || '';
-            doForm.value.customer_address = doSettings.value.default_customer_address || '';
-            doForm.value.contract_number = doSettings.value.default_contract_number || '';
-            doForm.value.program_name = doSettings.value.default_program_name || '';
-            doSubTab.value = 'form';
-            goToFormStep('customer');
-            triggerToast('Pengaturan Diterapkan', 'Data default instansi dan kontrak berhasil diisikan ke form DO.', 'success');
-          }
-        };
-
-        const loadDOPreviewData = async (doId) => {
-          if (!doId) return;
-          isLoadingPreviewDO.value = true;
-          updateRealtimePrintDate();
-          try {
-            const res = await fetchAPI(`/delivery-orders/detail?id=${doId}`);
-            if (res && (res.data || res.delivery_order)) {
-              previewDOData.value = res.data || res.delivery_order;
-              if (previewCrateIndex.value >= (previewDOData.value.crates?.length || 1)) {
-                previewCrateIndex.value = 0;
-              }
-              if (previewPackingListSheetIndex.value >= (previewPackingListSheets.value.length || 1)) {
-                previewPackingListSheetIndex.value = 0;
-              }
-              if (previewDOData.value?.package_type === 'unit' && (previewDocType.value === 'packing_list' || previewDocType.value === 'label_peti' || previewDocType.value === 'label_dus')) {
-                previewDocType.value = 'label_sn';
-              }
-              nextTick(() => {
-                if (previewDocType.value === 'surat_jalan') {
-                  renderDOTrackingQRCode('do-sj-qr-preview', previewDOData.value);
-                } else if (previewDocType.value === 'label_sn') {
-                  const snList = getDOSerialNumbers(previewDOData.value);
-                  snList.forEach((sn, idx) => {
-                    renderSNLabelQRCode('do-sn-qr-preview-' + idx, sn);
-                  });
-                }
-              });
-            }
-          } catch (e) {
-            console.error('Failed to load preview DO data:', e);
-          } finally {
-            isLoadingPreviewDO.value = false;
-          }
-        };
-
-        const openDODocumentPreview = (doId, docType = 'surat_jalan') => {
-          updateRealtimePrintDate();
-          previewDOId.value = doId;
-          previewDocType.value = docType;
-          previewCrateIndex.value = 0;
-          previewPackingListSheetIndex.value = 0;
-          loadDOPreviewData(doId).then(() => {
-            if (previewDOData.value?.package_type === 'unit' && (docType === 'packing_list' || docType === 'label_peti' || docType === 'label_dus')) {
-              previewDocType.value = 'label_sn';
-            }
-            nextTick(() => {
-              if (previewDocType.value === 'surat_jalan') {
-                renderDOTrackingQRCode('do-sj-qr-preview', previewDOData.value);
-              } else if (previewDocType.value === 'label_sn') {
-                const snList = getDOSerialNumbers(previewDOData.value);
-                snList.forEach((sn, idx) => {
-                  renderSNLabelQRCode('do-sn-qr-preview-' + idx, sn);
-                });
-              }
-            });
-          });
-          doSubTab.value = 'preview';
-        };
-
-        watch(previewDocType, (newVal) => {
-          if (newVal === 'surat_jalan') {
-            nextTick(() => {
-              renderDOTrackingQRCode('do-sj-qr-preview', previewDOData.value);
-            });
-          } else if (newVal === 'label_sn') {
-            nextTick(() => {
-              const snList = getDOSerialNumbers(previewDOData.value);
-              snList.forEach((sn, idx) => {
-                renderSNLabelQRCode('do-sn-qr-preview-' + idx, sn);
-              });
-            });
-          }
-        });
-        const doList = ref([]);
-        const doSearchText = ref('');
-        const doStartDate = ref('');
-        const doEndDate = ref('');
-        const doDocFilter = ref('');
-
-        const distinctDODocNumbers = computed(() => {
-          const set = new Set();
-          (doList.value || []).forEach(d => {
-            if (d.do_number) set.add(d.do_number);
-          });
-          return Array.from(set).sort();
-        });
-
-        const resetDOFilter = () => {
-          doSearchText.value = '';
-          doStartDate.value = '';
-          doEndDate.value = '';
-          doDocFilter.value = '';
-          if (pgState.doHistory) pgState.doHistory.page = 1;
-        };
-        const customersList = ref([]);
-        const isCustomerDropdownOpen = ref(false);
-        const customerDropdownRef = ref(null);
-        const showNewCustomerModal = ref(false);
-        const newCustomerForm = ref({
-          name: '',
-          address: '',
-          phone: '',
-          fax: '',
-          notes: ''
-        });
-        const isSubmittingCustomer = ref(false);
-        const customerSearchQuery = ref('');
-        const availableFinishedSNs = ref([]);
-        const isSubmittingDO = ref(false);
-        const showDOPostPublishModal = ref(false);
-        const lastPublishedDO = ref(null);
-        const selectedDOForDetail = ref(null);
-        const isLoadingDODetail = ref(false);
-
-        // Form Cards Sequential Stepper State
-        const activeFormStep = ref('customer');
-        const completedSteps = ref(new Set());
-        const openFormCards = ref({
-          customer: true,
-          reference: false,
-          batch: false,
-          allocation: false
-        });
-
-        const isFormCardOpen = (cardKey) => {
-          return !!openFormCards.value[cardKey];
-        };
-
-        const isStepValid = (stepKey) => {
-          if (stepKey === 'customer') {
-            return !!(doForm.value.customer_name && doForm.value.customer_name.trim() &&
-              doForm.value.customer_address && doForm.value.customer_address.trim());
-          }
-          if (stepKey === 'reference') {
-            return isStepValid('customer') &&
-              !!(doForm.value.contract_number && doForm.value.contract_number.trim() &&
-                doForm.value.program_name && doForm.value.program_name.trim());
-          }
-          if (stepKey === 'batch') {
-            return isStepValid('reference') &&
-              (parseInt(doForm.value.package_count) >= 1) &&
-              (parseInt(doForm.value.batch_number) >= 1);
-          }
-          if (stepKey === 'allocation') {
-            return isStepValid('batch');
-          }
-          return false;
-        };
-
-        const isStepCompleted = (stepKey) => {
-          return completedSteps.value.has(stepKey) && isStepValid(stepKey);
-        };
-
-        const canAccessStep = (stepKey) => {
-          if (stepKey === 'customer') return true;
-          if (stepKey === 'reference') return isStepCompleted('customer') || isStepValid('customer');
-          if (stepKey === 'batch') return isStepCompleted('reference');
-          if (stepKey === 'allocation') return isStepCompleted('batch');
-          return false;
-        };
-
-        const goToFormStep = (targetStep) => {
-          if (targetStep === 'reference') {
-            if (!doForm.value.customer_name || !doForm.value.customer_name.trim()) {
-              triggerToast('Data Belum Lengkap', 'Nama Customer wajib diisi sebelum lanjut.', 'warn');
-              return;
-            }
-            if (!doForm.value.customer_address || !doForm.value.customer_address.trim()) {
-              triggerToast('Data Belum Lengkap', 'Alamat Pengiriman wajib diisi sebelum lanjut.', 'warn');
-              return;
-            }
-            completedSteps.value.add('customer');
-            completedSteps.value.delete('reference');
-            completedSteps.value.delete('batch');
-            completedSteps.value.delete('allocation');
-          } else if (targetStep === 'batch') {
-            if (!doForm.value.contract_number || !doForm.value.contract_number.trim()) {
-              triggerToast('Data Belum Lengkap', 'Nomor Referensi/Kontrak wajib diisi sebelum lanjut.', 'warn');
-              return;
-            }
-            if (!doForm.value.program_name || !doForm.value.program_name.trim()) {
-              triggerToast('Data Belum Lengkap', 'Nama Program Pengadaan wajib diisi sebelum lanjut.', 'warn');
-              return;
-            }
-            completedSteps.value.add('customer');
-            completedSteps.value.add('reference');
-            completedSteps.value.delete('batch');
-            completedSteps.value.delete('allocation');
-          } else if (targetStep === 'allocation') {
-            if (!doForm.value.package_count || doForm.value.package_count < 1) {
-              triggerToast('Data Belum Lengkap', 'Jumlah pengemasan harus minimal 1.', 'warn');
-              return;
-            }
-            if (!doForm.value.batch_number || doForm.value.batch_number < 1) {
-              triggerToast('Data Belum Lengkap', 'Nomor batch pengiriman harus minimal 1.', 'warn');
-              return;
-            }
-            completedSteps.value.add('customer');
-            completedSteps.value.add('reference');
-            completedSteps.value.add('batch');
-            syncPackagingStructure();
-          } else if (targetStep === 'customer') {
-            completedSteps.value.delete('customer');
-            completedSteps.value.delete('reference');
-            completedSteps.value.delete('batch');
-            completedSteps.value.delete('allocation');
-          }
-
-          activeFormStep.value = targetStep;
-          openFormCards.value = {
-            customer: targetStep === 'customer',
-            reference: targetStep === 'reference',
-            batch: targetStep === 'batch',
-            allocation: targetStep === 'allocation'
-          };
-        };
-
-        const onCardHeaderClick = (cardKey) => {
-          // Dinonaktifkan: Berpindah kartu HANYA melalui tombol 'Lanjut' dan 'Kembali'
-          return;
-        };
-
-        const toggleFormCard = (cardKey) => {
-          onCardHeaderClick(cardKey);
-        };
-
-        const setAllFormCards = (isOpen) => {
-          if (isOpen) {
-            return;
-          }
-          resetDOFormSteps();
-        };
-
-        const resetDOFormSteps = () => {
-          activeFormStep.value = 'customer';
-          completedSteps.value.clear();
-          openFormCards.value = {
-            customer: true,
-            reference: false,
-            batch: false,
-            allocation: false
-          };
-          activeContainerIndex.value = 0;
-          selectedConsumedPLId.value = '';
-          selectedConsumedPL.value = null;
-          if (doForm.value) {
-            delete doForm.value.consumed_standalone_id;
-          }
-        };
-
-        const productTypesList = ref([
-          'Nanggala P9',
-          'Nanggala P9 Gen-2',
-          'Nanggala P9 Tactical'
-        ]);
-
-        const getTodayISODate = () => {
-          const now = new Date();
-          const y = now.getFullYear();
-          const m = String(now.getMonth() + 1).padStart(2, '0');
-          const d = String(now.getDate()).padStart(2, '0');
-          return `${y}-${m}-${d}`;
-        };
-
-        const formatNumericDate = (dateStr) => {
-          if (!dateStr) return '';
-          const s = String(dateStr).trim();
-          const isoMatch = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-          if (isoMatch) {
-            const d = isoMatch[3].padStart(2, '0');
-            const m = isoMatch[2].padStart(2, '0');
-            const y = isoMatch[1];
-            return `${d}/${m}/${y}`;
-          }
-          const monthMap = {
-            'januari': '01', 'january': '01', 'jan': '01',
-            'februari': '02', 'february': '02', 'feb': '02',
-            'maret': '03', 'march': '03', 'mar': '03',
-            'april': '04', 'apr': '04',
-            'mei': '05', 'may': '05',
-            'juni': '06', 'june': '06', 'jun': '06',
-            'juli': '07', 'july': '07', 'jul': '07',
-            'agustus': '08', 'august': '08', 'ags': '08', 'aug': '08',
-            'september': '09', 'sep': '09', 'sept': '09',
-            'oktober': '10', 'october': '10', 'okt': '10', 'oct': '10',
-            'november': '11', 'nov': '11',
-            'desember': '12', 'december': '12', 'des': '12', 'dec': '12'
-          };
-          const parts = s.split(/[\s,]+/);
-          if (parts.length >= 3) {
-            const day = parts[0].replace(/\D/g, '').padStart(2, '0');
-            const mKey = parts[1].toLowerCase();
-            const month = monthMap[mKey] || mKey.padStart(2, '0');
-            const year = parts[2].replace(/\D/g, '');
-            if (day && month && year) {
-              return `${day}/${month}/${year}`;
-            }
-          }
-          return s;
-        };
-
-        const doForm = ref({
-          do_number: '',
-          do_date: getTodayISODate(),
-          customer_name: '',
-          customer_address: '',
-          customer_phone: '',
-          customer_fax: '',
-          contract_number: '',
-          program_name: '',
-          product_name: 'Nanggala P9',
-          issued_by_name: '',
-          issued_by_title: '',
-          issued_by_dept: 'Logistik & PPIC',
-          package_type: 'crate',
-          package_count: 1,
-          total_quantity: 20,
-          batch_number: 1,
-          crates: []
-        });
-
-        // Consumed Packing List State (Penggunaan Packing List yang Sudah Ada ke DO)
-        const selectedConsumedPLId = ref('');
-        const selectedConsumedPL = ref(null);
-        const isLoadingConsumedPL = ref(false);
-
-        const applyConsumedPackingList = async () => {
-          if (!selectedConsumedPLId.value) {
-            selectedConsumedPL.value = null;
-            delete doForm.value.consumed_standalone_id;
-            return;
-          }
-          isLoadingConsumedPL.value = true;
-          try {
-            const res = await fetchAPI(`/packing-labels/detail?id=${selectedConsumedPLId.value}`);
-            if (res && res.data) {
-              const plData = res.data;
-              selectedConsumedPL.value = plData;
-              doForm.value.consumed_standalone_id = plData.id;
-              doForm.value.package_type = plData.package_type || 'crate';
-              doForm.value.batch_number = plData.batch_number || 1;
-              doForm.value.package_count = plData.total_containers || (Array.isArray(plData.crates) ? plData.crates.length : 1);
-              doForm.value.total_quantity = plData.total_quantity || 0;
-              if (plData.product_name) {
-                doForm.value.product_name = plData.product_name;
-              }
-              if (Array.isArray(plData.crates) && plData.crates.length > 0) {
-                doForm.value.crates = JSON.parse(JSON.stringify(plData.crates));
-              }
-              activeContainerIndex.value = 0;
-              triggerToast('Packing List Terpasang', `Berhasil memuat ${plData.total_quantity} unit dari Packing List ${plData.pl_number || plData.label_batch_id}`, 'success');
-            } else {
-              triggerToast('Gagal Memuat', 'Data Packing List tidak ditemukan', 'error');
-            }
-          } catch (e) {
-            console.error('Error applying consumed PL:', e);
-            triggerToast('Gagal', 'Terjadi kesalahan saat memuat data Packing List.', 'error');
-          } finally {
-            isLoadingConsumedPL.value = false;
-          }
-        };
-
-        const resetConsumedPackingList = () => {
-          selectedConsumedPLId.value = '';
-          selectedConsumedPL.value = null;
-          delete doForm.value.consumed_standalone_id;
-          syncPackagingStructure();
-          triggerToast('Direset', 'Alokasi Serial Number dikembalikan ke mode manual.', 'info');
-        };
-
-        // Container Selection from Standalone PL State & Functions
-        const showSelectCrateModal = ref(false);
-        const showSelectBoxModal = ref(false);
-        const selectTarget = ref({ crateIdx: 0, boxNumber: 1, isBoxDO: false });
-        const selectCrateSearchQuery = ref('');
-        const selectBoxSearchQuery = ref('');
-
-        const getAvailablePLCratesList = () => {
-          const list = [];
-          (standaloneLabelsList.value || []).forEach(pl => {
-            if (pl.package_type === 'crate') {
-              let crates = [];
-              if (Array.isArray(pl.crates) && pl.crates.length > 0) {
-                crates = pl.crates;
-              } else if (typeof pl.crates_json === 'string') {
-                try { crates = JSON.parse(pl.crates_json); } catch (_) { }
-              }
-              crates.forEach((c, cIdx) => {
-                list.push({
-                  pl_id: pl.id,
-                  pl_number: pl.pl_number || pl.label_batch_id,
-                  batch_number: pl.batch_number,
-                  product_name: pl.product_name,
-                  crate_id: c.crate_id,
-                  crate_number: c.crate_number || (cIdx + 1),
-                  boxes: c.boxes || [],
-                  total_quantity: c.total_quantity || 20,
-                  filled_items: (c.boxes || []).reduce((acc, b) => acc + (b.items || []).filter(it => it.serial_number && String(it.serial_number).trim()).length, 0)
-                });
-              });
-            }
-          });
-          return list;
-        };
-
-        const filteredAvailablePLCratesList = computed(() => {
-          const q = (selectCrateSearchQuery.value || '').trim().toLowerCase();
-          const all = getAvailablePLCratesList();
-          if (!q) return all;
-          return all.filter(c =>
-            (c.crate_id && c.crate_id.toLowerCase().includes(q)) ||
-            (c.pl_number && c.pl_number.toLowerCase().includes(q)) ||
-            (c.product_name && c.product_name.toLowerCase().includes(q))
-          );
-        });
-
-        const isPLCrateUsed = (crateId, currentCrateIdx) => {
-          if (!crateId) return false;
-          return (doForm.value.crates || []).some((c, idx) => {
-            if (idx === currentCrateIdx) return false;
-            return c.crate_id === crateId || c.consumed_source_crate_id === crateId;
-          });
-        };
-
-        const openSelectCrateModal = (crateIdx) => {
-          selectCrateSearchQuery.value = '';
-          selectTarget.value = { crateIdx, boxNumber: 1, isBoxDO: false };
-          loadStandaloneLabels();
-          showSelectCrateModal.value = true;
-        };
-
-        const applySelectedCrateToDO = (plCrate) => {
-          const cIdx = selectTarget.value.crateIdx;
-          if (!doForm.value.crates || !doForm.value.crates[cIdx]) return;
-
-          const targetCrate = doForm.value.crates[cIdx];
-          targetCrate.crate_id = plCrate.crate_id;
-          targetCrate.consumed_source_crate_id = plCrate.crate_id;
-          targetCrate.consumed_from_pl = plCrate.pl_number;
-
-          // Copy boxes and SN
-          targetCrate.boxes = (plCrate.boxes || []).map((b, bIdx) => {
-            const bNum = b.box_number || (bIdx + 1);
-            return {
-              box_number: bNum,
-              box_id: `${plCrate.crate_id}-${String(bNum).padStart(2, '0')}`,
-              consumed_source_box_id: b.box_id || `${plCrate.crate_id}-${String(bNum).padStart(2, '0')}`,
-              consumed_from_pl: plCrate.pl_number,
-              items: (b.items || []).map(it => ({
-                slot_number: it.slot_number,
-                serial_number: it.serial_number || ''
-              }))
-            };
-          });
-
-          showSelectCrateModal.value = false;
-          triggerToast('Peti Terpilih', `ID Peti ${plCrate.crate_id} berhasil diterapkan ke Peti ${cIdx + 1}!`, 'success');
-        };
-
-        const getAvailablePLBoxesList = () => {
-          const list = [];
-          (standaloneLabelsList.value || []).forEach(pl => {
-            let crates = [];
-            if (Array.isArray(pl.crates) && pl.crates.length > 0) {
-              crates = pl.crates;
-            } else if (typeof pl.crates_json === 'string') {
-              try { crates = JSON.parse(pl.crates_json); } catch (_) { }
-            }
-            crates.forEach((c, cIdx) => {
-              (c.boxes || []).forEach((b, bIdx) => {
-                const boxId = b.box_id || c.box_id || `${c.crate_id || 'BOX'}-${String(bIdx + 1).padStart(2, '0')}`;
-                list.push({
-                  pl_id: pl.id,
-                  pl_number: pl.pl_number || pl.label_batch_id,
-                  batch_number: pl.batch_number,
-                  product_name: pl.product_name,
-                  package_type: pl.package_type,
-                  parent_crate_id: pl.package_type === 'crate' ? c.crate_id : null,
-                  box_id: boxId,
-                  box_number: b.box_number || (bIdx + 1),
-                  items: b.items || [],
-                  filled_items: (b.items || []).filter(it => it.serial_number && String(it.serial_number).trim()).length
-                });
-              });
-            });
-          });
-          return list;
-        };
-
-        const filteredAvailablePLBoxesList = computed(() => {
-          const q = (selectBoxSearchQuery.value || '').trim().toLowerCase();
-          const all = getAvailablePLBoxesList();
-          if (!q) return all;
-          return all.filter(b =>
-            (b.box_id && b.box_id.toLowerCase().includes(q)) ||
-            (b.pl_number && b.pl_number.toLowerCase().includes(q)) ||
-            (b.parent_crate_id && b.parent_crate_id.toLowerCase().includes(q)) ||
-            (b.product_name && b.product_name.toLowerCase().includes(q)) ||
-            (b.items || []).some(it => it.serial_number && String(it.serial_number).toLowerCase().includes(q))
-          );
-        });
-
-        const isPLBoxUsed = (sourceBoxId, currentCrateIdx, currentBoxNumber, isBoxDO) => {
-          if (!sourceBoxId) return false;
-          for (let cIdx = 0; cIdx < (doForm.value.crates || []).length; cIdx++) {
-            const c = doForm.value.crates[cIdx];
-            for (let b of (c.boxes || [])) {
-              if (isBoxDO) {
-                if (cIdx !== currentCrateIdx && (b.box_id === sourceBoxId || b.consumed_source_box_id === sourceBoxId)) {
-                  return true;
-                }
-              } else {
-                if ((cIdx !== currentCrateIdx || b.box_number !== currentBoxNumber) && (b.box_id === sourceBoxId || b.consumed_source_box_id === sourceBoxId)) {
-                  return true;
-                }
-              }
-            }
-          }
-          return false;
-        };
-
-        const openSelectBoxModal = (crateIdx, boxNumber, isBoxDO = false) => {
-          selectBoxSearchQuery.value = '';
-          selectTarget.value = { crateIdx, boxNumber, isBoxDO };
-          loadStandaloneLabels();
-          showSelectBoxModal.value = true;
-        };
-
-        const applySelectedBoxToDO = (plBox) => {
-          const { crateIdx, boxNumber, isBoxDO } = selectTarget.value;
-          if (!doForm.value.crates || !doForm.value.crates[crateIdx]) return;
-
-          const targetCrate = doForm.value.crates[crateIdx];
-
-          if (isBoxDO) {
-            // DO Kemasan Dus
-            targetCrate.box_id = plBox.box_id;
-            targetCrate.consumed_source_box_id = plBox.box_id;
-            targetCrate.consumed_from_pl = plBox.pl_number;
-            if (targetCrate.boxes && targetCrate.boxes[0]) {
-              targetCrate.boxes[0].box_id = plBox.box_id;
-              targetCrate.boxes[0].consumed_source_box_id = plBox.box_id;
-              targetCrate.boxes[0].consumed_from_pl = plBox.pl_number;
-              targetCrate.boxes[0].items = (plBox.items || []).map(it => ({
-                slot_number: it.slot_number,
-                serial_number: it.serial_number || ''
-              }));
-            }
-            showSelectBoxModal.value = false;
-            triggerToast('Dus Terpilih', `ID Dus ${plBox.box_id} berhasil diterapkan ke Dus ${crateIdx + 1}!`, 'success');
-          } else {
-            // DO Kemasan Peti (Dus 1 atau Dus 2)
-            const targetBoxIdx = Math.max(0, boxNumber - 1);
-            if (!targetCrate.boxes || !targetCrate.boxes[targetBoxIdx]) return;
-            const targetBox = targetCrate.boxes[targetBoxIdx];
-
-            // ID Dus otomatis menyesuaikan dengan ID Peti: ${crate_id}-01 atau -02
-            const newBoxId = `${targetCrate.crate_id}-${String(boxNumber).padStart(2, '0')}`;
-            targetBox.box_id = newBoxId;
-            targetBox.consumed_source_box_id = plBox.box_id;
-            targetBox.consumed_from_pl = plBox.pl_number;
-            targetBox.items = (plBox.items || []).map(it => ({
-              slot_number: it.slot_number,
-              serial_number: it.serial_number || ''
-            }));
-
-            showSelectBoxModal.value = false;
-            triggerToast('Dus Terpilih', `Dus ${plBox.box_id} dimasukkan ke Peti ${crateIdx + 1} sebagai ${newBoxId}!`, 'success');
-          }
-        };
-
-        // Batch Paste Modal State
-        const showBatchPasteModal = ref(false);
-        const batchPasteRawText = ref('');
-        const batchPasteTarget = ref({ crateIdx: 0, boxNum: 1, isUnit: false });
-
-        // Print DO state
-        const activePrintDO = ref(null);
-        const activePrintType = ref('surat_jalan');
-
-        // Card 4 Container Stepper State
-        const activeContainerIndex = ref(0);
-
-        const getBoxFilledCount = (box) => {
-          if (!box || !box.items) return 0;
-          return box.items.filter(it => it.serial_number && String(it.serial_number).trim()).length;
-        };
-
-        const isBoxComplete = (box) => {
-          return getBoxFilledCount(box) === 10;
-        };
-
-        const isBoxIndexLocked = (bIdx) => {
-          if (bIdx === 0) return false;
-          const boxes = getAllBoxesInForm();
-          const prevBox = boxes[bIdx - 1];
-          return !prevBox || !isBoxComplete(prevBox);
-        };
-
-        const isCrateComplete = (crate) => {
-          return getCrateFilledCount(crate) === 20;
-        };
-
-        const isCrateIndexLocked = (cIdx) => {
-          if (cIdx === 0) return false;
-          const prevCrate = doForm.value.crates && doForm.value.crates[cIdx - 1];
-          return !prevCrate || !isCrateComplete(prevCrate);
-        };
-
-        const getUnitBatches = () => {
-          const allUnits = getAllUnitsInForm();
-          const batches = [];
-          for (let i = 0; i < allUnits.length; i += 10) {
-            batches.push(allUnits.slice(i, i + 10));
-          }
-          return batches;
-        };
-
-        const getUnitBatchFilledCount = (batch) => {
-          if (!batch) return 0;
-          return batch.filter(it => it.serial_number && String(it.serial_number).trim()).length;
-        };
-
-        const isUnitBatchComplete = (batchIdx) => {
-          const batches = getUnitBatches();
-          const b = batches[batchIdx];
-          if (!b || b.length === 0) return false;
-          return b.every(it => it.serial_number && String(it.serial_number).trim());
-        };
-
-        const isUnitBatchLocked = (batchIdx) => {
-          if (batchIdx === 0) return false;
-          return !isUnitBatchComplete(batchIdx - 1);
-        };
-
-        const nextContainer = () => {
-          if (doForm.value.package_type === 'box') {
-            const boxes = getAllBoxesInForm();
-            const cur = boxes[activeContainerIndex.value];
-            if (!isBoxComplete(cur)) {
-              triggerToast('Dus Belum Lengkap', 'Lengkapi 10 Serial Number pada Dus ini sebelum lanjut ke Dus berikutnya.', 'warn');
-              return;
-            }
-            if (activeContainerIndex.value < boxes.length - 1) {
-              activeContainerIndex.value++;
-            }
-          } else if (doForm.value.package_type === 'crate') {
-            const crates = doForm.value.crates;
-            const cur = crates[activeContainerIndex.value];
-            if (!isCrateComplete(cur)) {
-              triggerToast('Peti Belum Lengkap', 'Lengkapi 20 Serial Number pada Peti ini sebelum lanjut ke Peti berikutnya.', 'warn');
-              return;
-            }
-            if (activeContainerIndex.value < crates.length - 1) {
-              activeContainerIndex.value++;
-            }
-          } else {
-            if (!isUnitBatchComplete(activeContainerIndex.value)) {
-              triggerToast('Unit Belum Lengkap', 'Lengkapi Serial Number pada bagian ini sebelum lanjut ke bagian berikutnya.', 'warn');
-              return;
-            }
-            const batches = getUnitBatches();
-            if (activeContainerIndex.value < batches.length - 1) {
-              activeContainerIndex.value++;
-            }
-          }
-        };
-
-        const prevContainer = () => {
-          if (activeContainerIndex.value > 0) {
-            activeContainerIndex.value--;
-          }
-        };
-
-        const selectContainer = (idx) => {
-          if (doForm.value.package_type === 'box') {
-            if (isBoxIndexLocked(idx)) {
-              triggerToast('Dus Terkunci', 'Selesaikan pengisian Dus sebelumnya terlebih dahulu.', 'warn');
-              return;
-            }
-          } else if (doForm.value.package_type === 'crate') {
-            if (isCrateIndexLocked(idx)) {
-              triggerToast('Peti Terkunci', 'Selesaikan pengisian Peti sebelumnya terlebih dahulu.', 'warn');
-              return;
-            }
-          } else {
-            if (isUnitBatchLocked(idx)) {
-              triggerToast('Bagian Terkunci', 'Selesaikan pengisian bagian sebelumnya terlebih dahulu.', 'warn');
-              return;
-            }
-          }
-          activeContainerIndex.value = idx;
-        };
-
-        const isDOSlotLocked = (items, sIdx) => {
-          if (sIdx === 0) return false;
-          const prev = items[sIdx - 1];
-          return !prev || !prev.serial_number || !prev.serial_number.trim();
-        };
-
-        const autofillSingleBox = (boxIdx) => {
-          const boxes = getAllBoxesInForm();
-          const box = boxes[boxIdx];
-          if (!box) return;
-
-          const usedSNs = new Set();
-          doForm.value.crates.forEach(c => {
-            if (c.boxes) {
-              c.boxes.forEach(b => {
-                if (b.items) {
-                  b.items.forEach(it => {
-                    if (it.serial_number && it.serial_number.trim()) {
-                      usedSNs.add(it.serial_number.trim().toUpperCase());
-                    }
-                  });
-                }
-              });
-            }
-          });
-
-          const freeSNs = availableFinishedSNs.value.filter(s => !usedSNs.has(s.trim().toUpperCase()));
-          let snIdx = 0;
-          if (box.items) {
-            box.items.forEach(it => {
-              if (!it.serial_number || !it.serial_number.trim()) {
-                if (snIdx < freeSNs.length) {
-                  it.serial_number = freeSNs[snIdx++];
-                }
-              }
-            });
-          }
-
-          triggerToast('Auto Fill Selesai', `Dus #${boxIdx + 1} telah diisi (${snIdx} SN dialokasikan).`, 'info');
-        };
-
-        const autofillSingleCrate = (crateIdx) => {
-          const crate = doForm.value.crates && doForm.value.crates[crateIdx];
-          if (!crate || !crate.boxes) return;
-
-          const usedSNs = new Set();
-          doForm.value.crates.forEach(c => {
-            if (c.boxes) {
-              c.boxes.forEach(b => {
-                if (b.items) {
-                  b.items.forEach(it => {
-                    if (it.serial_number && it.serial_number.trim()) {
-                      usedSNs.add(it.serial_number.trim().toUpperCase());
-                    }
-                  });
-                }
-              });
-            }
-          });
-
-          const freeSNs = availableFinishedSNs.value.filter(s => !usedSNs.has(s.trim().toUpperCase()));
-          let snIdx = 0;
-          crate.boxes.forEach(b => {
-            if (b.items) {
-              b.items.forEach(it => {
-                if (!it.serial_number || !it.serial_number.trim()) {
-                  if (snIdx < freeSNs.length) {
-                    it.serial_number = freeSNs[snIdx++];
-                  }
-                }
-              });
-            }
-          });
-
-          triggerToast('Auto Fill Selesai', `Peti #${crateIdx + 1} telah diisi (${snIdx} SN dialokasikan).`, 'info');
-        };
-
-        const autofillSingleUnitBatch = (batchIdx) => {
-          const batches = getUnitBatches();
-          const batch = batches[batchIdx];
-          if (!batch) return;
-
-          const usedSNs = new Set();
-          doForm.value.crates.forEach(c => {
-            if (c.boxes) {
-              c.boxes.forEach(b => {
-                if (b.items) {
-                  b.items.forEach(it => {
-                    if (it.serial_number && it.serial_number.trim()) {
-                      usedSNs.add(it.serial_number.trim().toUpperCase());
-                    }
-                  });
-                }
-              });
-            }
-          });
-
-          const freeSNs = availableFinishedSNs.value.filter(s => !usedSNs.has(s.trim().toUpperCase()));
-          let snIdx = 0;
-          batch.forEach(it => {
-            if (!it.serial_number || !it.serial_number.trim()) {
-              if (snIdx < freeSNs.length) {
-                it.serial_number = freeSNs[snIdx++];
-              }
-            }
-          });
-
-          triggerToast('Auto Fill Selesai', `Bagian #${batchIdx + 1} telah diisi (${snIdx} SN dialokasikan).`, 'info');
-        };
-
-        const filteredCustomersList = computed(() => {
-          const q = (customerSearchQuery.value || '').trim().toLowerCase();
-          if (!q) return customersList.value;
-          return customersList.value.filter(c =>
-            (c.name && c.name.toLowerCase().includes(q)) ||
-            (c.address && c.address.toLowerCase().includes(q))
-          );
-        });
-
-        const getDODateKey = (item) => {
-          if (!item) return '';
-          if (item.do_date && /^\d{4}-\d{2}-\d{2}$/.test(String(item.do_date).trim())) {
-            return String(item.do_date).trim();
-          }
-          if (item.created_at) {
-            return String(item.created_at).substring(0, 10);
-          }
-          if (item.do_date) {
-            const months = {
-              'januari': '01', 'februari': '02', 'maret': '03', 'april': '04',
-              'mei': '05', 'juni': '06', 'juli': '07', 'agustus': '08',
-              'september': '09', 'oktober': '10', 'november': '11', 'desember': '12'
-            };
-            const parts = String(item.do_date).trim().toLowerCase().split(/\s+/);
-            if (parts.length === 3 && months[parts[1]]) {
-              const day = parts[0].padStart(2, '0');
-              const month = months[parts[1]];
-              const year = parts[2];
-              return `${year}-${month}-${day}`;
-            }
-          }
-          return '';
-        };
-
-        const filteredDOList = computed(() => {
-          let list = doList.value || [];
-
-          // 1. Doc DO Filter
-          if (doDocFilter.value) {
-            list = list.filter(d => d.do_number === doDocFilter.value);
-          }
-
-          // 2. Date Filter: Tanggal Dari
-          if (doStartDate.value) {
-            list = list.filter(d => {
-              const dk = getDODateKey(d);
-              return !dk || dk >= doStartDate.value;
-            });
-          }
-
-          // 3. Date Filter: Tanggal Sampai
-          if (doEndDate.value) {
-            list = list.filter(d => {
-              const dk = getDODateKey(d);
-              return !dk || dk <= doEndDate.value;
-            });
-          }
-
-          // 4. Search query
-          const q = (doSearchText.value || '').trim().toLowerCase();
-          if (q) {
-            list = list.filter(d =>
-              (d.do_number && d.do_number.toLowerCase().includes(q)) ||
-              (d.customer_name && d.customer_name.toLowerCase().includes(q)) ||
-              (d.contract_number && d.contract_number.toLowerCase().includes(q)) ||
-              (d.program_name && d.program_name.toLowerCase().includes(q))
-            );
-          }
-
-          return list;
-        });
-
-        const selectCustomer = (cust) => {
-          doForm.value.customer_name = cust.name;
-          doForm.value.customer_address = cust.address || '';
-          doForm.value.customer_phone = cust.phone || '';
-          doForm.value.customer_fax = cust.fax || '';
-          customerSearchQuery.value = cust.name;
-          isCustomerDropdownOpen.value = false;
-        };
-
-        const openNewCustomerModal = () => {
-          newCustomerForm.value = { name: '', address: '', phone: '', fax: '', notes: '' };
-          showNewCustomerModal.value = true;
-        };
-
-        const saveNewCustomer = async () => {
-          if (!newCustomerForm.value.name.trim()) {
-            triggerToast('Perhatian', 'Nama Customer wajib diisi', 'warn');
-            return;
-          }
-          isSubmittingCustomer.value = true;
-          try {
-            const data = await fetchAPI('/customers', {
-              method: 'POST',
-              body: JSON.stringify(newCustomerForm.value)
-            });
-            if (data && data.customer) {
-              customersList.value.unshift(data.customer);
-              selectCustomer(data.customer);
-              showNewCustomerModal.value = false;
-              triggerToast('Sukses', 'Customer baru berhasil ditambahkan', 'success');
-            } else {
-              triggerToast('Gagal', data?.error || 'Gagal menyimpan customer', 'error');
-            }
-          } catch (err) {
-            console.error(err);
-            triggerToast('Error', err.message || 'Gagal menyimpan customer', 'error');
-          } finally {
-            isSubmittingCustomer.value = false;
-          }
-        };
-
-        const loadCustomers = async () => {
-          try {
-            const data = await fetchAPI('/customers');
-            if (data && (data.customers || data.data)) {
-              customersList.value = data.customers || data.data || [];
-            }
-          } catch (err) {
-            console.error('Failed to load customers:', err);
-          }
-        };
-
-        const loadDeliveryOrders = async () => {
-          try {
-            const data = await fetchAPI('/delivery-orders');
-            if (data && (data.data || data.delivery_orders)) {
-              doList.value = data.data || data.delivery_orders || [];
-              if (doList.value.length > 0 && !previewDOId.value) {
-                previewDOId.value = doList.value[0].id;
-                loadDOPreviewData(previewDOId.value);
-              }
-            }
-          } catch (err) {
-            console.error('Failed to load delivery orders:', err);
-          }
-        };
-
-        const loadAvailableFinishedSNs = async () => {
-          try {
-            const data = await fetchAPI('/available-serial-numbers');
-            if (data && (data.data || data.serial_numbers)) {
-              const raw = data.data || data.serial_numbers || [];
-              availableFinishedSNs.value = raw.map(r => typeof r === 'string' ? r : (r.part15_sn || r.serial_number || '')).filter(Boolean);
-            }
-          } catch (err) {
-            console.error('Failed to load available finished SNs:', err);
-          }
-        };
-
-        const loadNextDOMeta = async (explicitDate = null) => {
-          try {
-            const targetDate = explicitDate || doForm.value.do_date || '';
-            const queryParam = targetDate ? `?date=${encodeURIComponent(targetDate)}` : '';
-            const data = await fetchAPI(`/delivery-orders/next-meta${queryParam}`);
-            if (data && (data.ok || data.do_number)) {
-              if (data.do_number) doForm.value.do_number = data.do_number;
-              if (data.batch_number && (!doForm.value.batch_number || doForm.value.batch_number === 1)) {
-                doForm.value.batch_number = data.batch_number;
-              }
-              if (!explicitDate && !doForm.value.do_date && data.do_date_iso) {
-                doForm.value.do_date = data.do_date_iso;
-              }
-              const { yy, mm } = getYearMonthFromDate(targetDate || data.do_date_iso || doForm.value.do_date);
-              if (data.crate_sequence) {
-                doForm.value.start_crate_seq = data.crate_sequence;
-                doForm.value.start_crate_month = `${yy}${mm}`;
-              }
-              if (data.box_sequence) {
-                doForm.value.start_box_seq = data.box_sequence;
-                doForm.value.start_box_month = `${yy}${mm}`;
-              }
-              if (data.customer_name && !doForm.value.customer_name) doForm.value.customer_name = data.customer_name;
-              if (data.customer_address && !doForm.value.customer_address) doForm.value.customer_address = data.customer_address;
-              if (data.contract_number && !doForm.value.contract_number) doForm.value.contract_number = data.contract_number;
-              if (data.program_name && !doForm.value.program_name) doForm.value.program_name = data.program_name;
-              if (data.product_name && !doForm.value.product_name) doForm.value.product_name = data.product_name;
-              if (data.created_by_name && !doForm.value.issued_by_name) doForm.value.issued_by_name = data.created_by_name;
-              if (data.created_by_title && !doForm.value.issued_by_title) doForm.value.issued_by_title = data.created_by_title;
-              if (data.created_by_department && !doForm.value.issued_by_dept) doForm.value.issued_by_dept = data.created_by_department;
-              syncPackagingStructure();
-            }
-          } catch (err) {
-            console.error('Failed to load next DO meta:', err);
-          }
-        };
-
-        const loadNextDONumber = async () => {
-          await loadNextDOMeta(doForm.value.do_date);
-          triggerToast('Nomor DO Diperbarui', `Nomor Surat Jalan disesuaikan: ${doForm.value.do_number}`, 'info');
-        };
-        const loadNextBatchNumber = loadNextDOMeta;
-        const loadDOList = loadDeliveryOrders;
-
-        let doDateChangeTimeout = null;
-        const onDODateChanged = () => {
-          const dateVal = doForm.value.do_date;
-          if (!dateVal || dateVal.length < 7) return;
-
-          // 1. Langsung update ID Peti & ID Dus di tampilan seketika (reaktif tanpa jeda)
-          syncPackagingStructure();
-
-          // 2. Debounce panggil backend untuk update nomor DO & sequence bulan baru
-          if (doDateChangeTimeout) clearTimeout(doDateChangeTimeout);
-          doDateChangeTimeout = setTimeout(async () => {
-            await loadNextDOMeta(dateVal);
-          }, 250);
-        };
-
-        const setPackageType = (type) => {
-          doForm.value.package_type = type;
-          syncPackagingStructure();
-        };
-
-        const buildPackagingStructure = (type, count, batchNum, startSeq = 1, targetDate = null) => {
-          const bNum = parseInt(batchNum) || 1;
-          const num = parseInt(count) || 1;
-          const start = Math.max(1, parseInt(startSeq) || 1);
-          const crates = [];
-
-          const { yy, mm } = getYearMonthFromDate(targetDate || doForm.value?.do_date);
-          const prefix = `${yy}${mm}-${bNum}`;
-
-          if (type === 'crate') {
-            for (let i = 0; i < num; i++) {
-              const c = start + i;
-              const crateId = `${prefix}${String(c).padStart(3, '0')}`;
-              const boxes = [];
-              for (let b = 1; b <= 2; b++) {
-                const boxId = `${crateId}-${String(b).padStart(2, '0')}`;
-                const items = [];
-                for (let s = 1; s <= 10; s++) {
-                  items.push({ slot_number: s, serial_number: '' });
-                }
-                boxes.push({ box_number: b, box_id: boxId, items });
-              }
-              crates.push({ crate_number: i + 1, crate_id: crateId, boxes });
-            }
-          } else if (type === 'box') {
-            const parentCrateId = `${yy}${mm}-${bNum}000`;
-            for (let i = 0; i < num; i++) {
-              const b = start + i;
-              const boxId = `${parentCrateId}-${String(b).padStart(2, '0')}`;
-              const items = [];
-              for (let s = 1; s <= 10; s++) {
-                items.push({ slot_number: s, serial_number: '' });
-              }
-              crates.push({
-                crate_number: i + 1,
-                crate_id: parentCrateId,
-                box_id: boxId,
-                boxes: [{ box_number: 1, box_id: boxId, items }]
-              });
-            }
-          } else {
-            for (let u = 1; u <= num; u++) {
-              crates.push({
-                crate_number: u,
-                crate_id: '',
-                boxes: [{
-                  box_number: 1,
-                  box_id: '',
-                  items: [{ slot_number: 1, serial_number: '' }]
-                }]
-              });
-            }
-          }
-          return crates;
-        };
-
-        const buildCratesForQuantity = (qty, batchNum) => {
-          const validQty = Math.max(1, parseInt(qty) || 1);
-          const numCrates = Math.ceil(validQty / 20);
-          return buildPackagingStructure('crate', numCrates, batchNum, 1, doForm.value.do_date);
-        };
-
-        const syncPackagingStructure = () => {
-          const type = doForm.value.package_type || 'crate';
-          const count = Math.max(1, parseInt(doForm.value.package_count) || 1);
-          const batchNum = Math.max(1, parseInt(doForm.value.batch_number) || 1);
-
-          if (type === 'crate') {
-            doForm.value.total_quantity = count * 20;
-          } else if (type === 'box') {
-            doForm.value.total_quantity = count * 10;
-          } else {
-            doForm.value.total_quantity = count;
-          }
-
-          let startSeq = 1;
-          const { yy, mm } = getYearMonthFromDate(doForm.value.do_date);
-          const prefix = `${yy}${mm}-${batchNum}`;
-
-          if (type === 'crate') {
-            let maxFound = 0;
-            const scanCrates = (list) => {
-              (list || []).forEach(item => {
-                let arr = [];
-                if (Array.isArray(item.crates)) arr = item.crates;
-                else if (typeof item.crates_json === 'string') {
-                  try { arr = JSON.parse(item.crates_json); } catch (_) { }
-                }
-                arr.forEach(c => {
-                  const cid = String(c.crate_id || '').trim();
-                  if (cid.startsWith(prefix)) {
-                    const s = parseInt(cid.substring(prefix.length), 10);
-                    if (!isNaN(s)) maxFound = Math.max(maxFound, s);
-                  }
-                });
-              });
-            };
-            scanCrates(doList.value);
-            scanCrates(standaloneLabelsList.value);
-            const baseSeq = (doForm.value.start_crate_month === `${yy}${mm}`) ? (doForm.value.start_crate_seq || 1) : 1;
-            startSeq = Math.max(maxFound + 1, baseSeq);
-          } else if (type === 'box') {
-            const parentCrateId = `${yy}${mm}-${batchNum}000`;
-            const boxPrefix = `${parentCrateId}-`;
-            let maxFound = 0;
-            const scanBoxes = (list) => {
-              (list || []).forEach(item => {
-                let arr = [];
-                if (Array.isArray(item.crates)) arr = item.crates;
-                else if (typeof item.crates_json === 'string') {
-                  try { arr = JSON.parse(item.crates_json); } catch (_) { }
-                }
-                arr.forEach(c => {
-                  (c.boxes || []).forEach(b => {
-                    const bid = String(b.box_id || c.box_id || '').trim();
-                    if (bid.startsWith(boxPrefix)) {
-                      const s = parseInt(bid.substring(boxPrefix.length), 10);
-                      if (!isNaN(s)) maxFound = Math.max(maxFound, s);
-                    }
-                  });
-                });
-              });
-            };
-            scanBoxes(doList.value);
-            scanBoxes(standaloneLabelsList.value);
-            const baseSeq = (doForm.value.start_box_month === `${yy}${mm}`) ? (doForm.value.start_box_seq || 1) : 1;
-            startSeq = Math.max(maxFound + 1, baseSeq);
-          }
-
-          const oldCrates = doForm.value.crates || [];
-          const newCrates = buildPackagingStructure(type, count, batchNum, startSeq, doForm.value.do_date);
-
-          newCrates.forEach((c, cIdx) => {
-            const oldC = oldCrates[cIdx];
-            if (oldC) {
-              if (oldC.consumed_source_crate_id) {
-                c.crate_id = oldC.crate_id;
-                c.consumed_source_crate_id = oldC.consumed_source_crate_id;
-              }
-              if (type === 'box' && oldC.consumed_source_box_id) {
-                c.box_id = oldC.box_id;
-                c.consumed_source_box_id = oldC.consumed_source_box_id;
-                c.consumed_from_pl = oldC.consumed_from_pl;
-              }
-              if (oldC.boxes) {
-                c.boxes.forEach((b, bIdx) => {
-                  const oldB = oldC.boxes[bIdx];
-                  if (oldB) {
-                    if (oldB.consumed_source_box_id) {
-                      b.consumed_source_box_id = oldB.consumed_source_box_id;
-                      b.consumed_from_pl = oldB.consumed_from_pl;
-                    }
-                    if (oldB.items) {
-                      b.items.forEach((it, sIdx) => {
-                        const oldIt = oldB.items[sIdx];
-                        if (oldIt && oldIt.serial_number) {
-                          it.serial_number = oldIt.serial_number;
-                        }
-                      });
-                    }
-                  }
-                });
-              }
-            }
-          });
-
-          doForm.value.crates = newCrates;
-          if (activeContainerIndex.value >= newCrates.length) {
-            activeContainerIndex.value = Math.max(0, newCrates.length - 1);
-          }
-        };
-
-        const getAllBoxesInForm = () => {
-          const boxes = [];
-          (doForm.value.crates || []).forEach(c => {
-            (c.boxes || []).forEach(b => boxes.push(b));
-          });
-          return boxes;
-        };
-
-        const getAllUnitsInForm = () => {
-          const units = [];
-          (doForm.value.crates || []).forEach(c => {
-            (c.boxes || []).forEach(b => {
-              (b.items || []).forEach(it => units.push(it));
-            });
-          });
-          return units;
-        };
-
-        const getTotalFilledSNs = () => {
-          let count = 0;
-          getAllUnitsInForm().forEach(it => {
-            if (it.serial_number && String(it.serial_number).trim()) {
-              count++;
-            }
-          });
-          return count;
-        };
-
-        const getCrateFilledCount = (crate) => {
-          if (!crate || !crate.boxes) return 0;
-          let count = 0;
-          crate.boxes.forEach(b => {
-            if (b.items) {
-              b.items.forEach(it => {
-                if (it.serial_number && String(it.serial_number).trim()) count++;
-              });
-            }
-          });
-          return count;
-        };
-
-        const isSNInList = (sn) => {
-          if (!sn) return false;
-          return availableFinishedSNs.value.includes(sn.trim().toUpperCase());
-        };
-
-        const getAvailableSNsForSlot = (currentVal) => {
-          const used = new Set();
-          getAllUnitsInForm().forEach(it => {
-            if (it.serial_number && it.serial_number.trim() && it.serial_number !== currentVal) {
-              used.add(it.serial_number.trim().toUpperCase());
-            }
-          });
-          return availableFinishedSNs.value.filter(s => !used.has(s.trim().toUpperCase()));
-        };
-
-        const openBatchPasteModal = (crateIdx, boxNum, isUnit = false) => {
-          batchPasteTarget.value = { crateIdx, boxNum, isUnit };
-          batchPasteRawText.value = '';
-          showBatchPasteModal.value = true;
-        };
-
-        const applyBatchPaste = () => {
-          const rawLines = batchPasteRawText.value
-            .split(/\r?\n/)
-            .map(l => l.trim().toUpperCase())
-            .filter(l => l.length > 0);
-
-          if (rawLines.length === 0) {
-            triggerToast('Perhatian', 'Tidak ada data Serial Number yang valid untuk ditempel.', 'warn');
-            return;
-          }
-
-          const { crateIdx, boxNum, isUnit } = batchPasteTarget.value;
-          let count = 0;
-
-          if (isUnit) {
-            if (rawLines.length > doForm.value.package_count) {
-              doForm.value.package_count = rawLines.length;
-              syncPackagingStructure();
-            }
-            const allUnits = getAllUnitsInForm();
-            for (let i = 0; i < allUnits.length && i < rawLines.length; i++) {
-              allUnits[i].serial_number = rawLines[i];
-              count++;
-            }
-            showBatchPasteModal.value = false;
-            triggerToast('Tempel Berhasil', `${count} Serial Number satuan berhasil dimasukkan.`, 'success');
-            return;
-          }
-
-          const crate = doForm.value.crates[crateIdx];
-          if (!crate) return;
-          const box = crate.boxes[boxNum - 1];
-          if (!box) return;
-
-          for (let i = 0; i < 10 && i < rawLines.length; i++) {
-            box.items[i].serial_number = rawLines[i];
-            count++;
-          }
-
-          showBatchPasteModal.value = false;
-          triggerToast('Tempel Berhasil', `${count} Serial Number berhasil ditempel ke Dus ${boxNum}.`, 'success');
-        };
-
-        const addUnitToDOForm = (count = 1, showToast = true) => {
-          const current = Math.max(1, parseInt(doForm.value.package_count) || 1);
-          const target = Math.max(1, current + count);
-          doForm.value.package_count = target;
-          syncPackagingStructure();
-          const batches = getUnitBatches();
-          if (activeContainerIndex.value < batches.length - 1) {
-            activeContainerIndex.value = batches.length - 1;
-          }
-          if (showToast) {
-            triggerToast('Unit Diperbarui', `Jumlah satuan menjadi ${doForm.value.package_count} unit.`, 'info');
-          }
-        };
-
-        const removeUnitFromDOForm = (unitIndex) => {
-          const allUnits = getAllUnitsInForm();
-          if (allUnits.length <= 1) {
-            triggerToast('Minimal 1 Unit', 'Pengiriman satuan minimal harus memiliki 1 unit.', 'warn');
-            return;
-          }
-          for (let i = unitIndex; i < allUnits.length - 1; i++) {
-            allUnits[i].serial_number = allUnits[i + 1].serial_number;
-          }
-          doForm.value.package_count = allUnits.length - 1;
-          syncPackagingStructure();
-          const batches = getUnitBatches();
-          if (activeContainerIndex.value >= batches.length) {
-            activeContainerIndex.value = Math.max(0, batches.length - 1);
-          }
-          triggerToast('Unit Dihapus', `Jumlah satuan menjadi ${doForm.value.package_count} unit.`, 'info');
-        };
-
-        const updateUnitCountDirectly = (newCount) => {
-          const count = Math.max(1, parseInt(newCount) || 1);
-          doForm.value.package_count = count;
-          syncPackagingStructure();
-          const batches = getUnitBatches();
-          if (activeContainerIndex.value >= batches.length) {
-            activeContainerIndex.value = Math.max(0, batches.length - 1);
-          }
-        };
-
-        // ================= UNIT PACKAGING DIRECT LIST & AUTOCOMPLETE =================
-        const unitDropdown = ref({
-          isOpen: false,
-          idx: null
-        });
-
-        let unitBlurTimer = null;
-
-        const onUnitInputFocus = (uIdx) => {
-          if (unitBlurTimer) clearTimeout(unitBlurTimer);
-          unitDropdown.value.idx = uIdx;
-          unitDropdown.value.isOpen = true;
-        };
-
-        const onUnitInputBlur = (uIdx) => {
-          unitBlurTimer = setTimeout(() => {
-            if (unitDropdown.value.idx === uIdx) {
-              unitDropdown.value.isOpen = false;
-              unitDropdown.value.idx = null;
-            }
-          }, 250);
-        };
-
-        const onUnitInputChange = (uIdx) => {
-          unitDropdown.value.idx = uIdx;
-          unitDropdown.value.isOpen = true;
-        };
-
-        const getFilteredUnitSuggestions = (currentInput) => {
-          const query = (currentInput || '').trim().toUpperCase();
-          const allUnits = getAllUnitsInForm();
-          const usedInOtherSlots = new Set();
-          allUnits.forEach((u, i) => {
-            if (i !== unitDropdown.value.idx && u.serial_number && u.serial_number.trim()) {
-              usedInOtherSlots.add(u.serial_number.trim().toUpperCase());
-            }
-          });
-          return (availableFinishedSNs.value || [])
-            .filter(sn => {
-              const s = sn.trim().toUpperCase();
-              if (usedInOtherSlots.has(s)) return false;
-              return !query || s.includes(query);
-            })
-            .slice(0, 15);
-        };
-
-        const selectUnitSN = (uIdx, sn) => {
-          const allUnits = getAllUnitsInForm();
-          if (allUnits[uIdx]) {
-            allUnits[uIdx].serial_number = sn;
-          }
-          unitDropdown.value.isOpen = false;
-          unitDropdown.value.idx = null;
-
-          if (uIdx === allUnits.length - 1) {
-            addUnitRowAutomatically();
-          }
-          nextTick(() => {
-            const nextInput = document.getElementById(`unit-sn-input-${uIdx + 1}`);
-            if (nextInput) nextInput.focus();
-          });
-        };
-
-        const addUnitRowAutomatically = () => {
-          addUnitToDOForm(1, false);
-        };
-
-        const handleUnitInputKeyDown = (e, uIdx) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            const allUnits = getAllUnitsInForm();
-            unitDropdown.value.isOpen = false;
-            if (uIdx === allUnits.length - 1) {
-              addUnitRowAutomatically();
-              nextTick(() => {
-                const nextInput = document.getElementById(`unit-sn-input-${uIdx + 1}`);
-                if (nextInput) nextInput.focus();
-              });
-            } else {
-              const nextInput = document.getElementById(`unit-sn-input-${uIdx + 1}`);
-              if (nextInput) nextInput.focus();
-            }
-          } else if (e.key === 'Escape') {
-            unitDropdown.value.isOpen = false;
-          }
-        };
-
-        const removeUnitRowDirectly = (uIdx) => {
-          removeUnitFromDOForm(uIdx);
-        };
-
-        const autofillAllUnits = () => {
-          const allUnits = getAllUnitsInForm();
-          const usedSNs = new Set();
-          allUnits.forEach(u => {
-            if (u.serial_number && u.serial_number.trim()) {
-              usedSNs.add(u.serial_number.trim().toUpperCase());
-            }
-          });
-          const freeSNs = (availableFinishedSNs.value || []).filter(s => !usedSNs.has(s.trim().toUpperCase()));
-          let filledCount = 0;
-          allUnits.forEach(u => {
-            if (!u.serial_number || !u.serial_number.trim()) {
-              if (filledCount < freeSNs.length) {
-                u.serial_number = freeSNs[filledCount++];
-              }
-            }
-          });
-          triggerToast('Auto Fill Satuan Selesai', `${filledCount} SN berhasil diisi otomatis.`, 'info');
-        };
-
-        const openDODetailView = async (doId) => {
-          isLoadingDODetail.value = true;
-          doSubTab.value = 'detail';
-          try {
-            const data = await fetchAPI(`/delivery-orders/detail?id=${doId}`);
-            if (data && (data.data || data.delivery_order)) {
-              selectedDOForDetail.value = data.data || data.delivery_order;
-            } else {
-              triggerToast('Gagal', data?.error || 'Data detail tidak ditemukan', 'error');
-              doSubTab.value = 'history';
-            }
-          } catch (err) {
-            console.error(err);
-            triggerToast('Error', err.message || 'Gagal memuat detail DO', 'error');
-            doSubTab.value = 'history';
-          } finally {
-            isLoadingDODetail.value = false;
-          }
-        };
-
-        const openDODetailAndPrint = async (doId, printType = 'surat_jalan') => {
-          try {
-            isLoadingDODetail.value = true;
-            updateRealtimePrintDate();
-
-            let doData = null;
-            // Prioritas 1: Gunakan data object langsung jika di-pass dari modul label PL
-            if (typeof doId === 'object' && doId !== null) {
-              doData = doId;
-            } else if (previewDOData.value && (previewDOData.value.id === doId || !doId)) {
-              doData = previewDOData.value;
-            } else if (selectedDOForDetail.value && selectedDOForDetail.value.id === doId) {
-              doData = selectedDOForDetail.value;
-            } else if (lastPublishedDO.value && (lastPublishedDO.value.id === doId || lastPublishedDO.value.do_id === doId)) {
-              doData = lastPublishedDO.value;
-            }
-
-            // Jika belum ada di memori, ambil dari backend (bisa standalone packing label atau DO)
-            if (!doData || !doData.crates || doData.crates.length === 0) {
-              const fetchId = (typeof doId === 'object' && doId !== null) ? (doId.id || doId.do_id) : doId;
-              if (fetchId) {
-                const resPl = await fetchAPI(`/packing-labels/detail?id=${fetchId}`);
-                if (resPl && resPl.data) {
-                  doData = resPl.data;
-                } else {
-                  const res = await fetchAPI(`/delivery-orders/detail?id=${fetchId}`);
-                  if (res && (res.data || res.delivery_order)) {
-                    doData = res.data || res.delivery_order;
-                  }
-                }
-              }
-            }
-
-            if (doData) {
-              if (typeof doData.crates === 'string') {
-                try { doData.crates = JSON.parse(doData.crates); } catch (_) { doData.crates = []; }
-              } else if (!doData.crates && typeof doData.crates_json === 'string') {
-                try { doData.crates = JSON.parse(doData.crates_json); } catch (_) { doData.crates = []; }
-              }
-            }
-
-            if (!doData) {
-              triggerToast('Gagal', 'Data detail Delivery Order tidak ditemukan', 'error');
-              return;
-            }
-
-            // Normalisasi printType berdasarkan package_type
-            let normalizedPrintType = printType;
-            if (doData.package_type === 'unit') {
-              if (normalizedPrintType === 'label_parent' || normalizedPrintType === 'label_unit' || normalizedPrintType === 'label_peti' || normalizedPrintType === 'label_dus' || normalizedPrintType === 'label_sn') {
-                normalizedPrintType = 'label_sn';
-              }
-            } else {
-              if (normalizedPrintType === 'label_parent') normalizedPrintType = 'label_peti';
-              if (normalizedPrintType === 'label_child') normalizedPrintType = 'label_dus';
-            }
-
-            console.log('[DO Print] doData.id:', doData.id, '| package_type:', doData.package_type, '| type:', normalizedPrintType);
-
-            const isUnitLabel = normalizedPrintType === 'label_sn';
-            const isBoxOrPetiLabel = normalizedPrintType === 'label_peti' || normalizedPrintType === 'label_dus';
-            const isLabel = isUnitLabel || isBoxOrPetiLabel;
-            const docNum = (doData.do_number || 'DO').replace(/[\/\\]/g, '_');
-            const typeLabel = isUnitLabel ? 'Label_SN'
-              : normalizedPrintType === 'label_peti' ? 'Label_Peti'
-                : normalizedPrintType === 'label_dus' ? 'Label_Dus'
-                  : normalizedPrintType === 'surat_jalan' ? 'Surat_Jalan'
-                    : normalizedPrintType === 'packing_list' ? 'Packing_List' : 'Dokumen_Lengkap';
-
-            // Set data reaktif agar Vue merender dokumen yang dipilih ke #do-printable-area
-            activePrintDO.value = doData;
-            activePrintType.value = normalizedPrintType;
-
-            // Tunggu Vue selesai merender DOM
-            await nextTick();
-            await nextTick();
-            await nextTick();
-
-            // Render QR code jika surat jalan
-            if (normalizedPrintType === 'surat_jalan' || normalizedPrintType === 'all') {
-              renderDOTrackingQRCode('do-sj-qr-print', activePrintDO.value);
-            }
-
-            // Render QR code jika label SN satuan
-            if (isUnitLabel) {
-              const snList = getDOSerialNumbers(activePrintDO.value);
-              snList.forEach((sn, idx) => {
-                renderSNLabelQRCode('do-sn-qr-print-' + idx, sn);
-              });
-            }
-
-            // Tunggu frame berikutnya agar gambar & QR code stabil di DOM
-            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-            await new Promise(resolve => setTimeout(resolve, 300));
-
-            // Setup dynamic rule @page agar browser langsung mencetak dengan ukuran kertas yang tepat
-            let styleEl = document.getElementById('do-dynamic-page-rule');
-            if (!styleEl) {
-              styleEl = document.createElement('style');
-              styleEl.id = 'do-dynamic-page-rule';
-              document.head.appendChild(styleEl);
-            }
-
-            const isSuratJalan = normalizedPrintType === 'surat_jalan';
-            const pageRule = isUnitLabel
-              ? '@page { size: 80mm 20mm landscape; margin: 0 !important; } @media print { @page { size: 80mm 20mm landscape; margin: 0 !important; } html, body { width: 80mm !important; margin: 0 !important; padding: 0 !important; } .do-page-break { page-break-after: always; break-after: page; } }'
-              : isBoxOrPetiLabel
-                ? '@page { size: 100mm 150mm; margin: 0 !important; } @media print { @page { size: 100mm 150mm; margin: 0 !important; } html, body { width: 100mm !important; margin: 0 !important; padding: 0 !important; } .do-page-break { page-break-after: always; break-after: page; } }'
-                : isSuratJalan
-                  ? '@page { size: 8.5in 5.5in landscape; margin: 0 !important; } @media print { @page { size: 8.5in 5.5in landscape; margin: 0 !important; } html, body { width: 8.5in !important; height: 5.5in !important; margin: 0 !important; padding: 0 !important; } .do-page-break { page-break-after: always; break-after: page; } .do-watermark-img { opacity: 0.35 !important; } }'
-                  : '@page { size: A4 portrait; margin: 0 !important; } @media print { @page { size: A4 portrait; margin: 0 !important; } html, body { width: 210mm !important; margin: 0 !important; padding: 0 !important; } }';
-
-            styleEl.innerHTML = pageRule;
-
-            const origTitle = document.title;
-            document.title = `${typeLabel}_${docNum}`;
-
-            document.body.classList.add('printing-do-only');
-            if (isUnitLabel) {
-              document.body.classList.add('printing-sn-label-size');
-            } else if (isBoxOrPetiLabel) {
-              document.body.classList.add('printing-label-size');
-            }
-
-            let cleanedUp = false;
-            const cleanup = () => {
-              if (cleanedUp) return;
-              cleanedUp = true;
-              document.body.classList.remove('printing-do-only');
-              document.body.classList.remove('printing-label-size');
-              document.body.classList.remove('printing-sn-label-size');
-              document.title = origTitle;
-              if (styleEl) styleEl.innerHTML = '';
-              activePrintDO.value = null;
-              activePrintType.value = null;
-              window.onafterprint = null;
-            };
-
-            window.onafterprint = cleanup;
-
-            // Langsung buka dialog print di jendela browser saat ini tanpa membuka jendela/tab baru
-            window.print();
-
-            // Fallback timeout aman agar preview di dialog cetak browser tidak terhapus prematur
-            setTimeout(cleanup, 60000);
-
-          } catch (err) {
-            console.error('Error openDODetailAndPrint:', err);
-            triggerToast('Error', err.message || 'Gagal memuat dokumen untuk dicetak', 'error');
-          } finally {
-            isLoadingDODetail.value = false;
-          }
-        };
-
-        const deleteDeliveryOrder = async (id, doNum) => {
-          const ok = await showConfirmCard({
-            title: 'Hapus Surat Jalan',
-            message: `Apakah Anda yakin ingin menghapus dokumen Surat Jalan "${doNum}"? Seluruh nomor seri di dalamnya akan dikembalikan ke stok gudang.`,
-            icon: 'fa-solid fa-trash',
-            iconBg: 'bg-red-100 text-red-600',
-            confirmText: 'Ya, Hapus Dokumen',
-            confirmBtnClass: 'bg-red-600 hover:bg-red-700 text-white'
-          });
-          if (!ok) return;
-          try {
-            const data = await fetchAPI('/delivery-orders/delete', {
-              method: 'POST',
-              body: JSON.stringify({ id })
-            });
-            if (data && (data.success || data.ok)) {
-              triggerToast('Dihapus', `Dokumen ${doNum} berhasil dihapus.`, 'info');
-              loadDeliveryOrders();
-              loadAvailableFinishedSNs();
-            } else {
-              triggerToast('Gagal', data?.error || 'Gagal menghapus dokumen', 'error');
-            }
-          } catch (err) {
-            console.error(err);
-            triggerToast('Error', err.message || 'Gagal menghapus dokumen', 'error');
-          }
-        };
-
-        const submitDeliveryOrder = async () => {
-          if (!doForm.value.customer_name.trim()) {
-            triggerToast('Perhatian', 'Nama Customer wajib diisi', 'warn');
-            goToFormStep('customer');
-            return;
-          }
-          if (!doForm.value.customer_address.trim()) {
-            triggerToast('Perhatian', 'Alamat Customer wajib diisi', 'warn');
-            goToFormStep('customer');
-            return;
-          }
-          if (!doForm.value.contract_number.trim()) {
-            triggerToast('Perhatian', 'Nomor Kontrak wajib diisi', 'warn');
-            goToFormStep('reference');
-            return;
-          }
-          if (!doForm.value.program_name.trim()) {
-            triggerToast('Perhatian', 'Program Pengadaan wajib diisi', 'warn');
-            goToFormStep('reference');
-            return;
-          }
-
-          // Khusus Kemasan Satuan: Pruning baris kosong otomatis jika ada minimal 1 unit yang terisi
-          if (doForm.value.package_type === 'unit') {
-            const allUnits = getAllUnitsInForm();
-            const filled = allUnits.filter(it => it.serial_number && it.serial_number.trim());
-            if (filled.length === 0) {
-              triggerToast('Alokasi SN Kosong', 'Harap isi minimal 1 Serial Number unit pengiriman.', 'warn');
-              goToFormStep('allocation');
-              return;
-            }
-            doForm.value.package_count = filled.length;
-            doForm.value.total_quantity = filled.length;
-            const batchNum = Math.max(1, parseInt(doForm.value.batch_number) || 1);
-            const newCrates = buildPackagingStructure('unit', filled.length, batchNum);
-            filled.forEach((it, idx) => {
-              const sn = it.serial_number.trim().toUpperCase();
-              newCrates[idx].boxes[0].items[0].serial_number = sn;
-              newCrates[idx].crate_id = sn;
-            });
-            doForm.value.crates = newCrates;
-          }
-
-          const totalFilled = getTotalFilledSNs();
-          if (totalFilled !== doForm.value.total_quantity) {
-            triggerToast('Alokasi SN Belum Lengkap', `Baru ${totalFilled} dari ${doForm.value.total_quantity} SN yang terisi. Lengkapi seluruh slot.`, 'warn');
-            goToFormStep('allocation');
-            return;
-          }
-
-          const seen = new Set();
-          for (const it of getAllUnitsInForm()) {
-            const sn = it.serial_number.trim().toUpperCase();
-            if (seen.has(sn)) {
-              triggerToast('Duplikasi SN', `Serial Number "${sn}" terisi lebih dari satu kali.`, 'error');
-              return;
-            }
-            seen.add(sn);
-          }
-
-          if (doForm.value.package_type === 'unit') {
-            (doForm.value.crates || []).forEach(c => {
-              const sn = c.boxes?.[0]?.items?.[0]?.serial_number;
-              if (sn) c.crate_id = sn;
-            });
-          }
-
-          isSubmittingDO.value = true;
-          try {
-            const data = await fetchAPI('/delivery-orders', {
-              method: 'POST',
-              body: JSON.stringify(doForm.value)
-            });
-            if (data && (data.success || data.delivery_order || data.id)) {
-              triggerToast('Berhasil Diterbitkan', `Dokumen Surat Jalan ${data.do_number || doForm.value.do_number} berhasil dibuat!`, 'success');
-              await loadDeliveryOrders();
-              await loadAvailableFinishedSNs();
-              await loadNextDONumber();
-              await loadNextBatchNumber();
-
-              // Gabungkan data form dengan response API agar modal menampilkan info lengkap
-              lastPublishedDO.value = data.delivery_order || {
-                ...doForm.value,
-                id: data.id,
-                do_number: data.do_number || doForm.value.do_number,
-              };
-              showDOPostPublishModal.value = true;
-              doSubTab.value = 'history';
-              resetDOFormSteps();
-
-              // Otomatis unggah Packing List ke Cloudinary jika sudah dikonfigurasi
-              if (doSettings.value?.cloudinary?.configured && lastPublishedDO.value?.id) {
-                uploadDOPackingListToCloud(lastPublishedDO.value).catch(e => console.error('Auto cloud upload error:', e));
-              }
-            } else {
-              triggerToast('Gagal Menerbitkan', data?.error || 'Gagal menyimpan Delivery Order', 'error');
-            }
-          } catch (err) {
-            console.error(err);
-            triggerToast('Error', err.message || 'Gagal menyimpan dokumen pengiriman', 'error');
-          } finally {
-            isSubmittingDO.value = false;
-          }
-        };
-
-        const getCratesForPrint = computed(() => {
-          if (!activePrintDO.value) return [];
-          return activePrintDO.value.crates || [];
-        });
-
-        const getBoxesForPrint = computed(() => {
-          if (!activePrintDO.value) return [];
-          const boxes = [];
-          (activePrintDO.value.crates || []).forEach(c => {
-            (c.boxes || []).forEach(b => boxes.push(b));
-          });
-          return boxes;
-        });
-
-        const getUnitsForPrint = computed(() => {
-          if (!activePrintDO.value) return [];
-          const units = [];
-          (activePrintDO.value.crates || []).forEach(c => {
-            (c.boxes || []).forEach(b => {
-              (b.items || []).forEach(it => units.push(it));
-            });
-          });
-          return units;
-        });
-
-
-        const handleCustomerDropdownClickOutside = (e) => {
-          if (customerDropdownRef.value && !customerDropdownRef.value.contains(e.target)) {
-            isCustomerDropdownOpen.value = false;
-          }
-        };
 
         onMounted(() => {
           // Inisialisasi stack dengan tab aktif saat ini
@@ -16343,7 +10271,6 @@
           } catch (_) { }
 
           window.addEventListener('popstate', handleMobileBackNavigation);
-          document.addEventListener('click', handleCustomerDropdownClickOutside);
 
           window.addEventListener('beforeunload', (e) => {
             if (isUserFormDirty() || isTestingPointFormDirty()) {
@@ -16354,18 +10281,29 @@
           });
 
           try {
-            syncPackagingStructure();
+            if (deliveryModule && typeof deliveryModule.syncPackagingStructure === 'function') {
+              deliveryModule.syncPackagingStructure();
+            }
             syncCurrentUserPermissions();
             if (!hasTabAccess(currentTab.value, adminSubTab.value)) {
               const fallback = defaultTab.value;
               const target = hasTabAccess(fallback) ? fallback : (['assembly', 'warehouse', 'qc', 'traveler', 'returns', 'report'].find(t => hasTabAccess(t)) || 'assembly');
               currentTab.value = target;
               localStorage.setItem('activeTab', target);
-              try {
-                window.location.hash = '#' + target;
-              } catch (_) { }
             }
+            // Strip any remaining hash from the address bar for pure clean URLs
+            try {
+              if (window.location.hash && window.history && window.history.replaceState) {
+                const initClean = TAB_CLEAN_URLS[currentTab.value] || ('/' + currentTab.value);
+                window.history.replaceState({ type: 'tab', key: currentTab.value, tab: currentTab.value }, '', initClean);
+              }
+            } catch (_) { }
 
+            if (currentTab.value === 'delivery_order') {
+              if (deliveryModule && typeof deliveryModule.initDeliveryTab === 'function') {
+                deliveryModule.initDeliveryTab();
+              }
+            }
             if (currentTab.value === 'warehouse') {
               loadTrays();
               loadOperatorsList();
@@ -16394,38 +10332,9 @@
 
         onUnmounted(() => {
           window.removeEventListener('popstate', handleMobileBackNavigation);
-          document.removeEventListener('click', handleCustomerDropdownClickOutside);
         });
 
         // =========================================================
-        // PAGINATION STATE (13 menus)
-        // =========================================================
-        const pgState = Vue.reactive({
-          adminSets: { page: 1, size: 20 },
-          adminParts: { page: 1, size: 20 },
-          adminRepl: { page: 1, size: 20 },
-          auditLogs: { page: 1, size: 20 },
-          downtime: { page: 1, size: 20 },
-          testPoint: { page: 1, size: 10 },
-          users: { page: 1, size: 10 },
-          masterStock: { page: 1, size: 50 },
-          qcList: { page: 1, size: 10 },
-          gudangVerif: { page: 1, size: 10 },
-          woReport: { page: 1, size: 20 },
-          assyReport: { page: 1, size: 20 },
-          assyTestReport: { page: 1, size: 20 },
-          qcReport: { page: 1, size: 20 },
-          receiptReport: { page: 1, size: 20 },
-          warehouseReport: { page: 1, size: 20 },
-          productionHold: { page: 1, size: 15 },
-          qcTraySummary: { page: 1, size: 10 },
-          assemblyResults: { page: 1, size: 10 },
-          doHistory: { page: 1, size: 10 },
-          labelsHistory: { page: 1, size: 10 },
-          returns: { page: 1, size: 10 },
-          receiptTray: { page: 1, size: 10 },
-        });
-
         const pagedAdminSets = computed(() => { const s = pgState.adminSets; return (filteredAdminSetsOnly.value || []).slice((s.page - 1) * s.size, s.page * s.size); });
         const pagedAdminParts = computed(() => { const s = pgState.adminParts; return (filteredAdminPartsOnly.value || []).slice((s.page - 1) * s.size, s.page * s.size); });
         const pagedAdminRepl = computed(() => { const s = pgState.adminRepl; return (filteredAdminReplacements.value || []).slice((s.page - 1) * s.size, s.page * s.size); });
@@ -16434,70 +10343,16 @@
         const pagedTestPoint = computed(() => { const s = pgState.testPoint; return (filteredTestingPointsList.value || []).slice((s.page - 1) * s.size, s.page * s.size); });
         const pagedUsers = computed(() => { const s = pgState.users; return (usersList.value || []).slice((s.page - 1) * s.size, s.page * s.size); });
         const pagedMasterStock = computed(() => { const s = pgState.masterStock; return (masterStockList.value || []).slice((s.page - 1) * s.size, s.page * s.size); });
-        const pagedQCList = computed(() => { const s = pgState.qcList; return (filteredQCList.value || []).slice((s.page - 1) * s.size, s.page * s.size); });
+        // [Moved to qc.js] const pagedQCList = computed(() => { const s = pgState.qcList; return (filteredQCList.value || []).slice((s.page - 1) * s.size, s.page * s.size); });
         const pagedGudangVerif = computed(() => { const s = pgState.gudangVerif; return (gudangVerifySets.value || []).slice((s.page - 1) * s.size, s.page * s.size); });
         const pagedWOReport = computed(() => { const s = pgState.woReport; return (filteredWOReport.value || []).slice((s.page - 1) * s.size, s.page * s.size); });
         const pagedAssyReport = computed(() => { const s = pgState.assyReport; return (filteredAssemblyReport.value || []).slice((s.page - 1) * s.size, s.page * s.size); });
         const pagedAssyTestReport = computed(() => { const s = pgState.assyTestReport; return (filteredAssyTestReport.value || []).slice((s.page - 1) * s.size, s.page * s.size); });
         const pagedQCReport = computed(() => { const s = pgState.qcReport; return (filteredQCTestReport.value || []).slice((s.page - 1) * s.size, s.page * s.size); });
         const pagedWarehouseReport = computed(() => { const s = pgState.warehouseReport || pgState.receiptReport; return (filteredWarehouseReport.value || []).slice((s.page - 1) * s.size, s.page * s.size); });
-        const pagedProductionHoldList = computed(() => { const s = pgState.productionHold; return (filteredProductionHoldList.value || []).slice((s.page - 1) * s.size, s.page * s.size); });
-        const pagedQcTraySummaryList = computed(() => { const s = pgState.qcTraySummary; return (qcTraySummaryList.value || []).slice((s.page - 1) * s.size, s.page * s.size); });
-        const pagedAssemblyResults = computed(() => { const s = pgState.assemblyResults; return (flatFilteredAssemblyResults.value || []).slice((s.page - 1) * s.size, s.page * s.size); });
-        const pagedDOList = computed(() => { const s = pgState.doHistory; return (filteredDOList.value || []).slice((s.page - 1) * s.size, s.page * s.size); });
-        const filteredStandaloneLabelsList = computed(() => {
-          let list = standaloneLabelsList.value || [];
-
-          // 1. Doc / No. PL Filter
-          if (labelDocFilter.value) {
-            const target = labelDocFilter.value.trim().toLowerCase();
-            list = list.filter(l =>
-              (l.pl_number && l.pl_number.trim().toLowerCase() === target) ||
-              (l.label_batch_id && l.label_batch_id.trim().toLowerCase() === target)
-            );
-          }
-
-          // 2. Package Type Filter
-          if (labelPackageFilter.value) {
-            list = list.filter(l => (l.package_type || '').toLowerCase() === labelPackageFilter.value.toLowerCase());
-          }
-
-          // 3. Date Filter: Tanggal Dari
-          if (labelStartDate.value) {
-            list = list.filter(l => {
-              const dk = getLabelDateKey(l);
-              return !dk || dk >= labelStartDate.value;
-            });
-          }
-
-          // 4. Date Filter: Tanggal Sampai
-          if (labelEndDate.value) {
-            list = list.filter(l => {
-              const dk = getLabelDateKey(l);
-              return !dk || dk <= labelEndDate.value;
-            });
-          }
-
-          // 5. Search Text query
-          const q = (labelSearchText.value || '').trim().toLowerCase();
-          if (q) {
-            list = list.filter(l =>
-              (l.label_batch_id || '').toLowerCase().includes(q) ||
-              (l.pl_number || '').toLowerCase().includes(q) ||
-              (l.created_by || '').toLowerCase().includes(q) ||
-              (l.product_name || '').toLowerCase().includes(q) ||
-              (l.package_type || '').toLowerCase().includes(q) ||
-              (l.notes || '').toLowerCase().includes(q)
-            );
-          }
-
-          return list;
-        });
-        const pagedStandaloneLabelsList = computed(() => {
-          const s = pgState.labelsHistory;
-          return (filteredStandaloneLabelsList.value || []).slice((s.page - 1) * s.size, s.page * s.size);
-        });
-        const totalPgStandaloneLabels = computed(() => Math.max(1, Math.ceil((filteredStandaloneLabelsList.value || []).length / pgState.labelsHistory.size)));
+        // [Moved to holds.js] const pagedProductionHoldList = ...
+        // [Moved to qc.js] const pagedQcTraySummaryList = computed(() => { const s = pgState.qcTraySummary; return (qcTraySummaryList.value || []).slice((s.page - 1) * s.size, s.page * s.size); });
+        // [Moved to holds.js] const pagedAssemblyResults = ...
         const pagedReturnsList = computed(() => { const s = pgState.returns; return (filteredReturnsList.value || []).slice((s.page - 1) * s.size, s.page * s.size); });
         const pagedWarehouseReceiptTraySummaryList = computed(() => { const s = pgState.receiptTray; return (warehouseReceiptTraySummaryList.value || []).slice((s.page - 1) * s.size, s.page * s.size); });
 
@@ -16509,17 +10364,16 @@
         const totalPgTestPoint = computed(() => Math.max(1, Math.ceil((filteredTestingPointsList.value || []).length / pgState.testPoint.size)));
         const totalPgUsers = computed(() => Math.max(1, Math.ceil((usersList.value || []).length / pgState.users.size)));
         const totalPgMasterStock = computed(() => Math.max(1, Math.ceil((masterStockList.value || []).length / pgState.masterStock.size)));
-        const totalPgQCList = computed(() => Math.max(1, Math.ceil((filteredQCList.value || []).length / pgState.qcList.size)));
+        // [Moved to qc.js] const totalPgQCList = computed(() => Math.max(1, Math.ceil((filteredQCList.value || []).length / pgState.qcList.size)));
         const totalPgGudangVerif = computed(() => Math.max(1, Math.ceil((gudangVerifySets.value || []).length / pgState.gudangVerif.size)));
         const totalPgWOReport = computed(() => Math.max(1, Math.ceil((filteredWOReport.value || []).length / pgState.woReport.size)));
         const totalPgAssyReport = computed(() => Math.max(1, Math.ceil((filteredAssemblyReport.value || []).length / pgState.assyReport.size)));
         const totalPgAssyTestReport = computed(() => Math.max(1, Math.ceil((filteredAssyTestReport.value || []).length / pgState.assyTestReport.size)));
         const totalPgQCReport = computed(() => Math.max(1, Math.ceil((filteredQCTestReport.value || []).length / pgState.qcReport.size)));
         const totalPgWarehouseReport = computed(() => Math.max(1, Math.ceil((filteredWarehouseReport.value || []).length / ((pgState.warehouseReport && pgState.warehouseReport.size) || (pgState.receiptReport && pgState.receiptReport.size) || 20))));
-        const totalPgProductionHold = computed(() => Math.max(1, Math.ceil((filteredProductionHoldList.value || []).length / pgState.productionHold.size)));
-        const totalPgQcTraySummary = computed(() => Math.max(1, Math.ceil((qcTraySummaryList.value || []).length / pgState.qcTraySummary.size)));
-        const totalPgAssemblyResults = computed(() => Math.max(1, Math.ceil((flatFilteredAssemblyResults.value || []).length / pgState.assemblyResults.size)));
-        const totalPgDOList = computed(() => Math.max(1, Math.ceil((filteredDOList.value || []).length / pgState.doHistory.size)));
+        // [Moved to holds.js] const totalPgProductionHold = ...
+        // [Moved to qc.js] const totalPgQcTraySummary = computed(() => Math.max(1, Math.ceil((qcTraySummaryList.value || []).length / pgState.qcTraySummary.size)));
+        // [Moved to holds.js] const totalPgAssemblyResults = ...
         const totalPgReturns = computed(() => Math.max(1, Math.ceil((filteredReturnsList.value || []).length / pgState.returns.size)));
         const totalPgReceiptTray = computed(() => Math.max(1, Math.ceil((warehouseReceiptTraySummaryList.value || []).length / pgState.receiptTray.size)));
 
@@ -16527,13 +10381,6 @@
           if (pgState.assemblyResults) pgState.assemblyResults.page = 1;
         });
 
-        watch([doSearchText, doStartDate, doEndDate, doDocFilter], () => {
-          if (pgState.doHistory) pgState.doHistory.page = 1;
-        });
-
-        watch([labelSearchText, labelDocFilter, labelPackageFilter, labelStartDate, labelEndDate], () => {
-          if (pgState.labelsHistory) pgState.labelsHistory.page = 1;
-        });
 
         watch([() => returnsFilter.operator, () => returnsFilter.traySuffix, () => returnsFilter.status], () => {
           if (pgState.returns) pgState.returns.page = 1;
@@ -16541,12 +10388,6 @@
 
         watch([() => reportFilters?.warehouse_receipt?.searchQuery], () => {
           if (pgState.receiptTray) pgState.receiptTray.page = 1;
-        });
-
-        watch(() => doForm.value.do_date, (newVal, oldVal) => {
-          if (newVal && newVal !== oldVal) {
-            onDODateChanged();
-          }
         });
 
         
@@ -16866,7 +10707,7 @@
           showInstructionGuideModal, currentGuideTestPoint, currentGuideImages, guideCarouselIndex, nextGuideSlide, prevGuideSlide,
           isSingleRetestMode, singleRetestTestNum, singleRetestStatus, singleRetestNotes, isSubmittingSingleRetest,
           startSingleRetest, cancelSingleRetest, setSingleRetestStatus, setSingleRetestAndSubmit, submitSingleRetest, assyTotalSteps, currentActiveChecklistItem, filteredTestingPointsList, setAllAssyTestStatus, assyTestCalculatedFailures, assyTestGeneratedFailureReason, submitAssyTest, assyTestStep, chooseAssyTestStatus, prevAssyTestStep, nextAssyTestStep, assyTestTableViewMode, qcTestTableViewMode,
-          showAssySaveProgressModal, assyDraftProgress, isSlotTested, getSlotDraftProgress, handleAssyBackNavigation, confirmSaveAssyProgress,
+          showAssySaveProgressModal, assyDraftProgress, isSlotTested, isSlotTF1Hold, isSlotTF1Good, getSlotDraftProgress, handleAssyBackNavigation, confirmSaveAssyProgress,
           showEarlyEndButton, showFirstNGPromptModal, showSecondNGPromptModal, handleFirstNGChoice, confirmEndSessionEarly,
           activeAssyQCDocSlot, testedGoodSlots, countTestedGoodInTray, countTestedHoldInTray, countTestedRUInTray, countUntestedInTray, selectAndPrintAssyQC, getTestItemParamStatus,
           getTestingTrayCounts, getTestingSetProgress, getPrintDocSetCount,
@@ -16893,7 +10734,7 @@
           replaceSelections, replaceDropdownOpen, replaceSearchQueries, availableReplacePartsByType, isLoadingPartsByType,
           getFilteredPartsForType, selectReplaceSNForPart, clearReplaceSNForPart, toggleReplaceDropdown, closeAllReplaceDropdowns, totalPartsToReplace,
           openReplacePartSubModal, closeReplacePartModal, onSelectReplacePartType, submitReplacePartAction,
-            isAllProblematicPartsReplaced, getItemPendingLabel, getHoldProceedButtonLabel, getHoldProceedButtonTitle,
+            isAllProblematicPartsReplaced, getItemPendingLabel, getHoldProceedButtonLabel, getHoldProceedButtonTitle, proceedHoldItem, isFunctionalHoldItem, getStatusTextClass, getDocStatusTextClass, getQCCardClass,
           adminApproveAssyRereg, adminReregApprovedOperator, adminReregNotes,
           openReregisterForPart, openReplaceForPart,
           filteredAssemblyReport,
@@ -16911,43 +10752,18 @@
           productionHoldList, productionProductsList, selectedProductionProduct, productionSourceFilter, productionSearchQuery, productionViewMode, functionalHoldViewMode, isLoadingProductionHold,
           loadProductionProducts, loadProductionHoldItems, filteredProductionHoldList, productionHoldCounts, productionHoldCount,
           isItemInReassemblyProcess, baseProductionHoldList,
-          // DO & PL Module exports
-          cloudForm, showCloudSecret, isTestingCloud, cloudTestResult, isSavingCloudSettings,
-          isUploadingCloudPdf, isBatchSyncingCloud, batchSyncProgress,
-          uploadDOPackingListToCloud, syncAllDOsToCloud, testCloudinaryConnection, saveCloudinarySettings,
-          nkriLogoBase64, nkriLabelLogoBase64, nkriEmblemBase64, doSubTab, doTableDisplayMode, doSJCurrentPage, getSuratJalanVisibleCrates, doSettings, isSavingDOSettings, previewDOId, previewDocType, previewCrateIndex, previewDOData, isLoadingPreviewDO, previewCurrentCrate,
-          previewPackingListSheets, previewPackingListSheetIndex, previewCurrentPackingListSheet, printPackingListSheets, getSheetPLNumber, renderDOTrackingQRCode, renderSNLabelQRCode, getDOTrackingFullUrl,
-          standaloneLabelsList, isLoadingStandaloneLabels, isSavingStandaloneLabel, activeLabelCrateIndex, labelForm, lastSavedPLInfo, resetLabelForm, confirmResetLabelForm, syncLabelPackagingStructure, autoFillAvailableSNsForLabel, loadStandaloneLabels, openStandaloneLabelsHistory, saveStandaloneLabel, printStandaloneLabel, deleteStandaloneLabel,
-          getLabelFormFilledCount, getLabelFormRequiredCount, getLabelCrateFilledCount, getLabelCrateRequiredCount, isLabelFormComplete,
-          labelSearchText, labelDocFilter, labelPackageFilter, labelStartDate, labelEndDate, distinctPLLabelNumbers, resetLabelFilter, filteredStandaloneLabelsList, pagedStandaloneLabelsList, totalPgStandaloneLabels,
-          loadDOSettings, saveDOSettings, applySettingsToNewDOForm, loadDOPreviewData, openDODocumentPreview, doList, doSearchText, filteredDOList, exportDeliveryOrderExcel, customersList, filteredCustomersList,
-          doStartDate, doEndDate, doDocFilter, distinctDODocNumbers, resetDOFilter, pagedDOList, totalPgDOList,
-          isCustomerDropdownOpen, customerDropdownRef, showNewCustomerModal, newCustomerForm,
-          isSubmittingCustomer, customerSearchQuery, availableFinishedSNs, isSubmittingDO,
-          showDOPostPublishModal, lastPublishedDO, selectedDOForDetail, isLoadingDODetail, openDODetailView,
-          activeFormStep, completedSteps, openFormCards, isFormCardOpen, isStepValid, isStepCompleted,
-          canAccessStep, goToFormStep, onCardHeaderClick, toggleFormCard, setAllFormCards, resetDOFormSteps,
-          selectedConsumedPLId, selectedConsumedPL, isLoadingConsumedPL, applyConsumedPackingList, resetConsumedPackingList,
-          productTypesList, doForm, showBatchPasteModal, batchPasteRawText, batchPasteTarget,
-          showSelectCrateModal, showSelectBoxModal, selectTarget, selectCrateSearchQuery, selectBoxSearchQuery, filteredAvailablePLCratesList, filteredAvailablePLBoxesList, getAvailablePLCratesList, isPLCrateUsed, openSelectCrateModal, applySelectedCrateToDO, getAvailablePLBoxesList, isPLBoxUsed, openSelectBoxModal, applySelectedBoxToDO,
-          activePrintDO, activePrintType, activeContainerIndex, getBoxFilledCount, isBoxComplete,
-          isBoxIndexLocked, isCrateComplete, isCrateIndexLocked, getUnitBatches, getUnitBatchFilledCount,
-          isUnitBatchComplete, isUnitBatchLocked, nextContainer, prevContainer, selectContainer,
-          isDOSlotLocked, autofillSingleBox, autofillSingleCrate, autofillSingleUnitBatch,
-          selectCustomer, openNewCustomerModal, saveNewCustomer, loadCustomers, loadDeliveryOrders,
-          loadAvailableFinishedSNs, loadNextDONumber, loadNextBatchNumber, loadNextDOMeta, loadDOList, setPackageType,
-          buildPackagingStructure, syncPackagingStructure, buildCratesForQuantity, getAllBoxesInForm, getAllUnitsInForm,
-          getTotalFilledSNs, getCrateFilledCount, isSNInList, getAvailableSNsForSlot,
-          openBatchPasteModal, applyBatchPaste, addUnitToDOForm, removeUnitFromDOForm, updateUnitCountDirectly, openDODetailAndPrint, deleteDeliveryOrder,
-          submitDeliveryOrder, getCratesForPrint, getBoxesForPrint, getUnitsForPrint,
-          formatIndoDate, formatNumericDate, currentRealtimePrintDate, updateRealtimePrintDate, getDOSerialNumbers, getDOCrateCount, getDOBoxCount,
-          unitDropdown, onUnitInputFocus, onUnitInputBlur, onUnitInputChange, getFilteredUnitSuggestions, selectUnitSN, addUnitRowAutomatically, handleUnitInputKeyDown, removeUnitRowDirectly, autofillAllUnits,
+          // DO & PL Module exports (Modularized Fase 2)
+          ...assemblyModule,
+          ...deliveryModule,
+          ...tf1Module,
+          ...qcModule,
+          ...holdsModule,
           showMasterPartTrackingModal, selectedMasterPartRow, masterPartTrackingData, isLoadingMasterPartDetail, openMasterPartTrackingModal,
           pendingReassemblyList, pendingReassemblyCount, selectedReassemblyIds, selectedReassemblyOperator, isLoadingPendingReassembly, isSubmittingReassemblyDispatch, loadPendingReassembly, toggleSelectReassembly, isReassemblySelected, selectAllReassembly, clearSelectedReassembly, submitReassemblyDispatch, openReplaceForHoldItem,
           gudangTotalBadgeCount, refreshAllMenuBadges,
           syncCurrentUserPermissions,
           defaultCrateIdForNow,
-          onDODateChanged, getYearMonthFromDate, getNowWIBDateString,
+          getYearMonthFromDate, getNowWIBDateString,
           getItemStartTime, getItemFinishTime, isTravelerItemAssembled,
           cmsActiveTab, cmsLoading, cmsErrorLogs, cmsSlowQueries, cmsAnomalies, cmsScanning, cmsRepairing, cmsDoSettings,
           loadCmsPortalData, fetchCmsErrorLogs, clearCmsErrorLogs, fetchCmsSlowQueries, clearCmsSlowQueries,

@@ -27,18 +27,32 @@ class DeliveryOrderController extends Controller
     public function index(Request $request)
     {
         $q = trim($request->input('q', ''));
+        $sn = trim($request->input('sn', ''));
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
         $docFilter = $request->input('doc_number');
+        $sortOrder = strtolower($request->input('sort_order', 'desc')) === 'asc' ? 'asc' : 'desc';
 
         $query = DeliveryOrder::with('packingLists.boxes.items')
-            ->orderBy('id', 'desc');
+            ->orderBy('do_date', $sortOrder)
+            ->orderBy('id', $sortOrder);
 
         if ($q) {
             $query->where(function ($w) use ($q) {
                 $w->where('do_number', 'like', "%{$q}%")
                   ->orWhere('customer_name', 'like', "%{$q}%")
-                  ->orWhere('pl_number', 'like', "%{$q}%");
+                  ->orWhere('contract_number', 'like', "%{$q}%")
+                  ->orWhere('program_name', 'like', "%{$q}%")
+                  ->orWhere('pl_number', 'like', "%{$q}%")
+                  ->orWhereHas('packingLists.boxes.items', function ($bi) use ($q) {
+                      $bi->where('serial_number', 'like', "%{$q}%");
+                  });
+            });
+        }
+
+        if ($sn) {
+            $query->whereHas('packingLists.boxes.items', function ($bi) use ($sn) {
+                $bi->where('serial_number', 'like', "%{$sn}%");
             });
         }
 
@@ -54,6 +68,18 @@ class DeliveryOrderController extends Controller
             $query->where('do_date', '<=', $endDate);
         }
 
+        $limitParam = $request->input('limit');
+        if ($limitParam === 'all' || $request->has('all') || !$request->has('page')) {
+            $allData = $query->get();
+            return response()->json([
+                'ok' => true,
+                'total' => $allData->count(),
+                'data' => $allData,
+                'current_page' => 1,
+                'last_page' => 1,
+            ]);
+        }
+
         $items = $query->paginate(20);
 
         return response()->json([
@@ -66,27 +92,153 @@ class DeliveryOrderController extends Controller
     }
 
     /**
+     * Melacak posisi Serial Number Part 15 ke Delivery Order, Peti, Dus, dan Slot
+     */
+    public function trackSerialNumber(Request $request)
+    {
+        $sn = trim($request->input('sn', ''));
+        if (empty($sn)) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Serial Number Part 15 wajib diisi.'
+            ], 400);
+        }
+
+        // 1. Cari di tabel relasional Delivery Orders & Packing Lists
+        $item = DB::table('packing_list_items as pli')
+            ->leftJoin('packing_list_boxes as plb', 'plb.id', '=', 'pli.box_id')
+            ->leftJoin('packing_lists as pl', 'pl.id', '=', 'plb.packing_list_id')
+            ->join('delivery_orders as do', 'do.id', '=', 'pli.delivery_order_id')
+            ->where('pli.serial_number', 'like', "%{$sn}%")
+            ->select(
+                'pli.serial_number',
+                'pli.slot_number',
+                'plb.box_number',
+                'plb.box_id',
+                'pl.crate_number',
+                'pl.crate_id',
+                'pl.pl_number',
+                'do.id as do_id',
+                'do.do_number',
+                'do.do_date',
+                'do.customer_name',
+                'do.contract_number',
+                'do.program_name',
+                'do.status',
+                'do.batch_number'
+            )
+            ->first();
+
+        if ($item) {
+            $deliverySeq = 1;
+            if (preg_match('/^0*(\d+)/', $item->do_number, $m)) {
+                $deliverySeq = (int)$m[1];
+            }
+
+            return response()->json([
+                'ok' => true,
+                'found' => true,
+                'type' => 'delivery_order',
+                'data' => [
+                    'serial_number' => $item->serial_number,
+                    'slot_number' => $item->slot_number,
+                    'delivery_id' => $item->do_id,
+                    'do_number' => $item->do_number,
+                    'do_date' => $item->do_date,
+                    'delivery_seq' => $deliverySeq,
+                    'customer_name' => $item->customer_name,
+                    'contract_number' => $item->contract_number,
+                    'program_name' => $item->program_name,
+                    'crate_number' => $item->crate_number,
+                    'crate_id' => $item->crate_id,
+                    'box_number' => $item->box_number,
+                    'box_id' => $item->box_id,
+                    'pl_number' => $item->pl_number,
+                    'status' => $item->status,
+                ]
+            ]);
+        }
+
+        // 2. Jika belum ditemukan, periksa Standalone Packing Labels
+        $labels = DB::table('standalone_packing_labels')->get();
+        foreach ($labels as $lbl) {
+            $crates = json_decode($lbl->crates_json, true) ?: [];
+            foreach ($crates as $cIdx => $c) {
+                foreach ($c['boxes'] ?? [] as $bIdx => $b) {
+                    foreach ($b['items'] ?? [] as $it) {
+                        $itSn = is_array($it) ? ($it['serial_number'] ?? '') : (string)$it;
+                        if (!empty($itSn) && stripos($itSn, $sn) !== false) {
+                            return response()->json([
+                                'ok' => true,
+                                'found' => true,
+                                'type' => 'standalone_label',
+                                'data' => [
+                                    'serial_number' => $itSn,
+                                    'slot_number' => is_array($it) ? ($it['slot_number'] ?? ($bIdx + 1)) : 1,
+                                    'label_batch_id' => $lbl->label_batch_id,
+                                    'pl_number' => $lbl->pl_number,
+                                    'delivery_seq' => 1,
+                                    'crate_number' => $c['crate_number'] ?? ($cIdx + 1),
+                                    'crate_id' => $c['crate_id'] ?? '',
+                                    'box_number' => $b['box_number'] ?? ($bIdx + 1),
+                                    'box_id' => $b['box_id'] ?? '',
+                                    'customer_name' => 'Label Standalone (Gudang)',
+                                    'status' => 'Tersimpan di Label Standalone'
+                                ]
+                            ]);
+                        }
+                    }
+                }
+            }
+        }
+
+        return response()->json([
+            'ok' => true,
+            'found' => false,
+            'message' => "Serial Number '{$sn}' tidak ditemukan pada riwayat pengiriman manapun."
+        ]);
+    }
+
+    /**
      * Serial Number yang sudah Lulus TF 2 (QC) dan Siap untuk Delivery Order
      */
     public function availableSerialNumbers()
     {
-        // Ambil unit yang sudah lulus GOOD di QC (TF 2) dan belum masuk DO
-        $usedSns = PackingListItem::pluck('serial_number')->toArray();
+        // Ambil seluruh unit yang sudah digunakan di Surat Jalan (DO)
+        $usedSns = PackingListItem::pluck('serial_number')->map(fn($s) => strtoupper(trim($s)))->toArray();
 
+        // Ambil juga unit yang sudah dialokasikan ke Standalone Packing Labels
+        $standaloneLabels = DB::table('standalone_packing_labels')->pluck('crates_json');
+        foreach ($standaloneLabels as $cj) {
+            $crates = json_decode($cj, true) ?: [];
+            foreach ($crates as $c) {
+                foreach ($c['boxes'] ?? [] as $b) {
+                    foreach ($b['items'] ?? [] as $it) {
+                        $sn = is_array($it) ? ($it['serial_number'] ?? '') : (string)$it;
+                        $sn = strtoupper(trim($sn));
+                        if (!empty($sn) && !in_array($sn, $usedSns)) {
+                            $usedSns[] = $sn;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Ambil unit yang telah melewati SEMUA proses hingga Penerimaan Fisik Gudang (ACC)
         $available = DB::table('assemblies as a')
             ->join('trays as t', 'a.tray_id', '=', 't.id')
             ->join('master_stocks as m15', function ($join) {
                 $join->on('a.part15_sn', '=', 'm15.sn')
                      ->where('m15.part_type', '=', '15');
             })
+            ->where('a.status', 'Good')
+            ->where('a.assy_test_status', 'Good')
             ->where('a.qc_status', 'GOOD')
             ->where(function ($w) {
                 $w->whereNull('a.is_declined')->orWhere('a.is_declined', 0);
             })
-            ->where(function ($w) {
-                $w->whereNull('a.verified_status')->orWhere('a.verified_status', '!=', 'DECLINED');
-            })
             ->whereIn(DB::raw("UPPER(COALESCE(a.warehouse_receipt_status, ''))"), ['ACCEPTED', 'ACC'])
+            ->whereIn(DB::raw("UPPER(COALESCE(a.verified_status, ''))"), ['ACC', 'ACCEPTED'])
             ->whereNotIn('m15.status', ['Tersedia', 'Scrap', 'Part Diganti', 'Hold', 'Declined', 'Decline'])
             ->whereNotIn('a.part15_sn', $usedSns)
             ->select([
@@ -97,6 +249,7 @@ class DeliveryOrderController extends Controller
                 'a.set_number',
                 'a.qc_tested_at',
             ])
+            ->distinct()
             ->orderBy('a.part15_sn', 'asc')
             ->get();
 
@@ -133,14 +286,26 @@ class DeliveryOrderController extends Controller
         $seqStr = str_pad($seq, 3, '0', STR_PAD_LEFT);
         $nextDoNumber = "{$seqStr}{$prefix}{$month}/{$year}";
         $nextPlNumber = "{$seqStr}{$plPrefix}{$month}/{$year}";
-        $nextBatchNumber = "{$date->format('y')}{$month}-" . str_pad($seq, 3, '0', STR_PAD_LEFT);
+
+        $batchNum = (int)$request->input('batch_number', 1);
+        $batch2Digit = str_pad($batchNum, 2, '0', STR_PAD_LEFT);
+        $pp2Digit = str_pad($seq, 2, '0', STR_PAD_LEFT);
+        $yymm = $date->format('y') . $month;
+
+        // Format Standar Baru: YYMM-BB-PPDD (Peti) & YYMM-BB-PPDD-SS (Dus)
+        $cratePrefix = "{$yymm}-{$batch2Digit}-{$pp2Digit}";
+        $nextBatchNumber = "{$yymm}-" . str_pad($seq, 3, '0', STR_PAD_LEFT);
 
         return $this->successResponse([
             'next_number' => $nextDoNumber,
             'next_pl_number' => $nextPlNumber,
             'next_batch' => $nextBatchNumber,
             'sequence' => $seq,
+            'delivery_seq' => $seq,
+            'batch_number_formatted' => $batch2Digit,
             'crate_prefix' => $cratePrefix,
+            'sample_crate_id' => "{$cratePrefix}01",
+            'sample_box_id' => "{$cratePrefix}01-01",
             'crate_capacity' => $settings?->crate_capacity ?: 20,
             'box_capacity' => $settings?->box_capacity ?: 10,
             'settings' => $settings,
@@ -188,6 +353,25 @@ class DeliveryOrderController extends Controller
                                     'ok' => false,
                                     'error' => "Nomor seri {$sn} sudah pernah terdaftar pada Surat Jalan ID #{$alreadyInDo->delivery_order_id}!"
                                 ], 400);
+                            }
+
+                            // Anti-duplikasi dengan Standalone Packing Label yang tersimpan
+                            $existingLabels = DB::table('standalone_packing_labels')->pluck('crates_json', 'pl_number');
+                            foreach ($existingLabels as $plNum => $cj) {
+                                $cratesJsonArr = json_decode($cj, true) ?: [];
+                                foreach ($cratesJsonArr as $cjCrate) {
+                                    foreach ($cjCrate['boxes'] ?? [] as $cjBox) {
+                                        foreach ($cjBox['items'] ?? [] as $cjItem) {
+                                            $exSn = strtoupper(trim(is_array($cjItem) ? ($cjItem['serial_number'] ?? '') : (string)$cjItem));
+                                            if ($exSn === strtoupper($sn)) {
+                                                return response()->json([
+                                                    'ok' => false,
+                                                    'error' => "Nomor seri {$sn} sudah pernah terdaftar pada Dokumen Packing List {$plNum}!"
+                                                ], 400);
+                                            }
+                                        }
+                                    }
+                                }
                             }
 
                             // 3. Validasi kepatuhan alur: Wajib lolos QC GOOD dan telah di-ACCEPT fisik oleh Gudang
@@ -596,6 +780,90 @@ class DeliveryOrderController extends Controller
         while (DB::table('packing_lists')->where('pl_number', $plNumber)->exists() || DB::table('standalone_packing_labels')->where('pl_number', $plNumber)->exists()) {
             $plSeq++;
             $plNumber = sprintf("%03d/PL/PPIC/%s", $plSeq, $mmYyyy);
+        }
+
+        // VALIDASI KETAT: Seluruh SN wajib lolos alur proses dan tidak boleh ada duplikasi
+        $allSns = [];
+        foreach ($cratesData as $c) {
+            foreach ($c['boxes'] ?? [] as $b) {
+                foreach ($b['items'] ?? [] as $it) {
+                    $sVal = is_array($it) ? ($it['serial_number'] ?? '') : (string)$it;
+                    $sVal = strtoupper(trim($sVal));
+                    if (empty($sVal)) {
+                        return response()->json([
+                            'ok' => false,
+                            'error' => 'Seluruh slot Serial Number wajib diisi lengkap sebelum label dapat disimpan!'
+                        ], 400);
+                    }
+                    $allSns[] = $sVal;
+                }
+            }
+        }
+
+        if (empty($allSns)) {
+            return response()->json([
+                'ok' => false,
+                'error' => 'Tidak ada data Serial Number yang dikirimkan.'
+            ], 400);
+        }
+
+        // 1. Validasi Anti-Duplikasi dalam form label ini
+        $seen = [];
+        foreach ($allSns as $sn) {
+            if (isset($seen[$sn])) {
+                return response()->json([
+                    'ok' => false,
+                    'error' => "Nomor seri {$sn} terduplikasi di dalam dokumen packing list ini! Tidak boleh ada part number yang diinput dua kali."
+                ], 400);
+            }
+            $seen[$sn] = true;
+        }
+
+        // 2. Validasi Anti-Duplikasi dengan Surat Jalan (DO) yang sudah ada
+        $alreadyInDo = PackingListItem::whereIn('serial_number', $allSns)->first();
+        if ($alreadyInDo) {
+            return response()->json([
+                'ok' => false,
+                'error' => "Nomor seri {$alreadyInDo->serial_number} sudah pernah digunakan pada Surat Jalan ID #{$alreadyInDo->delivery_order_id}!"
+            ], 400);
+        }
+
+        // 3. Validasi Anti-Duplikasi dengan Standalone Packing Labels lain
+        $existingStandalone = DB::table('standalone_packing_labels')->pluck('crates_json', 'pl_number');
+        foreach ($existingStandalone as $plNum => $cj) {
+            $cratesJsonArr = json_decode($cj, true) ?: [];
+            foreach ($cratesJsonArr as $cjCrate) {
+                foreach ($cjCrate['boxes'] ?? [] as $cjBox) {
+                    foreach ($cjBox['items'] ?? [] as $cjItem) {
+                        $exSn = strtoupper(trim(is_array($cjItem) ? ($cjItem['serial_number'] ?? '') : (string)$cjItem));
+                        if (in_array($exSn, $allSns)) {
+                            return response()->json([
+                                'ok' => false,
+                                'error' => "Nomor seri {$exSn} sudah pernah digunakan pada Dokumen Packing List {$plNum}!"
+                            ], 400);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 4. Validasi Kepatuhan Alur: Wajib lolos Meja Rakit -> TF 1 -> QC -> Penerimaan Fisik Gudang (ACC)
+        foreach ($allSns as $sn) {
+            $valid = DB::table('assemblies as a')
+                ->where('a.part15_sn', $sn)
+                ->where('a.status', 'Good')
+                ->where('a.assy_test_status', 'Good')
+                ->where('a.qc_status', 'GOOD')
+                ->whereIn(DB::raw("UPPER(COALESCE(a.warehouse_receipt_status, ''))"), ['ACCEPTED', 'ACC'])
+                ->whereIn(DB::raw("UPPER(COALESCE(a.verified_status, ''))"), ['ACC', 'ACCEPTED'])
+                ->exists();
+
+            if (!$valid) {
+                return response()->json([
+                    'ok' => false,
+                    'error' => "Nomor seri {$sn} tidak sah! Unit harus telah menyelesaikan seluruh proses sampai dengan Penerimaan Fisik Gudang (ACC) dan tidak tertahan."
+                ], 400);
+            }
         }
 
         // Hitung total unit dan container

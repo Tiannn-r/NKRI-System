@@ -18,6 +18,7 @@ abstract class Controller
         return response()->json([
             'ok' => false,
             'error' => $message,
+            'message' => $message,
             'data' => $data,
         ], $code);
     }

@@ -298,7 +298,7 @@
             <template v-if="filteredQCList.length > 0">
               <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
                 <div v-for="item in pagedQCList" :key="item.assembly_id || item.id"
-                  :class="(item.qc_status === 'GOOD' || item.qc_status === 'GOOD_QC') ? 'border-emerald-200 bg-white hover:border-emerald-400 hover:shadow-emerald-100' : (isQCHoldItem(item) ? 'border-rose-200 bg-rose-50/20 hover:border-rose-300 hover:shadow-rose-100' : 'border-amber-200 bg-amber-50/20 hover:border-amber-400 hover:shadow-amber-100')"
+                  :class="getQCCardClass(item)"
                   class="border-2 rounded-2xl p-4 sm:p-5 flex flex-col justify-between space-y-4 shadow-sm hover:shadow-md transition duration-200">
 
                   <!-- Card Top Header -->
@@ -326,14 +326,14 @@
                         class="px-2.5 py-1 rounded-lg text-[10.5px] font-black uppercase tracking-wider bg-indigo-100 text-indigo-800 border border-indigo-300 flex items-center gap-1">
                         <i class="fa-solid fa-arrows-rotate text-xs"></i> RU
                       </span>
-                      <span v-else-if="item.qc_status === 'GOOD'"
-                        class="px-2.5 py-1 rounded-lg text-[10.5px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
-                        <i class="fa-solid fa-circle-check text-xs"></i> Lolos QC
-                      </span>
                       <span
-                        v-else-if="item.qc_status === 'HOLD_QC' || item.qc_status === 'HOLD' || item.qc_status === 'REWORK_QC'"
+                        v-else-if="isQCHoldItem(item) || item.qc_status === 'HOLD_QC' || item.qc_status === 'HOLD' || item.qc_status === 'REWORK_QC'"
                         class="px-2.5 py-1 rounded-lg text-[10.5px] font-black uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1">
                         <i class="fa-solid fa-triangle-exclamation text-xs"></i> Hold QC
+                      </span>
+                      <span v-else-if="item.qc_status === 'GOOD' || item.qc_status === 'GOOD_QC'"
+                        class="px-2.5 py-1 rounded-lg text-[10.5px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
+                        <i class="fa-solid fa-circle-check text-xs"></i> Lolos QC
                       </span>
                       <span v-else
                         class="px-2.5 py-1 rounded-lg text-[10.5px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1 animate-pulse">

@@ -29,13 +29,13 @@ class AdminCmsController extends Controller
     public function clearTrays(Request $request)
     {
         $admin = auth()->user()?->username ?: 'admin';
-        $res = $this->maintenanceService->clearTraysAndRestoreStock($admin);
+        $res = $this->maintenanceService->clearAllTrays($admin);
 
         if (!$res['ok']) {
             return $this->errorResponse($res['message'], 500);
         }
 
-        return $this->successResponse($res['data'], $res['message']);
+        return $this->successResponse($res['stocks_restored'] ?? $res['data'] ?? null, $res['message']);
     }
 
     /**
@@ -45,13 +45,13 @@ class AdminCmsController extends Controller
     public function clearDowntimes(Request $request)
     {
         $admin = auth()->user()?->username ?: 'admin';
-        $res = $this->maintenanceService->clearDowntimeLogs($admin);
+        $res = $this->maintenanceService->clearDowntimeAudit($admin);
 
         if (!$res['ok']) {
             return $this->errorResponse($res['message'], 500);
         }
 
-        return $this->successResponse($res['data'], $res['message']);
+        return $this->successResponse($res['deleted_count'] ?? $res['data'] ?? null, $res['message']);
     }
 
     /**
@@ -61,13 +61,13 @@ class AdminCmsController extends Controller
     public function clearAuditLogs(Request $request)
     {
         $admin = auth()->user()?->username ?: 'admin';
-        $res = $this->maintenanceService->clearAuditLogs($admin);
+        $res = $this->maintenanceService->clearOverallAudit($admin);
 
         if (!$res['ok']) {
             return $this->errorResponse($res['message'], 500);
         }
 
-        return $this->successResponse($res['data'], $res['message']);
+        return $this->successResponse($res['purged'] ?? $res['data'] ?? null, $res['message']);
     }
 
     /**
@@ -130,14 +130,92 @@ class AdminCmsController extends Controller
             'id' => 'required|integer',
         ]);
 
-        $point = TestingPoint::findOrFail($request->id);
-        $point->update([
-            'category' => $request->input('category', $point->category),
-            'instruction' => $request->input('instruction', $point->instruction),
-            'output' => $request->input('output', $point->output),
-        ]);
+        try {
+            $point = TestingPoint::findOrFail($request->id);
+            $testNum = $request->input('test_num', $point->test_num);
+            $payload = [
+                'category' => $request->input('category', $point->category),
+                'instruction' => $request->input('instruction', $point->instruction),
+                'output' => $request->input('output', $point->output),
+            ];
 
-        return $this->successResponse($point, 'Parameter uji fungsional 1 berhasil disimpan.');
+            if ($request->has('test_num')) {
+                $payload['test_num'] = $testNum;
+            }
+
+            if ($request->has('images')) {
+                $images = $request->input('images');
+                $payload['images'] = $this->processTestingPointImages($images, $testNum);
+            }
+
+            $point->update($payload);
+
+            return $this->successResponse($point, 'Parameter uji fungsional 1 berhasil disimpan.');
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error updating testing point: ' . $e->getMessage());
+            return response()->json([
+                'ok' => false,
+                'error' => 'Gagal menyimpan testing point: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Konversi foto upload base64 testing point ke physical file dan return list web URL path
+     */
+    private function processTestingPointImages($images, $testNum = 'tp')
+    {
+        if (empty($images)) {
+            return [];
+        }
+        if (is_string($images)) {
+            $decoded = json_decode($images, true);
+            $images = is_array($decoded) ? $decoded : [$images];
+        }
+        if (!is_array($images)) {
+            return [];
+        }
+
+        $processed = [];
+        $uploadDir = public_path('uploads/testing_points');
+        if (!file_exists($uploadDir)) {
+            @mkdir($uploadDir, 0755, true);
+        }
+
+        foreach ($images as $img) {
+            if (!is_string($img) || empty(trim($img))) {
+                continue;
+            }
+
+            $img = trim($img);
+
+            // Jika sudah berupa URL relatif atau absolut, pertahankan
+            if (!str_starts_with($img, 'data:image')) {
+                $processed[] = $img;
+                continue;
+            }
+
+            // Jika berupa Data URL Base64, decode dan simpan ke file
+            if (preg_match('/^data:image\/(\w+);base64,/', $img, $typeMatches)) {
+                $rawBase64 = substr($img, strpos($img, ',') + 1);
+                $ext = strtolower($typeMatches[1]);
+                if ($ext === 'jpeg') $ext = 'jpg';
+                if (!in_array($ext, ['jpg', 'png', 'webp', 'gif'])) {
+                    $ext = 'jpg';
+                }
+
+                $binary = base64_decode($rawBase64);
+                if ($binary !== false) {
+                    $filename = 'tp_' . $testNum . '_' . time() . '_' . substr(md5(uniqid()), 0, 8) . '.' . $ext;
+                    $filePath = $uploadDir . '/' . $filename;
+                    if (file_put_contents($filePath, $binary) !== false) {
+                        $processed[] = '/uploads/testing_points/' . $filename;
+                    }
+                }
+            }
+        }
+
+        return $processed;
     }
 
     public function getAuditLogs(Request $request)
@@ -163,7 +241,7 @@ class AdminCmsController extends Controller
                   ->orWhere('reason', 'LIKE', "%{$q}%");
             });
         }
-        $logs = $query->orderBy('id', 'desc')->limit(500)->get();
+        $logs = $query->orderBy('id', 'desc')->get();
         return response()->json(['ok' => true, 'data' => $logs]);
     }
 
@@ -189,8 +267,96 @@ class AdminCmsController extends Controller
 
     public function getPendingAssemblies(Request $request)
     {
-        $items = DB::table('assemblies as a')
+        // 1. Assemblies dari Perakitan, TF1, dan Pengembalian/Receipts (Declined)
+        $assyQuery = DB::table('assemblies as a')
             ->join('trays as t', 'a.tray_id', '=', 't.id')
+            ->leftJoin('users as u_assy', function ($join) {
+                $join->on('a.pic_assembly', '=', 'u_assy.username')
+                     ->orOn('a.pic_assembly', '=', 'u_assy.full_name');
+            })
+            ->leftJoin('users as u_wh', function ($join) {
+                $join->on('t.pic_warehouse', '=', 'u_wh.username')
+                     ->orOn('t.pic_warehouse', '=', 'u_wh.full_name');
+            })
+            ->leftJoin('users as u_qc', function ($join) {
+                $join->on('a.qc_tested_by', '=', 'u_qc.username')
+                     ->orOn('a.qc_tested_by', '=', 'u_qc.full_name');
+            })
+            ->select([
+                'a.*',
+                'a.id as assembly_id',
+                't.tray_code',
+                't.source_document_mo',
+                't.product_type',
+                DB::raw("COALESCE(u_assy.full_name, a.pic_assembly) as pic_assembly"),
+                DB::raw("COALESCE(u_wh.full_name, t.pic_warehouse) as pic_warehouse"),
+                DB::raw("COALESCE(u_qc.full_name, a.qc_tested_by) as pic_qc"),
+                't.created_at as tray_created_at',
+            ])
+            ->where(function ($w) {
+                // a. Unit Declined (dari Penerimaan Fisik Gudang / Receipts)
+                $w->where(function ($dec) {
+                    $dec->where('a.is_declined', true)
+                        ->orWhere('a.status', 'Decline')
+                        ->orWhere('a.verified_status', 'DECLINED')
+                        ->orWhere('a.warehouse_receipt_status', 'DECLINED');
+                })
+                // b. Unit yang diajukan untuk Verifikasi / Perakitan Ulang oleh Operator
+                ->orWhereIn('a.verified_status', ['PENDING_ADMIN', 'PENDING_ADMIN_ASSY_REREG', 'PENDING_ADMIN_TF1', 'PENDING_ADMIN_PROCEED_TF1', 'PENDING_ADMIN_PROCEED_QC'])
+                ->orWhere('a.is_reregistered', true);
+            })
+            ->where(function ($w) {
+                $w->whereNull('a.verified_status')
+                  ->orWhereNotIn('a.verified_status', ['ACC', 'APPROVED', 'APPROVED_QC', 'APPROVED_REREG', 'RESOLVED_RESTORED', 'APPROVED_REASSEMBLY', 'COMPLETED_PU', 'APPROVED_PROCEED_TF1', 'APPROVED_PROCEED_TF2', 'REJECTED_PROCEED']);
+            })
+            ->where(function ($w) {
+                $w->whereNull('a.warehouse_receipt_status')
+                  ->orWhere('a.warehouse_receipt_status', '!=', 'ACCEPTED');
+            })
+            ->orderBy('a.id', 'desc')
+            ->get()
+            ->map(function ($row) {
+                $isDec = (bool)$row->is_declined ||
+                         strtoupper((string)$row->verified_status) === 'DECLINED' ||
+                         strtoupper((string)$row->status) === 'DECLINE' ||
+                         strtoupper((string)$row->warehouse_receipt_status) === 'DECLINED';
+
+                $isProceedTF1 = $row->verified_status === 'PENDING_ADMIN_PROCEED_TF1' ||
+                                (str_contains((string)$row->notes, 'Test Functional 1') && !str_contains((string)$row->notes, 'Disetujui'));
+                $isProceedQC = $row->verified_status === 'PENDING_ADMIN_PROCEED_QC' ||
+                                (str_contains((string)$row->notes, 'Test Functional 2') && !str_contains((string)$row->notes, 'Disetujui'));
+
+                if ($isDec) {
+                    $row->stage = 'DECLINED';
+                    $row->process_stage = 'declined';
+                    $row->request_type = 'DECLINED';
+                } elseif ($isProceedTF1) {
+                    $row->stage = 'PERAKITAN';
+                    $row->process_stage = 'perakitan';
+                    $row->request_type = 'PROCEED_TF1';
+                } elseif ($isProceedQC) {
+                    $row->stage = 'TF1';
+                    $row->process_stage = 'test_functional_1';
+                    $row->request_type = 'PROCEED_QC';
+                } elseif (in_array(strtoupper((string)$row->assy_test_status), ['HOLD TF 1', 'HOLD', 'NOT GOOD', 'FAIL', 'REWORK']) || !empty($row->assy_failure_reasons)) {
+                    $row->stage = 'TF1';
+                    $row->process_stage = 'test_functional_1';
+                    $row->request_type = 'TF1_HOLD';
+                } else {
+                    $row->stage = 'PERAKITAN';
+                    $row->process_stage = 'perakitan';
+                    $row->request_type = ($row->is_reregistered || $row->verified_status === 'PENDING_ADMIN_ASSY_REREG') ? 'REREGISTER_ASSY' : 'PERAKITAN_HOLD';
+                }
+                return $row;
+            });
+
+        // 2. Assemblies dari QC yang bermasalah / PENDING_ADMIN_QC
+        $qcQuery = DB::table('assemblies as a')
+            ->join('trays as t', 'a.tray_id', '=', 't.id')
+            ->leftJoin('users as u_qc', function ($join) {
+                $join->on('a.qc_tested_by', '=', 'u_qc.username')
+                     ->orOn('a.qc_tested_by', '=', 'u_qc.full_name');
+            })
             ->leftJoin('users as u_assy', function ($join) {
                 $join->on('a.pic_assembly', '=', 'u_assy.username')
                      ->orOn('a.pic_assembly', '=', 'u_assy.full_name');
@@ -205,21 +371,71 @@ class AdminCmsController extends Controller
                 't.tray_code',
                 't.source_document_mo',
                 't.product_type',
+                DB::raw("COALESCE(u_qc.full_name, a.qc_tested_by) as pic_qc"),
                 DB::raw("COALESCE(u_assy.full_name, a.pic_assembly) as pic_assembly"),
                 DB::raw("COALESCE(u_wh.full_name, t.pic_warehouse) as pic_warehouse"),
-                't.created_at as tray_created_at'
+                't.created_at as tray_created_at',
+                DB::raw("'QC' as stage"),
+                DB::raw("'qc' as process_stage"),
             ])
             ->where(function ($w) {
-                $w->where('a.verified_status', 'PENDING_ADMIN_ASSY_REREG')
-                  ->orWhere('a.status', 'Hold')
-                  ->orWhere('a.status', 'Rework')
-                  ->orWhere('a.status', 'Scrap')
-                  ->orWhere('a.qc_status', 'HOLD_QC');
+                $w->where('a.verified_status', 'PENDING_ADMIN_QC')
+                  ->orWhere(function ($sub) {
+                      $sub->where('a.is_reregistered', true)
+                          ->whereIn('a.qc_status', ['HOLD_QC', 'REWORK_QC', 'HOLD']);
+                  });
+            })
+            ->where(function ($w) {
+                $w->where('a.is_declined', false)
+                  ->orWhereNull('a.is_declined');
+            })
+            ->where(function ($w) {
+                $w->whereNull('a.status')
+                  ->orWhere('a.status', '!=', 'Decline');
+            })
+            ->where(function ($w) {
+                $w->whereNull('a.verified_status')
+                  ->orWhereNotIn('a.verified_status', ['HOLD_QC_GUDANG', 'REWORK_QC_GUDANG', 'APPROVED_QC', 'ACC', 'APPROVED', 'REJECTED', 'PENDING_REPLACEMENT', 'RESOLVED_RESTORED', 'APPROVED_REASSEMBLY', 'COMPLETED_PU', 'APPROVED_PROCEED_TF1', 'APPROVED_PROCEED_TF2', 'REJECTED_PROCEED']);
             })
             ->orderBy('a.id', 'desc')
             ->get();
 
-        return response()->json(['ok' => true, 'data' => $items]);
+        // Ambil status riil SN dari master_stocks untuk seluruh part
+        $allRows = $assyQuery->concat($qcQuery);
+        $snList = [];
+        foreach ($allRows as $r) {
+            if (!empty($r->part15_sn) && $r->part15_sn !== '-') $snList[] = $r->part15_sn;
+            if (!empty($r->part1_sn) && $r->part1_sn !== '-') $snList[] = $r->part1_sn;
+            if (!empty($r->part12_sn) && $r->part12_sn !== '-') $snList[] = $r->part12_sn;
+        }
+        $stockStatuses = [];
+        if (!empty($snList)) {
+            $stockStatuses = DB::table('master_stocks')
+                ->whereIn('sn', array_unique($snList))
+                ->pluck('status', 'sn')
+                ->all();
+        }
+
+        $enrich = function ($row) use ($stockStatuses) {
+            $isDec = (bool)($row->is_declined ?? false) ||
+                     strtoupper((string)($row->verified_status ?? '')) === 'DECLINED' ||
+                     strtoupper((string)($row->status ?? '')) === 'DECLINE' ||
+                     strtoupper((string)($row->warehouse_receipt_status ?? '')) === 'DECLINED';
+
+            $row->p15_status = $stockStatuses[$row->part15_sn] ?? ($isDec ? 'Declined' : 'Allocated');
+            $row->p1_status = $stockStatuses[$row->part1_sn] ?? ($isDec ? 'Declined' : 'Allocated');
+            $row->p12_status = $stockStatuses[$row->part12_sn] ?? ($isDec ? 'Declined' : 'Allocated');
+            return $row;
+        };
+
+        $assyQuery = $assyQuery->map($enrich);
+        $qcQuery = $qcQuery->map($enrich);
+
+        return response()->json([
+            'ok' => true,
+            'data' => $assyQuery,
+            'qc_data' => $qcQuery,
+        ]);
     }
 
     public function getPendingReplacements(Request $request)
@@ -396,7 +612,7 @@ class AdminCmsController extends Controller
                                     'allocated_at' => null,
                                     'used_at' => null,
                                     'last_tray_id' => null,
-                                    'is_replaced_from_assy' => 1,
+                                    'is_replaced_from_assy' => ($targetOldStatus === 'Tersedia' ? 0 : 1),
                                     'last_reason' => 'Diganti part baru: ' . $replRecord->reason,
                                 ]);
 
@@ -431,7 +647,15 @@ class AdminCmsController extends Controller
                     ]);
             }
 
-            $assembly->verified_status = 'WAITING_REASSEMBLY';
+            $isFunctionalOrigin = in_array($assembly->assy_test_status, ['Hold TF 1', 'Hold', 'Not Good', 'FAIL'])
+                || in_array($assembly->qc_status, ['HOLD_QC', 'REWORK_QC', 'HOLD']);
+
+            if ($isFunctionalOrigin) {
+                $assembly->verified_status = 'APPROVED_REASSEMBLY';
+            } else {
+                $assembly->verified_status = 'WAITING_REASSEMBLY';
+            }
+            $assembly->status = 'Dirakit Ulang';
             $assembly->is_declined = false;
             $assembly->save();
 
@@ -459,16 +683,60 @@ class AdminCmsController extends Controller
         } else {
             $reqQuery->where('assembly_id', $assemblyId)->where('status', 'PENDING');
         }
-        $reqQuery->update([
-            'status' => 'REJECTED',
-            'admin_notes' => $notes,
-            'admin_username' => $admin,
-            'verified_at' => now(),
-            'updated_at' => now(),
-        ]);
+        $replRecord = $reqQuery->first();
 
-        if ($assemblyId) {
-            Assembly::where('id', $assemblyId)->update(['verified_status' => null]);
+        // Lepaskan part baru yang sempat di-reserve (Pending Verif Admin) kembali ke Tersedia dan sterilkan relasinya
+        if ($replRecord) {
+            $details = json_decode($replRecord->replacements_json ?: '[]', true);
+            foreach ((array)$details as $d) {
+                if (!is_array($d)) continue;
+                $pType = (string)($d['part_type'] ?? '');
+                $newSn = trim((string)($d['new_sn'] ?? ''));
+                if ($newSn) {
+                    MasterStock::where('part_type', $pType)
+                        ->where(function ($w) use ($newSn) {
+                            $w->where('sn', $newSn)
+                              ->orWhere(DB::raw("REPLACE(sn, '.', '')"), str_replace('.', '', $newSn));
+                        })
+                        ->where('status', 'Pending Verif Admin')
+                        ->update([
+                            'status' => 'Tersedia',
+                            'allocated_tray_id' => null,
+                            'allocated_at' => null,
+                            'used_at' => null,
+                            'last_tray_id' => null,
+                            'last_operator' => null,
+                            'last_reason' => 'Pengajuan pergantian part ditolak Admin: ' . $notes,
+                            'updated_at' => now(),
+                        ]);
+
+                    PartAuditLog::create([
+                        'part_type' => $pType,
+                        'sn' => $newSn,
+                        'old_status' => 'Pending Verif Admin',
+                        'new_status' => 'Tersedia',
+                        'action_type' => 'REPLACEMENT_REJECTED_RELEASE',
+                        'actor_username' => $admin,
+                        'actor_role' => 'admin',
+                        'reason' => 'Pengajuan pergantian part ditolak Admin, part baru dikembalikan ke Tersedia tanpa ikatan baki',
+                    ]);
+                }
+            }
+        }
+
+        DB::table('part_replacement_requests')
+            ->where('id', $replRecord ? $replRecord->id : $replId)
+            ->update([
+                'status' => 'REJECTED',
+                'admin_notes' => $notes,
+                'admin_username' => $admin,
+                'verified_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+        $targetAssyId = $assemblyId ?: $replRecord?->assembly_id;
+        if ($targetAssyId) {
+            Assembly::where('id', $targetAssyId)->update(['verified_status' => null]);
         }
 
         return response()->json([
@@ -507,7 +775,7 @@ class AdminCmsController extends Controller
                 'verified_status' => 'WAITING_REASSEMBLY',
                 'status' => 'Dirakit Ulang',
                 'rereg_pending_operator' => $approvedOperator ?: $assembly->pic_assembly,
-                'is_reregistered' => 1,
+                'is_reregistered' => 0,
                 'notes' => $notes ?: 'Disetujui Admin untuk Perakitan Ulang',
             ]);
 
@@ -559,6 +827,114 @@ class AdminCmsController extends Controller
     }
 
     /**
+     * Persetujuan Admin untuk Permohonan Lanjut Tahap Proses (Perakitan -> TF1, TF1 -> TF2, QC -> Gudang)
+     * Endpoint: POST /api/admin/approve-proceed
+     */
+    public function approveProceed(Request $request)
+    {
+        $assemblyId = $request->input('assembly_id');
+        $action = strtoupper($request->input('action', 'APPROVE'));
+        $notes = $request->input('notes', '');
+        $admin = auth()->user()?->username ?: 'admin';
+
+        $assembly = Assembly::findOrFail($assemblyId);
+
+        if ($action === 'APPROVE') {
+            $isQC = in_array(strtoupper($assembly->qc_status ?? ''), ['HOLD_QC', 'HOLD', 'HOLD TF 2', 'REWORK_QC']) ||
+                $assembly->verified_status === 'PENDING_ADMIN_QC' ||
+                str_contains($assembly->notes ?? '', 'Penerimaan');
+
+            $isTF1 = !$isQC && (
+                $assembly->verified_status === 'PENDING_ADMIN_PROCEED_QC' ||
+                str_contains($assembly->notes ?? '', 'Test Functional 2') ||
+                in_array($assembly->assy_test_status, ['Hold', 'Rework', 'Hold TF 1', 'Not Good', 'FAIL']) ||
+                in_array($assembly->qc_status, ['HOLD_ASSY', 'REWORK_ASSY']) ||
+                !empty($assembly->assy_failure_reasons)
+            );
+
+            if ($isQC) {
+                // QC -> Penerimaan Fisik Gudang
+                $targetName = 'Penerimaan Fisik Gudang';
+                $qcDocNumber = $assembly->qc_doc_number;
+                if (!$qcDocNumber) {
+                    $tray = Tray::find($assembly->tray_id);
+                    $docSeq = ($tray && preg_match('/(\d+)$/', $tray->tray_code, $m)) ? str_pad($m[1], 6, '0', STR_PAD_LEFT) : str_pad($assembly->tray_id, 6, '0', STR_PAD_LEFT);
+                    $qcDocNumber = "WH/QC/{$docSeq}";
+                }
+                $assembly->update([
+                    'status' => 'Good',
+                    'qc_status' => 'GOOD',
+                    'verified_status' => 'APPROVED_QC',
+                    'qc_failure_reasons' => null,
+                    'qc_tested_at' => $assembly->qc_tested_at ?: now(),
+                    'qc_tested_by' => $assembly->qc_tested_by ?: $admin,
+                    'qc_doc_number' => $qcDocNumber,
+                    'warehouse_receipt_status' => 'PENDING',
+                    'notes' => $notes ?: 'Disetujui Admin untuk lanjut ke Penerimaan Gudang',
+                ]);
+            } elseif ($isTF1) {
+                // TF 1 -> QC (TF 2)
+                $targetName = 'Test Functional 2 (QC)';
+                $assembly->update([
+                    'status' => 'Good',
+                    'assy_test_status' => 'Good',
+                    'qc_status' => 'PENDING_QC',
+                    'verified_status' => 'APPROVED_PROCEED_TF2',
+                    'notes' => $notes ?: 'Disetujui Admin untuk lanjut ke Test Functional 2 (QC)',
+                ]);
+            } else {
+                // Perakitan -> TF 1
+                $targetName = 'Test Functional 1 (TF 1)';
+                $assembly->update([
+                    'status' => 'Good',
+                    'assy_test_status' => 'PENDING',
+                    'verified_status' => 'APPROVED_PROCEED_TF1',
+                    'notes' => $notes ?: 'Disetujui Admin untuk lanjut ke Test Functional 1 (TF 1)',
+                ]);
+            }
+
+            PartAuditLog::create([
+                'part_type' => 'SET',
+                'sn' => $assembly->part15_sn ?: ("Set #" . $assembly->set_number),
+                'old_status' => $assembly->verified_status,
+                'new_status' => 'APPROVED_PROCEED',
+                'action_type' => 'ADMIN_APPROVE_PROCEED',
+                'actor_username' => $admin,
+                'actor_role' => 'admin',
+                'reason' => "Admin menyetujui permohonan Set #{$assembly->set_number} untuk lanjut ke {$targetName}. {$notes}",
+            ]);
+
+            return response()->json([
+                'ok' => true,
+                'message' => "Permohonan Set #{$assembly->set_number} untuk lanjut ke {$targetName} berhasil disetujui Admin!"
+            ]);
+        } else {
+            // Tolak permohonan: Kembalikan status ke Hold tanpa pending
+            $assembly->update([
+                'verified_status' => 'REJECTED_PROCEED',
+                'notes' => $notes ?: 'Permohonan lanjut proses berikutnya ditolak Admin.',
+            ]);
+
+            PartAuditLog::create([
+                'part_type' => 'SET',
+                'sn' => $assembly->part15_sn ?: ("Set #" . $assembly->set_number),
+                'old_status' => 'PENDING_ADMIN_PROCEED',
+                'new_status' => 'REJECTED_PROCEED',
+                'action_type' => 'ADMIN_REJECT_PROCEED',
+                'actor_username' => $admin,
+                'actor_role' => 'admin',
+                'reason' => "Admin menolak permohonan Set #{$assembly->set_number} untuk lanjut ke proses selanjutnya. {$notes}",
+            ]);
+
+            return response()->json([
+                'ok' => true,
+                'message' => "Permohonan lanjut proses untuk Set #{$assembly->set_number} telah ditolak."
+            ]);
+        }
+    }
+
+
+    /**
      * Setujui / Tolak Permohonan Pendaftaran Ulang Part (Admin)
      * Endpoint: POST /api/admin/approve-re-register
      */
@@ -567,6 +943,9 @@ class AdminCmsController extends Controller
         $requestId = $request->input('request_id');
         $action = strtoupper($request->input('action', 'APPROVE'));
         $targetStatus = $request->input('target_status', 'Tersedia');
+        if (strtolower($targetStatus) === 'rework') {
+            $targetStatus = 'Hold';
+        }
         $notes = $request->input('notes', '');
         $admin = auth()->user()?->username ?: 'admin';
 
@@ -625,6 +1004,30 @@ class AdminCmsController extends Controller
                     'updated_at' => now(),
                 ]);
 
+                $revertStatus = ($req->current_status && $req->current_status !== 'Pending Verif Admin') ? $req->current_status : 'Hold';
+
+                MasterStock::where('part_type', $req->part_type)
+                    ->where(function ($w) use ($req) {
+                        $w->where('sn', $req->sn)
+                          ->orWhere(DB::raw("REPLACE(sn, '.', '')"), str_replace('.', '', $req->sn));
+                    })
+                    ->update([
+                        'status' => $revertStatus,
+                        'last_reason' => $notes ?: 'Pendaftaran ulang ditolak oleh Admin',
+                        'updated_at' => now(),
+                    ]);
+
+                PartAuditLog::create([
+                    'part_type' => $req->part_type,
+                    'sn' => $req->sn,
+                    'old_status' => 'Pending Verif Admin',
+                    'new_status' => $revertStatus,
+                    'action_type' => 'ADMIN_REJECT_RE_REGISTER',
+                    'actor_username' => $admin,
+                    'actor_role' => 'admin',
+                    'reason' => $notes ?: 'Pendaftaran ulang part ditolak oleh Admin',
+                ]);
+
                 return response()->json([
                     'ok' => true,
                     'message' => 'Permohonan pendaftaran ulang berhasil ditolak.'
@@ -642,14 +1045,18 @@ class AdminCmsController extends Controller
         $partType = (string)$request->input('part_type', '');
         $sn = trim((string)$request->input('sn', ''));
         $targetStatus = $request->input('target_status', 'Tersedia');
+        if (strtolower($targetStatus) === 'rework') {
+            $targetStatus = 'Hold';
+        }
         $notes = $request->input('notes', 'Verifikasi fisik langsung Admin');
         $admin = auth()->user()?->username ?: 'admin';
+        $assemblyId = (int)$request->input('assembly_id');
 
         if (!$sn) {
             return response()->json(['ok' => false, 'error' => 'SN part wajib diisi.'], 400);
         }
 
-        return DB::transaction(function () use ($partType, $sn, $targetStatus, $notes, $admin) {
+        return DB::transaction(function () use ($partType, $sn, $targetStatus, $notes, $admin, $assemblyId) {
             $stock = MasterStock::where('part_type', $partType)
                 ->where(function ($w) use ($sn) {
                     $w->where('sn', $sn)
@@ -681,9 +1088,32 @@ class AdminCmsController extends Controller
                 ]);
             }
 
+            // Jika assembly_id disertakan, periksa apakah seluruh part dalam rakitan kini sudah Tersedia
+            $allRestored = false;
+            if ($assemblyId > 0) {
+                $assy = Assembly::find($assemblyId);
+                if ($assy) {
+                    $partSNs = array_filter([$assy->part15_sn, $assy->part1_sn, $assy->part12_sn], fn($s) => !empty($s) && $s !== '-');
+                    if (!empty($partSNs)) {
+                        $nonAvailableCount = MasterStock::whereIn('sn', $partSNs)
+                            ->where('status', '!=', 'Tersedia')
+                            ->count();
+                        if ($nonAvailableCount === 0) {
+                            $assy->update([
+                                'verified_status' => 'RESOLVED_RESTORED',
+                                'is_declined' => false,
+                                'declined_reason' => $notes,
+                            ]);
+                            $allRestored = true;
+                        }
+                    }
+                }
+            }
+
             return response()->json([
                 'ok' => true,
-                'message' => "Part {$partType} ({$sn}) berhasil dipulihkan menjadi {$targetStatus}!"
+                'message' => "Part {$partType} ({$sn}) berhasil dipulihkan menjadi {$targetStatus}!" . ($allRestored ? " Seluruh part pada set ini telah tuntas dipulihkan." : ""),
+                'all_restored' => $allRestored
             ]);
         });
     }
@@ -740,11 +1170,17 @@ class AdminCmsController extends Controller
         ]);
 
         $maxNum = TestingPoint::max('test_num') ?? 0;
+        $testNum = $request->filled('test_num') ? (int)$request->input('test_num') : ($maxNum + 1);
+
+        $images = $request->input('images', []);
+        $processedImages = $this->processTestingPointImages($images, $testNum);
+
         $point = TestingPoint::create([
-            'test_num' => $maxNum + 1,
+            'test_num' => $testNum,
             'category' => $data['category'],
             'instruction' => $data['instruction'],
             'output' => $data['output'],
+            'images' => $processedImages,
         ]);
 
         return response()->json([
@@ -774,6 +1210,36 @@ class AdminCmsController extends Controller
      * Pulihkan Set yang Ditolak/Decline (Barang Hilang/Tidak Ditemukan) Kembali ke Tersedia
      * Endpoint: POST /api/admin/approve-declined-set-restore
      */
+    /**
+     * Kunci Set yang Seluruh Partnya Telah Selesai Diverifikasi
+     * Endpoint: POST /api/admin/lock-verified-set
+     */
+    public function lockVerifiedSet(Request $request)
+    {
+        $assemblyId = (int)$request->input('assembly_id');
+        $notes = $request->input('notes') ?: 'Seluruh part selesai diverifikasi oleh Admin & set dikunci';
+
+        if (!$assemblyId) {
+            return response()->json(['ok' => false, 'error' => 'assembly_id wajib disertakan.'], 400);
+        }
+
+        $assy = Assembly::find($assemblyId);
+        if (!$assy) {
+            return response()->json(['ok' => false, 'error' => 'Assembly tidak ditemukan.'], 404);
+        }
+
+        $assy->update([
+            'verified_status' => 'RESOLVED_RESTORED',
+            'is_declined' => false,
+            'declined_reason' => $notes,
+        ]);
+
+        return response()->json([
+            'ok' => true,
+            'message' => "Set #{$assy->set_number} berhasil dikunci dan selesai diverifikasi."
+        ]);
+    }
+
     public function approveDeclinedSetRestore(Request $request)
     {
         $assemblyId = (int)$request->input('assembly_id');
@@ -786,7 +1252,10 @@ class AdminCmsController extends Controller
             foreach (['15' => $assembly->part15_sn, '1' => $assembly->part1_sn, '12' => $assembly->part12_sn] as $pType => $sn) {
                 if ($sn && $sn !== '-') {
                     MasterStock::where('part_type', $pType)
-                        ->where('sn', $sn)
+                        ->where(function ($w) use ($sn) {
+                            $w->where('sn', $sn)
+                              ->orWhere(DB::raw("REPLACE(sn, '.', '')"), str_replace('.', '', $sn));
+                        })
                         ->update([
                             'status' => 'Tersedia',
                             'allocated_tray_id' => null,
@@ -923,4 +1392,3 @@ class AdminCmsController extends Controller
         ], 400);
     }
 }
-

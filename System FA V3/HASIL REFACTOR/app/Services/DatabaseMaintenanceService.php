@@ -15,13 +15,19 @@ class DatabaseMaintenanceService
      */
     public function clearAllTrays(string $actorUsername = 'admin'): array
     {
-        return DB::transaction(function () use ($actorUsername) {
+        try {
             // Disable foreign key checks for safe truncation
             DB::statement('SET FOREIGN_KEY_CHECKS=0;');
             
             DB::table('assemblies')->truncate();
             DB::table('parts')->truncate();
             DB::table('trays')->truncate();
+            if (Schema::hasTable('assembly_tests')) {
+                DB::table('assembly_tests')->truncate();
+            }
+            if (Schema::hasTable('assembly_wo_history')) {
+                DB::table('assembly_wo_history')->truncate();
+            }
             
             // Kembalikan seluruh 18.000 master_stocks ke status 'Tersedia'
             $affected = DB::table('master_stocks')->update([
@@ -35,27 +41,35 @@ class DatabaseMaintenanceService
                 'is_replaced_from_assy' => 0,
                 'updated_at' => now(),
             ]);
-
+        } finally {
             DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        }
 
-            // Rekam audit trail
-            PartAuditLog::create([
-                'part_type' => 'ALL',
-                'sn' => 'ALL_TRAYS',
-                'old_status' => 'Mixed',
-                'new_status' => 'Tersedia',
-                'action_type' => 'RESET_ALL_TRAYS',
-                'actor_username' => $actorUsername,
-                'actor_role' => 'admin',
-                'reason' => 'Pembersihan database seluruh tray via CMS Admin',
-            ]);
+        // Rekam audit trail
+        PartAuditLog::create([
+            'part_type' => 'ALL',
+            'sn' => 'ALL_TRAYS',
+            'old_status' => 'Mixed',
+            'new_status' => 'Tersedia',
+            'action_type' => 'RESET_ALL_TRAYS',
+            'actor_username' => $actorUsername,
+            'actor_role' => 'admin',
+            'reason' => 'Pembersihan database seluruh tray via CMS Admin',
+        ]);
 
-            return [
-                'ok' => true,
-                'message' => 'Seluruh data Tray, Parts, dan Assemblies telah dibersihkan.',
-                'stocks_restored' => $affected,
-            ];
-        });
+        return [
+            'ok' => true,
+            'message' => 'Seluruh data Tray, Parts, dan Assemblies telah dibersihkan.',
+            'stocks_restored' => $affected,
+        ];
+    }
+
+    /**
+     * Alias method for clearAllTrays
+     */
+    public function clearTraysAndRestoreStock(string $actorUsername = 'admin'): array
+    {
+        return $this->clearAllTrays($actorUsername);
     }
 
     /**
@@ -83,6 +97,14 @@ class DatabaseMaintenanceService
             'message' => "Berhasil membersihkan {$count} data audit downtime operator.",
             'deleted_count' => $count,
         ];
+    }
+
+    /**
+     * Alias method for clearDowntimeAudit
+     */
+    public function clearDowntimeLogs(string $actorUsername = 'admin'): array
+    {
+        return $this->clearDowntimeAudit($actorUsername);
     }
 
     /**
@@ -125,5 +147,13 @@ class DatabaseMaintenanceService
                 'part_replacement_requests' => $replCount,
             ]
         ];
+    }
+
+    /**
+     * Alias method for clearOverallAudit
+     */
+    public function clearAuditLogs(string $actorUsername = 'admin'): array
+    {
+        return $this->clearOverallAudit($actorUsername);
     }
 }

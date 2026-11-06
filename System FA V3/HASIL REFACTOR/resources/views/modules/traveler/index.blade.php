@@ -56,12 +56,12 @@
 
               <!-- Print Button: Text is simply 'Cetak' with icon (Terkunci jika TF 2 / QC atau Penerimaan Gudang belum selesai, atau dokumen PU belum ada) -->
               <button @click="triggerPrint"
-                :disabled="(activePrintDocType === 'wh_qc' && !isCurrentTravelerQCDone) || (activePrintDocType === 'wh_gr' && !isCurrentTravelerWHQCVerified) || (activePrintDocType === 'assy_rework' && (!travelerTray || !isPUTray(travelerTray))) || filteredPrintTrays.length === 0 || !selectedTrayCode"
-                :class="((activePrintDocType === 'wh_qc' && !isCurrentTravelerQCDone) || (activePrintDocType === 'wh_gr' && !isCurrentTravelerWHQCVerified) || (activePrintDocType === 'assy_rework' && (!travelerTray || !isPUTray(travelerTray))) || filteredPrintTrays.length === 0 || !selectedTrayCode) ? 'opacity-40 cursor-not-allowed bg-slate-400 text-white shadow-none' : 'bg-red-600 hover:bg-red-700 text-white shadow-md shadow-red-600/25 active:scale-95 cursor-pointer'"
+                :disabled="(activePrintDocType === 'wh_qc' && (!isCurrentTravelerQCDone || whQCQualifiedItems.length === 0)) || (activePrintDocType === 'wh_gr' && (!isCurrentTravelerWHQCVerified || whGRQualifiedItems.length === 0)) || (activePrintDocType === 'assy_qc' && assyQCQualifiedItems.length === 0) || (activePrintDocType === 'assy_rework' && (!travelerTray || !isPUTray(travelerTray))) || filteredPrintTrays.length === 0 || !selectedTrayCode"
+                :class="((activePrintDocType === 'wh_qc' && (!isCurrentTravelerQCDone || whQCQualifiedItems.length === 0)) || (activePrintDocType === 'wh_gr' && (!isCurrentTravelerWHQCVerified || whGRQualifiedItems.length === 0)) || (activePrintDocType === 'assy_qc' && assyQCQualifiedItems.length === 0) || (activePrintDocType === 'assy_rework' && (!travelerTray || !isPUTray(travelerTray))) || filteredPrintTrays.length === 0 || !selectedTrayCode) ? 'opacity-40 cursor-not-allowed bg-slate-400 text-white shadow-none' : 'bg-red-600 hover:bg-red-700 text-white shadow-md shadow-red-600/25 active:scale-95 cursor-pointer'"
                 class="px-5 py-2 rounded-xl font-bold text-xs flex items-center justify-center space-x-1.5 min-h-[38px] transition"
-                :title="(activePrintDocType === 'wh_qc' && !isCurrentTravelerQCDone) ? 'Dokumen belum bisa dicetak sebelum Test Functional 2 (QC) selesai' : ((activePrintDocType === 'wh_gr' && !isCurrentTravelerWHQCVerified) ? 'Dokumen belum bisa dicetak sebelum seluruh unit diverifikasi fisik (ACC) oleh Gudang' : ((activePrintDocType === 'assy_rework' && (!travelerTray || !isPUTray(travelerTray))) ? 'Dokumen belum tersedia karena belum ada perakitan ulang yang ditugaskan ke operator' : 'Cetak Dokumen ke Kertas'))">
+                :title="(activePrintDocType === 'wh_qc' && (!isCurrentTravelerQCDone || whQCQualifiedItems.length === 0)) ? 'Dokumen belum bisa dicetak sebelum Test Functional 2 (QC) selesai' : ((activePrintDocType === 'wh_gr' && (!isCurrentTravelerWHQCVerified || whGRQualifiedItems.length === 0)) ? 'Dokumen belum bisa dicetak sebelum seluruh unit diverifikasi fisik (ACC) oleh Gudang' : ((activePrintDocType === 'assy_qc' && assyQCQualifiedItems.length === 0) ? 'Dokumen belum bisa dicetak karena rakitan pada tray ini belum melalui pengujian fungsional (TF 1)' : ((activePrintDocType === 'assy_rework' && (!travelerTray || !isPUTray(travelerTray))) ? 'Dokumen belum tersedia karena belum ada perakitan ulang yang ditugaskan ke operator' : 'Cetak Dokumen ke Kertas')))">
                 <i
-                  :class="((activePrintDocType === 'wh_qc' && !isCurrentTravelerQCDone) || (activePrintDocType === 'wh_gr' && !isCurrentTravelerWHQCVerified) || (activePrintDocType === 'assy_rework' && (!travelerTray || !isPUTray(travelerTray))) || filteredPrintTrays.length === 0 || !selectedTrayCode) ? 'fa-solid fa-lock text-[11px]' : 'fa-solid fa-print'"></i>
+                  :class="((activePrintDocType === 'wh_qc' && (!isCurrentTravelerQCDone || whQCQualifiedItems.length === 0)) || (activePrintDocType === 'wh_gr' && (!isCurrentTravelerWHQCVerified || whGRQualifiedItems.length === 0)) || (activePrintDocType === 'assy_qc' && assyQCQualifiedItems.length === 0) || (activePrintDocType === 'assy_rework' && (!travelerTray || !isPUTray(travelerTray))) || filteredPrintTrays.length === 0 || !selectedTrayCode) ? 'fa-solid fa-lock text-[11px]' : 'fa-solid fa-print'"></i>
                 <span>Cetak</span>
               </button>
             </div>
@@ -142,7 +142,20 @@
 
             <!-- ================= 1. FORM DOC SUPPLY (WH/WO) ================= -->
             <template v-if="activePrintDocType === 'supply'">
-              <div class="print-doc-wrapper flex flex-col justify-between flex-grow h-full w-full">
+              <!-- Empty state: jika dokumen supply belum ada / tray belum dipilih -->
+              <div
+                v-if="!travelerTray || filteredPrintTrays.length === 0"
+                class="print-doc-wrapper flex flex-col justify-center items-center flex-grow h-full w-full py-20 px-8 text-center bg-slate-50/70 rounded-2xl border-2 border-dashed border-slate-300 my-auto min-h-[420px]">
+                <div
+                  class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-4 shadow-inner">
+                  <i class="fa-solid fa-file-circle-xmark text-3xl"></i>
+                </div>
+                <h3 class="text-base font-black text-slate-800 tracking-wide">Dokumen Supply Material Belum Tersedia</h3>
+                <p class="text-xs text-slate-500 font-medium mt-1.5 max-w-md leading-relaxed">
+                  Belum ada dokumen perintah supply material (WH/WO) yang dipilih atau sesuai dengan filter pencarian saat ini.
+                </p>
+              </div>
+              <div v-else class="print-doc-wrapper flex flex-col justify-between flex-grow h-full w-full">
                 <!-- Top Section: Header + Meta + Table -->
                 <div class="print-top-section space-y-3">
                   <!-- Top Title Bar with Logo & Document Number -->
@@ -240,36 +253,36 @@
 
                 <!-- Signatures (Pinned to the bottom with spacious vertical gap) -->
                 <div
-                  class="print-footer-signatures grid grid-cols-2 gap-8 pt-4 border-t-2 border-slate-900 text-xs font-sans text-center mt-auto">
+                  class="print-footer-signatures grid grid-cols-2 gap-8 pt-6 sm:pt-7 border-t-2 border-black text-xs font-sans text-center mt-auto">
                   <div class="flex flex-col justify-between items-center text-center">
-                    <span class="block text-slate-800 font-bold text-[10px] sm:text-[10.5px] tracking-wider">Diserahkan
+                    <span class="block text-black font-bold text-[10px] sm:text-[10.5px] tracking-wider">Diserahkan
                       Oleh (Gudang):</span>
                     <div class="h-14 sm:h-16 flex items-center justify-center">
                       <!-- Area Ruang Tanda Tangan Fisik / Stempel -->
                     </div>
                     <div>
-                      <div class="font-bold underline text-slate-900 text-sm tracking-wide leading-tight">
+                      <div class="font-bold underline text-black text-sm tracking-wide leading-tight">
                         {{ travelerTray ? getOperatorFullName(travelerTray.pic_warehouse) : '........................'
                         }}
                       </div>
-                      <div class="text-[10px] sm:text-[10.5px] text-slate-600 font-medium mt-1">Petugas Gudang Supply
+                      <div class="text-[10px] sm:text-[10.5px] text-black font-medium mt-1">Petugas Gudang Supply
                       </div>
                     </div>
                   </div>
 
                   <div class="flex flex-col justify-between items-center text-center">
-                    <span class="block text-slate-800 font-bold text-[10px] sm:text-[10.5px] tracking-wider">Diterima
+                    <span class="block text-black font-bold text-[10px] sm:text-[10.5px] tracking-wider">Diterima
                       Oleh (Perakitan):</span>
                     <div class="h-14 sm:h-16 flex items-center justify-center">
                       <!-- Area Ruang Tanda Tangan Fisik / Stempel -->
                     </div>
                     <div>
-                      <div class="font-bold underline text-slate-900 text-sm tracking-wide leading-tight">
+                      <div class="font-bold underline text-black text-sm tracking-wide leading-tight">
                         {{ travelerAssyOperator ? getOperatorFullName(travelerAssyOperator) : (travelerTray &&
                         travelerTray.assigned_operator ? getOperatorFullName(travelerTray.assigned_operator) :
                         '........................') }}
                       </div>
-                      <div class="text-[10px] sm:text-[10.5px] text-slate-600 font-medium mt-1">Operator Final Assembly
+                      <div class="text-[10px] sm:text-[10.5px] text-black font-medium mt-1">Operator Final Assembly
                       </div>
                     </div>
                   </div>
@@ -291,6 +304,19 @@
                 </h3>
                 <p class="text-xs text-slate-500 font-medium mt-1.5 max-w-md leading-relaxed">
                   Belum ada dokumen perakitan ulang (-PU) yang dibuat atau sesuai dengan filter pencarian saat ini.
+                </p>
+              </div>
+              <!-- Empty state: jika dokumen perakitan normal belum ada / belum dipilih -->
+              <div
+                v-else-if="activePrintDocType === 'assy' && (!travelerTray || filteredPrintTrays.length === 0)"
+                class="print-doc-wrapper flex flex-col justify-center items-center flex-grow h-full w-full py-20 px-8 text-center bg-slate-50/70 rounded-2xl border-2 border-dashed border-slate-300 my-auto min-h-[420px]">
+                <div
+                  class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-4 shadow-inner">
+                  <i class="fa-solid fa-file-circle-xmark text-3xl"></i>
+                </div>
+                <h3 class="text-base font-black text-slate-800 tracking-wide">Dokumen Hasil Perakitan Belum Tersedia</h3>
+                <p class="text-xs text-slate-500 font-medium mt-1.5 max-w-md leading-relaxed">
+                  Belum ada data perakitan pada tray yang dipilih atau sesuai dengan filter pencarian saat ini.
                 </p>
               </div>
               <div v-else class="print-doc-wrapper flex flex-col justify-between flex-grow h-full w-full">
@@ -400,9 +426,9 @@
                           </td>
                           <td class="p-1.5 text-center font-sans">
                             <span v-if="getTravelerItemActualStatus(item) && getTravelerItemActualStatus(item) !== '-'"
-                              :class="getStatusBadgeClass(getTravelerItemActualStatus(item))"
-                              class="px-1.5 py-0.5 rounded font-bold text-[9px] border inline-block uppercase whitespace-nowrap">
-                              {{ getTravelerItemActualStatus(item) }}
+                              :class="getDocStatusTextClass(getTravelerItemActualStatus(item))"
+                              class="font-black text-[9.5px] uppercase tracking-wide inline-block whitespace-nowrap">
+                              {{ formatDocStatus(getTravelerItemActualStatus(item)) }}
                             </span>
                             <span v-else class="text-slate-400 font-mono text-xs font-bold">-</span>
                           </td>
@@ -418,35 +444,35 @@
 
                 <!-- Signatures (Pinned to the bottom with spacious vertical gap - Diserahkan Oleh Gudang & Dirakit Oleh Perakitan) -->
                 <div
-                  class="print-footer-signatures grid grid-cols-2 gap-8 pt-4 border-t-2 border-slate-900 text-xs font-sans text-center mt-auto">
+                  class="print-footer-signatures grid grid-cols-2 gap-8 pt-6 sm:pt-7 border-t-2 border-black text-xs font-sans text-center mt-auto">
                   <div class="flex flex-col justify-between items-center text-center">
-                    <span class="block text-slate-800 font-bold text-[10px] sm:text-[10.5px] tracking-wider">Diserahkan
+                    <span class="block text-black font-bold text-[10px] sm:text-[10.5px] tracking-wider">Diserahkan
                       Oleh (Gudang):</span>
                     <div class="h-14 sm:h-16 flex items-center justify-center">
                       <!-- Area Ruang Tanda Tangan Fisik / Stempel -->
                     </div>
                     <div>
-                      <div class="font-bold underline text-slate-900 text-sm tracking-wide leading-tight">
+                      <div class="font-bold underline text-black text-sm tracking-wide leading-tight">
                         {{ travelerTray ? getOperatorFullName(travelerTray.pic_warehouse) : '........................'
                         }}
                       </div>
-                      <div class="text-[10px] sm:text-[10.5px] text-slate-600 font-medium mt-1">Petugas Gudang Supply
+                      <div class="text-[10px] sm:text-[10.5px] text-black font-medium mt-1">Petugas Gudang Supply
                       </div>
                     </div>
                   </div>
 
                   <div class="flex flex-col justify-between items-center text-center">
-                    <span class="block text-slate-800 font-bold text-[10px] sm:text-[10.5px] tracking-wider">Dirakit
+                    <span class="block text-black font-bold text-[10px] sm:text-[10.5px] tracking-wider">Dirakit
                       Oleh (Perakitan):</span>
                     <div class="h-14 sm:h-16 flex items-center justify-center">
                       <!-- Area Ruang Tanda Tangan Fisik / Stempel -->
                     </div>
                     <div>
-                      <div class="font-bold underline text-slate-900 text-sm tracking-wide leading-tight">
+                      <div class="font-bold underline text-black text-sm tracking-wide leading-tight">
                         {{ travelerAssyOperator ? getOperatorFullName(travelerAssyOperator) : '........................'
                         }}
                       </div>
-                      <div class="text-[10px] sm:text-[10.5px] text-slate-600 font-medium mt-1">Operator Final Assembly
+                      <div class="text-[10px] sm:text-[10.5px] text-black font-medium mt-1">Operator Final Assembly
                       </div>
                     </div>
                   </div>
@@ -456,7 +482,20 @@
 
             <!-- ================= 3. FORM DOC UJI FUNGSIONAL ASSY (Assy/QC) ================= -->
             <template v-else-if="activePrintDocType === 'assy_qc'">
-              <div class="print-doc-wrapper flex flex-col justify-between flex-grow h-full w-full">
+              <!-- Empty state: jika dokumen hasil uji fungsional belum ada / belum diuji TF 1 -->
+              <div
+                v-if="!travelerTray || filteredPrintTrays.length === 0 || assyQCQualifiedItems.length === 0"
+                class="print-doc-wrapper flex flex-col justify-center items-center flex-grow h-full w-full py-20 px-8 text-center bg-slate-50/70 rounded-2xl border-2 border-dashed border-slate-300 my-auto min-h-[420px]">
+                <div
+                  class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-4 shadow-inner">
+                  <i class="fa-solid fa-file-circle-xmark text-3xl"></i>
+                </div>
+                <h3 class="text-base font-black text-slate-800 tracking-wide">Laporan Hasil Uji Fungsional Belum Tersedia</h3>
+                <p class="text-xs text-slate-500 font-medium mt-1.5 max-w-md leading-relaxed">
+                  Rakitan pada tray ini belum melalui pengujian fungsional assembly (TF 1). Laporan hanya dapat diterbitkan setelah pengujian dilakukan oleh operator tester.
+                </p>
+              </div>
+              <div v-else class="print-doc-wrapper flex flex-col justify-between flex-grow h-full w-full">
                 <!-- Top Section: Header + Meta + Table -->
                 <div class="print-top-section space-y-3">
                   <!-- Top Title Bar with Logo & Document Number -->
@@ -561,10 +600,10 @@
                           <td class="p-1 text-center text-slate-800 break-all text-[9px] leading-tight">{{
                             item.part12_sn || '-' }}</td>
                           <td class="p-1 text-center font-sans">
-                            <!-- Status Aktual Riwayat Pengujian Assembly -->
-                            <span :class="getStatusHistoryBadgeClass(item.assy_status_history, item.status)"
-                              class="px-1.5 py-0.5 rounded font-black text-[8.5px] border uppercase inline-block leading-tight shadow-2xs whitespace-nowrap">
-                              {{ formatLifecycleHistory(item.assy_status_history, item.status) }}
+                            <!-- Status Aktual Pengujian Assembly (TF 1) -->
+                            <span :class="getDocStatusTextClass(getAssyTestItemActualStatus(item))"
+                              class="font-black text-[9.5px] uppercase tracking-wide inline-block leading-tight whitespace-nowrap">
+                              {{ formatDocStatus(getAssyTestItemActualStatus(item)) }}
                             </span>
                           </td>
                           <td class="p-0.5 font-sans">
@@ -606,36 +645,36 @@
 
                 <!-- Signatures (2 Blok Tanda Tangan: Diserahkan Oleh Gudang & Dirakit/Diuji Oleh Perakitan) -->
                 <div
-                  class="print-footer-signatures grid grid-cols-2 gap-8 pt-4 border-t-2 border-slate-900 text-xs font-sans text-center mt-auto">
+                  class="print-footer-signatures grid grid-cols-2 gap-8 pt-6 sm:pt-7 border-t-2 border-black text-xs font-sans text-center mt-auto">
                   <div class="flex flex-col justify-between items-center text-center">
-                    <span class="block text-slate-800 font-bold text-[10px] sm:text-[10.5px] tracking-wider">Diserahkan
+                    <span class="block text-black font-bold text-[10px] sm:text-[10.5px] tracking-wider">Diserahkan
                       Oleh (Gudang):</span>
                     <div class="h-14 sm:h-16 flex items-center justify-center">
                       <!-- Area Ruang Tanda Tangan Fisik / Stempel -->
                     </div>
                     <div>
-                      <div class="font-bold underline text-slate-900 text-sm tracking-wide leading-tight">
+                      <div class="font-bold underline text-black text-sm tracking-wide leading-tight">
                         {{ travelerTray ? getOperatorFullName(travelerTray.pic_warehouse) : '........................'
                         }}
                       </div>
-                      <div class="text-[10px] sm:text-[10.5px] text-slate-600 font-medium mt-1">Petugas Gudang Supply
+                      <div class="text-[10px] sm:text-[10.5px] text-black font-medium mt-1">Petugas Gudang Supply
                       </div>
                     </div>
                   </div>
 
                   <div class="flex flex-col justify-between items-center text-center">
-                    <span class="block text-slate-800 font-bold text-[10px] sm:text-[10.5px] tracking-wider">Dirakit
+                    <span class="block text-black font-bold text-[10px] sm:text-[10.5px] tracking-wider">Dirakit
                       &amp; Diuji Oleh (Perakitan):</span>
                     <div class="h-14 sm:h-16 flex items-center justify-center">
                       <!-- Area Ruang Tanda Tangan Fisik / Stempel -->
                     </div>
                     <div>
-                      <div class="font-bold underline text-slate-900 text-sm tracking-wide leading-tight">
+                      <div class="font-bold underline text-black text-sm tracking-wide leading-tight">
                         {{ activeAssyQCDocSlot && activeAssyQCDocSlot.assy_tester_fullname ?
                         activeAssyQCDocSlot.assy_tester_fullname : (travelerAssyOperator ?
                         getOperatorFullName(travelerAssyOperator) : '........................') }}
                       </div>
-                      <div class="text-[10px] sm:text-[10.5px] text-slate-600 font-medium mt-1">Operator Final Assembly
+                      <div class="text-[10px] sm:text-[10.5px] text-black font-medium mt-1">Operator Final Assembly
                         &amp; Tester</div>
                     </div>
                   </div>
@@ -645,7 +684,20 @@
 
             <!-- ================= 4. DOKUMEN MUTU QC (WH/QC) ================= -->
             <template v-if="activePrintDocType === 'wh_qc'">
-              <div class="print-doc-wrapper flex flex-col justify-between flex-grow h-full w-full">
+              <!-- Empty state: jika dokumen mutu QC belum ada / belum lulus uji QC -->
+              <div
+                v-if="!travelerTray || filteredPrintTrays.length === 0 || whQCQualifiedItems.length === 0 || !isCurrentTravelerQCDone"
+                class="print-doc-wrapper flex flex-col justify-center items-center flex-grow h-full w-full py-20 px-8 text-center bg-slate-50/70 rounded-2xl border-2 border-dashed border-slate-300 my-auto min-h-[420px]">
+                <div
+                  class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-4 shadow-inner">
+                  <i class="fa-solid fa-file-circle-xmark text-3xl"></i>
+                </div>
+                <h3 class="text-base font-black text-slate-800 tracking-wide">Laporan Dokumen Mutu (WH/QC) Belum Tersedia</h3>
+                <p class="text-xs text-slate-500 font-medium mt-1.5 max-w-md leading-relaxed">
+                  Rakitan pada tray ini belum menyelesaikan tahapan Uji Perakitan dan Pengujian QC. Dokumen resmi serah terima mutu baru dapat diterbitkan setelah seluruh rakitan lulus uji perakitan dan selesai diverifikasi oleh Inspector QC.
+                </p>
+              </div>
+              <div v-else class="print-doc-wrapper flex flex-col justify-between flex-grow h-full w-full">
                 <!-- Top Section: Header + Meta + Table -->
                 <div class="print-top-section space-y-3">
                   <!-- Top Title Bar with Logo & Document Number -->
@@ -741,16 +793,15 @@
                           </td>
                           <td class="p-1.5 text-center font-sans">
                             <!-- Status Testing Assy di Dokumen QC selalu GOOD karena hanya unit lulus yang masuk QC -->
-                            <span
-                              class="px-1.5 py-0.5 rounded font-black text-[8.5px] border uppercase inline-block leading-tight shadow-2xs whitespace-nowrap bg-emerald-50 text-emerald-800 border-emerald-300">
+                            <span class="font-black text-[9.5px] uppercase tracking-wide inline-block leading-tight text-emerald-700 whitespace-nowrap">
                               GOOD
                             </span>
                           </td>
                           <td class="p-1.5 text-center font-sans">
                             <!-- Status Riwayat Pengujian yang terjadi di tahap QC (TF 2) -->
-                            <span :class="getStatusHistoryBadgeClass(item.qc_status_history, item.qc_status)"
-                              class="px-1.5 py-0.5 rounded font-black text-[8.5px] border uppercase inline-block leading-tight shadow-2xs whitespace-nowrap">
-                              {{ formatLifecycleHistory(item.qc_status_history, item.qc_status || 'Good') }}
+                            <span :class="getDocStatusTextClass(item.qc_status || 'Good')"
+                              class="font-black text-[9.5px] uppercase tracking-wide inline-block leading-tight whitespace-nowrap">
+                              {{ formatDocStatus(item.qc_status || 'Good') }}
                             </span>
                           </td>
                         </tr>
@@ -774,18 +825,18 @@
 
                 <!-- Signatures: QC Inspector only (Warehouse Receiver moved to Receipts doc) -->
                 <div
-                  class="print-footer-signatures flex justify-center pt-4 border-t-2 border-slate-900 text-xs font-sans text-center mt-auto">
+                  class="print-footer-signatures flex justify-center pt-6 sm:pt-7 border-t-2 border-black text-xs font-sans text-center mt-auto">
                   <div class="flex flex-col justify-between items-center text-center min-w-[220px]">
-                    <span class="block text-slate-800 font-bold text-[10px] sm:text-[10.5px] tracking-wider">Diperiksa
+                    <span class="block text-black font-bold text-[10px] sm:text-[10.5px] tracking-wider">Diperiksa
                       &amp; Disetujui (Quality Control):</span>
                     <div class="h-14 sm:h-16 flex items-center justify-center">
                       <!-- Area Ruang Tanda Tangan Fisik / Stempel -->
                     </div>
                     <div>
-                      <div class="font-bold underline text-slate-900 text-sm tracking-wide leading-tight">
+                      <div class="font-bold underline text-black text-sm tracking-wide leading-tight">
                         {{ getInspectorQC(whQCQualifiedItems) || '........................' }}
                       </div>
-                      <div class="text-[10px] sm:text-[10.5px] text-slate-600 font-medium mt-1">Inspector Quality
+                      <div class="text-[10px] sm:text-[10.5px] text-black font-medium mt-1">Inspector Quality
                         Control (QC)</div>
                     </div>
                   </div>
@@ -795,7 +846,20 @@
 
             <!-- ================= 5. DOKUMEN PENERIMAAN GUDANG (WH/GR) ================= -->
             <template v-else-if="activePrintDocType === 'wh_gr'">
-              <div class="print-doc-wrapper flex flex-col justify-between flex-grow h-full w-full">
+              <!-- Empty state: jika dokumen penerimaan gudang belum ada / belum diverifikasi gudang -->
+              <div
+                v-if="!travelerTray || filteredPrintTrays.length === 0 || whGRQualifiedItems.length === 0 || !isCurrentTravelerWHQCVerified"
+                class="print-doc-wrapper flex flex-col justify-center items-center flex-grow h-full w-full py-20 px-8 text-center bg-slate-50/70 rounded-2xl border-2 border-dashed border-slate-300 my-auto min-h-[420px]">
+                <div
+                  class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-4 shadow-inner">
+                  <i class="fa-solid fa-file-circle-xmark text-3xl"></i>
+                </div>
+                <h3 class="text-base font-black text-slate-800 tracking-wide">Laporan Penerimaan Gudang (WH/GR) Belum Tersedia</h3>
+                <p class="text-xs text-slate-500 font-medium mt-1.5 max-w-md leading-relaxed">
+                  Rakitan pada tray ini belum diverifikasi secara fisik oleh Petugas Gudang di tab Receipts. Dokumen bukti penerimaan barang jadi akan otomatis tersedia setelah verifikasi selesai.
+                </p>
+              </div>
+              <div v-else class="print-doc-wrapper flex flex-col justify-between flex-grow h-full w-full">
                 <!-- Top Section: Header + Meta + Table -->
                 <div class="print-top-section space-y-3">
                   <!-- Top Title Bar with Logo & Document Number -->
@@ -893,24 +957,23 @@
                           <td class="p-1.5 text-center text-slate-800 break-all text-[10px]">{{ item.part12_sn || '-' }}
                           </td>
                           <td class="p-1.5 text-center font-sans">
-                            <span
-                              :class="item.qc_status === 'GOOD' ? 'bg-emerald-100 text-emerald-900 border-emerald-300' : 'bg-amber-100 text-amber-900 border-amber-300'"
-                              class="px-1.5 py-0.5 rounded font-black text-[8.5px] border uppercase inline-block leading-none">
-                              {{ item.qc_status || 'PENDING' }}
+                            <span :class="getDocStatusTextClass(item.qc_status || 'PENDING')"
+                              class="font-black text-[9.5px] uppercase tracking-wide inline-block leading-none whitespace-nowrap">
+                              {{ formatDocStatus(item.qc_status || 'PENDING') }}
                             </span>
                           </td>
                           <td class="p-1.5 text-center font-sans">
                             <span
                               v-if="item.warehouse_receipt_status === 'ACCEPTED' || item.warehouse_receipt_status === 'ACC'"
-                              class="px-1.5 py-0.5 rounded font-black text-[8.5px] border uppercase inline-block leading-none bg-emerald-100 text-emerald-900 border-emerald-300">
-                              <i class="fa-solid fa-check text-[7.5px] mr-0.5"></i> ACC
+                              class="font-black text-[9.5px] uppercase tracking-wide inline-block leading-none text-emerald-700 whitespace-nowrap">
+                              <i class="fa-solid fa-check text-[8px] mr-0.5"></i> ACC
                             </span>
                             <span v-else-if="item.warehouse_receipt_status === 'DECLINED'"
-                              class="px-1.5 py-0.5 rounded font-black text-[8.5px] border uppercase inline-block leading-none bg-rose-100 text-rose-900 border-rose-300">
+                              class="font-black text-[9.5px] uppercase tracking-wide inline-block leading-none text-rose-600 whitespace-nowrap">
                               DECLINED
                             </span>
                             <span v-else
-                              class="px-1.5 py-0.5 rounded font-black text-[8.5px] border uppercase inline-block leading-none bg-amber-100 text-amber-900 border-amber-300">
+                              class="font-black text-[9px] uppercase tracking-wide inline-block leading-none text-amber-600 whitespace-nowrap">
                               MENUNGGU VERIFIKASI FISIK GUDANG
                             </span>
                           </td>
@@ -933,37 +996,37 @@
 
                 <!-- Signatures: Serah Terima Fisik (Diserahkan oleh QC, Diterima oleh Petugas Gudang) -->
                 <div
-                  class="print-footer-signatures flex justify-between pt-4 border-t-2 border-slate-900 text-xs font-sans text-center mt-auto">
+                  class="print-footer-signatures flex justify-between pt-6 sm:pt-7 border-t-2 border-black text-xs font-sans text-center mt-auto">
                   <div class="flex flex-col justify-between items-center text-center min-w-[200px]">
-                    <span class="block text-slate-800 font-bold text-[10px] sm:text-[10.5px] tracking-wider">Diserahkan
+                    <span class="block text-black font-bold text-[10px] sm:text-[10.5px] tracking-wider">Diserahkan
                       Oleh (Quality Control):</span>
                     <div class="h-14 sm:h-16 flex items-center justify-center">
                       <!-- Area Ruang Tanda Tangan Fisik / Stempel -->
                     </div>
                     <div>
-                      <div class="font-bold underline text-slate-900 text-sm tracking-wide leading-tight">
+                      <div class="font-bold underline text-black text-sm tracking-wide leading-tight">
                         {{ getInspectorQC(whGRQualifiedItems) || getInspectorQC(whQCQualifiedItems) ||
                         '........................' }}
                       </div>
-                      <div class="text-[10px] sm:text-[10.5px] text-slate-600 font-medium mt-1">Inspector Quality
+                      <div class="text-[10px] sm:text-[10.5px] text-black font-medium mt-1">Inspector Quality
                         Control (QC)</div>
                     </div>
                   </div>
 
                   <div class="flex flex-col justify-between items-center text-center min-w-[200px]">
-                    <span class="block text-slate-800 font-bold text-[10px] sm:text-[10.5px] tracking-wider">Diterima
+                    <span class="block text-black font-bold text-[10px] sm:text-[10.5px] tracking-wider">Diterima
                       &amp; Diverifikasi Oleh:</span>
                     <div class="h-14 sm:h-16 flex items-center justify-center">
                       <!-- Area Ruang Tanda Tangan Fisik / Stempel -->
                     </div>
                     <div>
-                      <div class="font-bold underline text-slate-900 text-sm tracking-wide leading-tight">
+                      <div class="font-bold underline text-black text-sm tracking-wide leading-tight">
                         {{ getOperatorFullName(whGRQualifiedItems.find(i =>
                         i.warehouse_receipt_by)?.warehouse_receipt_by_name || whGRQualifiedItems.find(i =>
                         i.warehouse_receipt_by)?.warehouse_receipt_by) || getOperatorFullName(travelerTray ?
                         travelerTray.pic_warehouse : '') || '........................' }}
                       </div>
-                      <div class="text-[10px] sm:text-[10.5px] text-slate-600 font-medium mt-1">Petugas Gudang
+                      <div class="text-[10px] sm:text-[10.5px] text-black font-medium mt-1">Petugas Gudang
                         (Warehouse)</div>
                     </div>
                   </div>

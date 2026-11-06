@@ -12553,12 +12553,12 @@
 
           <!-- Search & Filter Bar -->
           <div class="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-xs space-y-3.5">
-            <!-- Filter Grid: Search, Doc DO, Tanggal Mulai, Tanggal Selesai -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <!-- Search query -->
-              <div>
+            <!-- Filter Grid: Search, Lacak SN, Doc DO, Urutan, Tanggal Mulai, Tanggal Selesai -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+              <!-- Search query umum -->
+              <div class="lg:col-span-2">
                 <label class="block text-[10px] font-bold text-slate-500 mb-1">
-                  <i class="fa-solid fa-magnifying-glass mr-1"></i> Cari Data:
+                  <i class="fa-solid fa-magnifying-glass mr-1"></i> Cari Data DO:
                 </label>
                 <div class="relative">
                   <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-xs"></i>
@@ -12567,18 +12567,54 @@
                 </div>
               </div>
 
+              <!-- Lacak Serial Number Part 15 Langsung -->
+              <div class="lg:col-span-2">
+                <label class="block text-[10px] font-bold text-emerald-700 mb-1 flex items-center justify-between">
+                  <span><i class="fa-solid fa-barcode mr-1 text-emerald-600"></i> Lacak SN Part 15 (Tracking):</span>
+                  <span class="text-[9px] text-slate-400 font-normal">Tekan Enter / Klik Lacak</span>
+                </label>
+                <div class="flex items-center gap-1.5">
+                  <div class="relative flex-1">
+                    <i class="fa-solid fa-crosshairs absolute left-3 top-3 text-emerald-500 text-xs"></i>
+                    <input type="text" v-model="doSearchSN" @keyup.enter="trackSerialNumberDirect"
+                      placeholder="Input SN (FA-2610-001 / P9...)"
+                      class="w-full bg-emerald-50/50 border border-emerald-300 focus:border-emerald-600 focus:bg-white rounded-xl pl-8 pr-3 py-2 text-xs font-bold font-mono text-emerald-950 uppercase transition min-h-[38px]">
+                  </div>
+                  <button type="button" @click="trackSerialNumberDirect" :disabled="isTrackingSN || !doSearchSN.trim()"
+                    class="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 min-h-[38px] shadow-xs cursor-pointer whitespace-nowrap">
+                    <i class="fa-solid fa-magnifying-glass-location text-xs" :class="{'fa-spin': isTrackingSN}"></i>
+                    <span>Lacak</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Filter Urutan Tanggal -->
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 mb-1">
+                  <i class="fa-solid fa-arrow-down-up-across-line mr-1 text-indigo-600"></i> Urutan Tanggal:
+                </label>
+                <select v-model="doSortOrder"
+                  class="w-full bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-indigo-600 min-h-[38px] cursor-pointer">
+                  <option value="desc">Terbaru (Paling Atas) ▼</option>
+                  <option value="asc">Terlama (Paling Atas) ▲</option>
+                </select>
+              </div>
+
               <!-- Filter Dokumen DO / Surat Jalan -->
               <div>
                 <label class="block text-[10px] font-bold text-slate-500 mb-1">
                   <i class="fa-solid fa-file-invoice mr-1 text-red-600"></i> Filter Doc DO:
                 </label>
                 <select v-model="doDocFilter"
-                  class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-red-600 min-h-[38px] cursor-pointer">
+                  class="w-full bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-red-600 min-h-[38px] cursor-pointer">
                   <option value="">Semua Dokumen DO</option>
                   <option v-for="doc in distinctDODocNumbers" :key="doc" :value="doc">{{ doc }}</option>
                 </select>
               </div>
+            </div>
 
+            <!-- Baris Tambahan: Tanggal Dari & Sampai -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-slate-100">
               <!-- Filter Tanggal Dari -->
               <div>
                 <label class="block text-[10px] font-bold text-slate-500 mb-1">
@@ -12640,6 +12676,98 @@
             </div>
           </div>
 
+          <!-- KARTU HASIL PELACAKAN SERIAL NUMBER (TRACKING RESULT CARD) -->
+          <div v-if="snTrackingResult" class="bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 border-2 border-emerald-500/80 rounded-2xl p-4 sm:p-5 shadow-md animate-fadeIn relative space-y-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black shadow-md shadow-emerald-600/30 text-lg">
+                  <i class="fa-solid fa-box-check"></i>
+                </div>
+                <div>
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-600 text-white shadow-xs">
+                      HASIL PELACAKAN SERIAL NUMBER
+                    </span>
+                    <span class="text-sm font-mono font-black text-emerald-950 bg-white px-2.5 py-0.5 rounded-md border border-emerald-300">
+                      {{ snTrackingResult.serial_number }}
+                    </span>
+                  </div>
+                  <p class="text-xs text-slate-600 font-medium mt-0.5">
+                    Unit teridentifikasi pada database logistik pengiriman pabrik.
+                  </p>
+                </div>
+              </div>
+              <button type="button" @click="snTrackingResult = null" title="Tutup Hasil Pelacakan"
+                class="text-slate-400 hover:text-slate-600 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/80 transition cursor-pointer">
+                <i class="fa-solid fa-xmark text-sm"></i>
+              </button>
+            </div>
+
+            <!-- Grid 4 Kolom: Pengiriman Ke, Peti Ke, Dus Ke, Slot -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+              <div class="bg-white/95 backdrop-blur-xs border border-emerald-200 rounded-xl p-3 shadow-2xs">
+                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                  <i class="fa-solid fa-truck-fast text-emerald-600"></i> Pengiriman Ke:
+                </div>
+                <div class="text-lg font-black text-slate-900 mt-0.5">
+                  Pengiriman #{{ snTrackingResult.delivery_seq || 1 }}
+                </div>
+                <div class="text-[11px] text-slate-600 font-semibold truncate mt-0.5" :title="snTrackingResult.do_number">
+                  {{ snTrackingResult.do_number }}
+                </div>
+              </div>
+
+              <div class="bg-white/95 backdrop-blur-xs border border-teal-200 rounded-xl p-3 shadow-2xs">
+                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                  <i class="fa-solid fa-pallet text-teal-600"></i> Peti Ke:
+                </div>
+                <div class="text-lg font-black text-teal-800 mt-0.5">
+                  Peti #{{ snTrackingResult.crate_number || 1 }}
+                </div>
+                <div class="text-[11px] text-teal-700 font-mono font-bold truncate mt-0.5" :title="snTrackingResult.crate_id">
+                  ID: {{ snTrackingResult.crate_id }}
+                </div>
+              </div>
+
+              <div class="bg-white/95 backdrop-blur-xs border border-blue-200 rounded-xl p-3 shadow-2xs">
+                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                  <i class="fa-solid fa-box text-blue-600"></i> Dus Ke:
+                </div>
+                <div class="text-lg font-black text-blue-800 mt-0.5">
+                  Dus #{{ snTrackingResult.box_number || 1 }}
+                </div>
+                <div class="text-[11px] text-blue-700 font-mono font-bold truncate mt-0.5" :title="snTrackingResult.box_id">
+                  ID: {{ snTrackingResult.box_id }}
+                </div>
+              </div>
+
+              <div class="bg-white/95 backdrop-blur-xs border border-amber-200 rounded-xl p-3 shadow-2xs">
+                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                  <i class="fa-solid fa-location-dot text-amber-600"></i> Posisi Slot:
+                </div>
+                <div class="text-lg font-black text-amber-700 mt-0.5">
+                  Slot #{{ snTrackingResult.slot_number || 1 }}
+                </div>
+                <div class="text-[11px] text-slate-500 font-semibold truncate mt-0.5">
+                  {{ snTrackingResult.do_date || snTrackingResult.customer_name }}
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-1 border-t border-emerald-200/60 text-xs">
+              <span class="text-[11px] text-slate-600 font-medium">
+                Penerima / Instansi: <strong class="text-slate-900">{{ snTrackingResult.customer_name }}</strong>
+              </span>
+              <div class="flex items-center gap-2">
+                <button v-if="snTrackingResult.delivery_id" type="button" @click="openDODetailView(snTrackingResult.delivery_id)"
+                  class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs shadow-xs transition flex items-center gap-1.5 cursor-pointer">
+                  <i class="fa-solid fa-eye text-xs"></i>
+                  <span>Buka Dokumen DO</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
           <!-- Tabel Riwayat DO -->
           <div v-if="filteredDOList.length > 0"
             class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
@@ -12649,7 +12777,12 @@
                   <tr>
                     <th class="p-3.5 w-12 text-center">No</th>
                     <th class="p-3.5">No. Surat Jalan</th>
-                    <th class="p-3.5">Tanggal</th>
+                    <th @click="toggleDOSortOrder" class="p-3.5 cursor-pointer hover:bg-slate-100 transition select-none" title="Klik untuk membalik urutan tanggal">
+                      <div class="flex items-center gap-1.5">
+                        <span>Tanggal</span>
+                        <i class="fa-solid text-[10px] text-indigo-600" :class="doSortOrder === 'desc' ? 'fa-arrow-down-wide-short' : 'fa-arrow-up-wide-short'"></i>
+                      </div>
+                    </th>
                     <th class="p-3.5">Penerima (Customer)</th>
                     <th class="p-3.5">Kontrak / Referensi</th>
                     <th class="p-3.5 text-center w-28 whitespace-nowrap">Kuantitas</th>
@@ -36898,9 +37031,13 @@ K1101621
         });
         const doList = ref([]);
         const doSearchText = ref('');
+        const doSearchSN = ref('');
         const doStartDate = ref('');
         const doEndDate = ref('');
         const doDocFilter = ref('');
+        const doSortOrder = ref('desc');
+        const isTrackingSN = ref(false);
+        const snTrackingResult = ref(null);
 
         const distinctDODocNumbers = computed(() => {
           const set = new Set();
@@ -36912,10 +37049,94 @@ K1101621
 
         const resetDOFilter = () => {
           doSearchText.value = '';
+          doSearchSN.value = '';
           doStartDate.value = '';
           doEndDate.value = '';
           doDocFilter.value = '';
+          snTrackingResult.value = null;
           if (pgState.doHistory) pgState.doHistory.page = 1;
+        };
+
+        const toggleDOSortOrder = () => {
+          doSortOrder.value = doSortOrder.value === 'desc' ? 'asc' : 'desc';
+        };
+
+        const trackSerialNumberDirect = async () => {
+          const rawSn = (doSearchSN.value || '').trim();
+          if (!rawSn) {
+            triggerToast('Perhatian', 'Ketikkan Serial Number Part 15 yang ingin dilacak.', 'warn');
+            return;
+          }
+
+          const sn = rawSn.toUpperCase();
+          isTrackingSN.value = true;
+          snTrackingResult.value = null;
+
+          // 1. Cek dulu di in-memory doList
+          let foundLocally = null;
+          for (const d of (doList.value || [])) {
+            const crates = Array.isArray(d.crates) ? d.crates : (Array.isArray(d.packing_lists) ? d.packing_lists : []);
+            for (const c of crates) {
+              const boxes = Array.isArray(c.boxes) ? c.boxes : [];
+              for (const b of boxes) {
+                const items = Array.isArray(b.items) ? b.items : [];
+                for (const it of items) {
+                  const itSn = (typeof it === 'object' && it !== null) ? (it.serial_number || '') : String(it);
+                  if (itSn && itSn.toUpperCase().includes(sn)) {
+                    let dSeq = 1;
+                    if (d.do_number) {
+                      const m = String(d.do_number).match(/^0*(\d+)/);
+                      if (m) dSeq = parseInt(m[1], 10) || 1;
+                    }
+                    foundLocally = {
+                      serial_number: itSn,
+                      slot_number: it.slot_number || 1,
+                      delivery_id: d.id,
+                      do_number: d.do_number,
+                      do_date: d.do_date,
+                      delivery_seq: dSeq,
+                      customer_name: d.customer_name,
+                      contract_number: d.contract_number,
+                      program_name: d.program_name,
+                      crate_number: c.crate_number || 1,
+                      crate_id: c.crate_id || '-',
+                      box_number: b.box_number || 1,
+                      box_id: b.box_id || '-',
+                      pl_number: c.pl_number || d.pl_number,
+                      status: d.status || 'Terkirim'
+                    };
+                    break;
+                  }
+                }
+                if (foundLocally) break;
+              }
+              if (foundLocally) break;
+            }
+            if (foundLocally) break;
+          }
+
+          if (foundLocally) {
+            snTrackingResult.value = foundLocally;
+            isTrackingSN.value = false;
+            triggerToast('SN Ditemukan!', `Serial Number ${sn} ditemukan di Pengiriman ke-${foundLocally.delivery_seq}, Peti ${foundLocally.crate_id}, Dus ${foundLocally.box_id}.`, 'success');
+            return;
+          }
+
+          // 2. Jika tidak ada di in-memory, query ke endpoint backend
+          try {
+            const res = await fetchAPI(`/api/delivery-orders/track-sn?sn=${encodeURIComponent(sn)}`);
+            if (res && res.found && res.data) {
+              snTrackingResult.value = res.data;
+              triggerToast('SN Ditemukan!', `Serial Number ${sn} ditemukan di Pengiriman ke-${res.data.delivery_seq}, Peti ${res.data.crate_id}, Dus ${res.data.box_id}.`, 'success');
+            } else {
+              snTrackingResult.value = null;
+              triggerToast('Tidak Ditemukan', res?.message || `Serial Number ${sn} belum dialokasikan pada pengiriman manapun.`, 'info');
+            }
+          } catch (err) {
+            triggerToast('Error Pelacakan', 'Terjadi kendala saat melacak Serial Number: ' + err.message, 'error');
+          } finally {
+            isTrackingSN.value = false;
+          }
         };
         const customersList = ref([]);
         const isCustomerDropdownOpen = ref(false);
@@ -37560,7 +37781,7 @@ K1101621
         };
 
         const filteredDOList = computed(() => {
-          let list = doList.value || [];
+          let list = (doList.value || []).slice();
 
           // 1. Doc DO Filter
           if (doDocFilter.value) {
@@ -37590,9 +37811,40 @@ K1101621
               (d.do_number && d.do_number.toLowerCase().includes(q)) ||
               (d.customer_name && d.customer_name.toLowerCase().includes(q)) ||
               (d.contract_number && d.contract_number.toLowerCase().includes(q)) ||
-              (d.program_name && d.program_name.toLowerCase().includes(q))
+              (d.program_name && d.program_name.toLowerCase().includes(q)) ||
+              (d.pl_number && d.pl_number.toLowerCase().includes(q))
             );
           }
+
+          // 5. SN Filter
+          const snQ = (doSearchSN.value || '').trim().toUpperCase();
+          if (snQ) {
+            list = list.filter(d => {
+              const crates = Array.isArray(d.crates) ? d.crates : (Array.isArray(d.packing_lists) ? d.packing_lists : []);
+              return crates.some(c => {
+                const boxes = Array.isArray(c.boxes) ? c.boxes : [];
+                return boxes.some(b => {
+                  const items = Array.isArray(b.items) ? b.items : [];
+                  return items.some(it => {
+                    const s = (typeof it === 'object' && it !== null) ? (it.serial_number || '') : String(it);
+                    return s && s.toUpperCase().includes(snQ);
+                  });
+                });
+              });
+            });
+          }
+
+          // 6. Urutan Tanggal (Terbaru / Terlama)
+          list.sort((a, b) => {
+            const dateA = getDODateKey(a) || '';
+            const dateB = getDODateKey(b) || '';
+            if (dateA !== dateB) {
+              return doSortOrder.value === 'asc' ? dateA.localeCompare(dateB) : dateB.localeCompare(dateA);
+            }
+            const idA = Number(a.id) || 0;
+            const idB = Number(b.id) || 0;
+            return doSortOrder.value === 'asc' ? idA - idB : idB - idA;
+          });
 
           return list;
         });
@@ -37747,28 +37999,42 @@ K1101621
           const crates = [];
 
           const { yy, mm } = getYearMonthFromDate(targetDate || doForm.value?.do_date);
-          const prefix = `${yy}${mm}-${bNum}`;
+          const bNumStr = String(parseInt(bNum, 10) || 1).padStart(2, '0');
+
+          let deliverySeq = 1;
+          if (doForm.value?.delivery_seq) {
+            deliverySeq = parseInt(doForm.value.delivery_seq, 10) || 1;
+          } else if (doForm.value?.do_number) {
+            const m = String(doForm.value.do_number).match(/^0*(\d+)/);
+            if (m) deliverySeq = parseInt(m[1], 10) || 1;
+          }
+          const ppStr = String(deliverySeq).padStart(2, '0');
 
           if (type === 'crate') {
             for (let i = 0; i < num; i++) {
               const c = start + i;
-              const crateId = `${prefix}${String(c).padStart(3, '0')}`;
+              const ddStr = String(c).padStart(2, '0');
+              const crateId = `${yy}${mm}-${bNumStr}-${ppStr}${ddStr}`;
               const boxes = [];
               for (let b = 1; b <= 2; b++) {
-                const boxId = `${crateId}-${String(b).padStart(2, '0')}`;
+                const ssStr = String(b).padStart(2, '0');
+                const boxId = `${crateId}-${ssStr}`;
                 const items = [];
                 for (let s = 1; s <= 10; s++) {
                   items.push({ slot_number: s, serial_number: '' });
                 }
                 boxes.push({ box_number: b, box_id: boxId, items });
               }
-              crates.push({ crate_number: i + 1, crate_id: crateId, boxes });
+              crates.push({ crate_number: i + 1, crate_id: crateId, total_quantity: 20, boxes });
             }
           } else if (type === 'box') {
-            const parentCrateId = `${yy}${mm}-${bNum}000`;
             for (let i = 0; i < num; i++) {
               const b = start + i;
-              const boxId = `${parentCrateId}-${String(b).padStart(2, '0')}`;
+              const crateIdx = Math.ceil((i + 1) / 2);
+              const ddStr = String(crateIdx).padStart(2, '0');
+              const ssStr = String(((i % 2) + 1)).padStart(2, '0');
+              const parentCrateId = `${yy}${mm}-${bNumStr}-${ppStr}${ddStr}`;
+              const boxId = `${parentCrateId}-${ssStr}`;
               const items = [];
               for (let s = 1; s <= 10; s++) {
                 items.push({ slot_number: s, serial_number: '' });
@@ -37777,6 +38043,7 @@ K1101621
                 crate_number: i + 1,
                 crate_id: parentCrateId,
                 box_id: boxId,
+                total_quantity: 10,
                 boxes: [{ box_number: 1, box_id: boxId, items }]
               });
             }
@@ -38862,7 +39129,7 @@ K1101621
           standaloneLabelsList, isLoadingStandaloneLabels, isSavingStandaloneLabel, activeLabelCrateIndex, labelForm, lastSavedPLInfo, resetLabelForm, confirmResetLabelForm, syncLabelPackagingStructure, autoFillAvailableSNsForLabel, loadStandaloneLabels, openStandaloneLabelsHistory, saveStandaloneLabel, printStandaloneLabel, deleteStandaloneLabel,
           getLabelFormFilledCount, getLabelFormRequiredCount, getLabelCrateFilledCount, getLabelCrateRequiredCount, isLabelFormComplete,
           labelSearchText, labelDocFilter, labelPackageFilter, labelStartDate, labelEndDate, distinctPLLabelNumbers, resetLabelFilter, filteredStandaloneLabelsList, pagedStandaloneLabelsList, totalPgStandaloneLabels,
-          loadDOSettings, saveDOSettings, applySettingsToNewDOForm, loadDOPreviewData, openDODocumentPreview, doList, doSearchText, filteredDOList, exportDeliveryOrderExcel, customersList, filteredCustomersList,
+          loadDOSettings, saveDOSettings, applySettingsToNewDOForm, loadDOPreviewData, openDODocumentPreview, doList, doSearchText, doSearchSN, doSortOrder, isTrackingSN, snTrackingResult, toggleDOSortOrder, trackSerialNumberDirect, filteredDOList, exportDeliveryOrderExcel, customersList, filteredCustomersList,
           doStartDate, doEndDate, doDocFilter, distinctDODocNumbers, resetDOFilter, pagedDOList, totalPgDOList,
           isCustomerDropdownOpen, customerDropdownRef, showNewCustomerModal, newCustomerForm,
           isSubmittingCustomer, customerSearchQuery, availableFinishedSNs, isSubmittingDO,

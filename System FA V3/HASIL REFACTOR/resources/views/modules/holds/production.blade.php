@@ -321,16 +321,16 @@
                           Set #{{ it.set_number }}
                         </span>
                         <!-- Status Badge (Pure Assembly Status) -->
-                        <span v-if="isItemPendingAdmin(it)"
+                        <span v-if="isItemPendingAdmin(it) && getAssemblyStageStatus(it) !== 'Good'"
                           class="px-2 py-0.5 rounded-md text-[10.5px] font-black uppercase bg-amber-100 text-amber-900 border border-amber-300 inline-flex items-center gap-1">
                           <i class="fa-solid fa-clock-rotate-left text-[9px]"></i> MENUNGGU VERIFIKASI
                         </span>
                         <span
-                          v-else-if="getAssemblyStageStatus(it) === 'Declined' || it.is_declined || it.status === 'Declined' || it.verified_status === 'DECLINED'"
+                          v-else-if="getAssemblyStageStatus(it) === 'Declined'"
                           class="px-2 py-0.5 rounded-md text-[10.5px] font-black uppercase bg-rose-100 text-rose-900 border border-rose-300 inline-flex items-center gap-1">
                           <i class="fa-solid fa-circle-xmark text-[9px]"></i> DECLINED
                         </span>
-                        <span v-else-if="isReassemblySet(it) || getAssemblyStageStatus(it) === 'RU'"
+                        <span v-else-if="getAssemblyStageStatus(it) === 'RU'"
                           class="px-2 py-0.5 rounded-md text-[10.5px] font-black uppercase bg-indigo-100 text-indigo-900 border border-indigo-300 inline-flex items-center gap-1">
                           <i class="fa-solid fa-arrows-rotate text-[9px]"></i> RU
                         </span>
@@ -434,16 +434,16 @@
                     <td class="py-2.5 px-3 font-mono font-medium text-slate-700">{{ it.part1_sn || '-' }}</td>
                     <td class="py-2.5 px-3 font-mono font-medium text-slate-700">{{ it.part12_sn || '-' }}</td>
                     <td class="py-2.5 px-3.5 text-center">
-                      <span v-if="isItemPendingAdmin(it)"
+                      <span v-if="isItemPendingAdmin(it) && getAssemblyStageStatus(it) !== 'Good'"
                         class="px-2 py-0.5 rounded-md text-[10px] font-black uppercase bg-amber-100 text-amber-900 border border-amber-300 inline-flex items-center gap-1">
                         <i class="fa-solid fa-clock-rotate-left text-[8.5px]"></i> {{ getItemPendingLabel(it) }}
                       </span>
                       <span
-                        v-else-if="getAssemblyStageStatus(it) === 'Declined' || it.is_declined || it.status === 'Declined' || it.verified_status === 'DECLINED'"
+                        v-else-if="getAssemblyStageStatus(it) === 'Declined'"
                         class="px-2 py-0.5 rounded-md text-[10px] font-black uppercase bg-rose-100 text-rose-900 border border-rose-300 inline-flex items-center gap-1">
                         <i class="fa-solid fa-circle-xmark text-[8.5px]"></i> DECLINED
                       </span>
-                      <span v-else-if="isReassemblySet(it) || getAssemblyStageStatus(it) === 'RU'"
+                      <span v-else-if="getAssemblyStageStatus(it) === 'RU'"
                         class="px-2 py-0.5 rounded-md text-[10px] font-black uppercase bg-indigo-100 text-indigo-900 border border-indigo-300 inline-flex items-center gap-1">
                         <i class="fa-solid fa-arrows-rotate text-[8.5px]"></i> RU
                       </span>
@@ -574,16 +574,16 @@
                       </div>
                     </div>
                     <div>
-                      <span v-if="isItemPendingAdmin(it)"
+                      <span v-if="isItemPendingAdmin(it) && getAssemblyStageStatus(it) !== 'Good'"
                         class="px-2 py-0.5 rounded-md text-[10px] font-black uppercase bg-amber-100 text-amber-900 border border-amber-300 inline-flex items-center gap-1 w-full justify-center">
                         <i class="fa-solid fa-clock-rotate-left text-[8.5px]"></i> {{ getItemPendingLabel(it) }}
                       </span>
                       <span
-                        v-else-if="getAssemblyStageStatus(it) === 'Declined' || it.is_declined || it.status === 'Declined' || it.verified_status === 'DECLINED'"
+                        v-else-if="getAssemblyStageStatus(it) === 'Declined'"
                         class="px-2 py-0.5 rounded-md text-[10px] font-black uppercase bg-rose-100 text-rose-900 border border-rose-300 inline-flex items-center gap-1 w-full justify-center">
                         <i class="fa-solid fa-circle-xmark text-[8.5px]"></i> DECLINED
                       </span>
-                      <span v-else-if="isReassemblySet(it) || getAssemblyStageStatus(it) === 'RU'"
+                      <span v-else-if="getAssemblyStageStatus(it) === 'RU'"
                         class="px-2 py-0.5 rounded-md text-[10px] font-black uppercase bg-indigo-100 text-indigo-900 border border-indigo-300 inline-flex items-center gap-1 w-full justify-center">
                         <i class="fa-solid fa-arrows-rotate text-[8.5px]"></i> RU
                       </span>

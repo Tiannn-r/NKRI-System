@@ -56,10 +56,10 @@ def create_report(filename):
     doc = SimpleDocTemplate(
         filename,
         pagesize=A4,
-        leftMargin=40,
-        rightMargin=40,
-        topMargin=48,
-        bottomMargin=52
+        leftMargin=11.3,   # 4mm
+        rightMargin=22.7,  # 8mm
+        topMargin=51.0,    # 18mm
+        bottomMargin=17.0  # 6mm
     )
 
     styles = getSampleStyleSheet()

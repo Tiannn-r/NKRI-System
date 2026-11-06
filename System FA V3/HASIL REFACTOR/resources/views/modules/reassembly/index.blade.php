@@ -104,10 +104,23 @@
                     <span class="text-[10px] text-slate-400 block font-mono">Tray {{ item.tray_code }}</span>
                   </div>
                 </div>
-                <span
-                  class="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200">
-                  Dirakit Ulang
-                </span>
+                <div class="flex items-center gap-1">
+                  <span v-if="item.hold_source === 'QC' || ['HOLD_QC', 'REWORK_QC'].includes(item.qc_status)"
+                    class="px-2 py-0.5 rounded-md text-[9.5px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                    Asal: QC (TF 2)
+                  </span>
+                  <span v-else-if="item.hold_source === 'TESTER_ASSEMBLY' || ['Hold TF 1', 'Hold', 'Not Good', 'FAIL'].includes(item.assy_test_status) || item.assy_failure_reasons"
+                    class="px-2 py-0.5 rounded-md text-[9.5px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                    Asal: TF 1
+                  </span>
+                  <span v-else
+                    class="px-2 py-0.5 rounded-md text-[9.5px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                    Asal: Perakitan
+                  </span>
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200">
+                    RU
+                  </span>
+                </div>
               </div>
 
               <!-- Product type & Replaced By -->
@@ -396,7 +409,7 @@
             <!-- Tombol Aksi: DAFTAR ULANG & GANTI PART -->
             <!-- 1. Jika Sedang Menunggu Verifikasi Admin: Sembunyikan Tombol & Tampilkan Status Pending (hanya untuk yang bermasalah di perakitan) -->
             <div
-              v-if="(selectedAssemblyItem || selectedHoldItem)?.assembly_status !== 'Good' && isItemPendingAdmin(selectedAssemblyItem || selectedHoldItem)"
+              v-if="isItemPendingAdmin(selectedAssemblyItem || selectedHoldItem)"
               class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs font-bold shadow-xs">
               <i class="fa-solid fa-clock-rotate-left text-amber-600 text-sm"></i>
               <div>
@@ -439,15 +452,13 @@
               v-else-if="String(selectedAssemblyItem?.assembly_status || selectedHoldItem?.assembly_status || 'Good').trim().toUpperCase() !== 'GOOD' && !isReassemblySet(selectedAssemblyItem || selectedHoldItem)"
               class="flex items-center gap-2 flex-wrap">
 
-              <!-- KONDISI A: DARI HASIL TEST FUNCTIONAL (Uji Fungsional 1 atau QC) -> DAFTAR ULANG & GANTI PART -->
+              <!-- KONDISI A: DARI HASIL TEST FUNCTIONAL (Uji Fungsional 1 atau QC) -> LANJUT PROSES & GANTI PART -->
               <template
                 v-if="currentTab === 'functional_hold' || (showHoldDetailModal && currentTab !== 'production_hold')">
                 <button type="button"
-                  @click="showHoldDetailModal = false; showAssemblyDetailModal = false; openReregisterSetConfirmModal(selectedHoldItem || selectedAssemblyItem);"
-                  :class="isAllProblematicPartsReplaced(selectedHoldItem || selectedAssemblyItem) ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/20' : 'bg-amber-600 hover:bg-amber-700 shadow-amber-600/20'"
-                  class="h-10 px-4 rounded-xl text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 cursor-pointer active:scale-95 whitespace-nowrap">
-                  <i :class="isAllProblematicPartsReplaced(selectedHoldItem || selectedAssemblyItem) ? 'fa-solid fa-hammer' : 'fa-solid fa-forward-step'"
-                    class="text-[11px]"></i>
+                  @click="proceedHoldItem(selectedHoldItem || selectedAssemblyItem)"
+                  class="h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition flex items-center gap-1.5 cursor-pointer active:scale-95 whitespace-nowrap">
+                  <i class="fa-solid fa-circle-arrow-right text-[11px]"></i>
                   <span>{{ getHoldProceedButtonLabel(selectedHoldItem || selectedAssemblyItem) }}</span>
                 </button>
                 <button type="button" @click="openReplacePartSubModal"
@@ -457,7 +468,7 @@
                 </button>
               </template>
 
-              <!-- KONDISI B: DARI HASIL PERAKITAN (ASSEMBLY MURNI) -> PERAKITAN ULANG & GANTI PART -->
+              <!-- KONDISI B: DARI HASIL PERAKITAN (ASSEMBLY MURNI) -> LANJUT PROSES & GANTI PART -->
               <template v-else>
                 <!-- Keterangan Jika Semua Part Bermasalah Sudah Diganti: Informasi Tambahan Siap Daftar Ulang -->
                 <div v-if="isAllProblematicPartsReplaced(selectedAssemblyItem || selectedHoldItem)"
@@ -466,12 +477,11 @@
                   <span>Part bermasalah telah diganti &bull; Siap untuk Rakit Ulang</span>
                 </div>
 
-                <!-- Tombol RAKIT ULANG / LANJUT TF1 PERAKITAN -->
-                <button type="button" @click="openReregisterSubModal"
-                  :class="isAllProblematicPartsReplaced(selectedAssemblyItem || selectedHoldItem) ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/20' : 'bg-amber-600 hover:bg-amber-700 shadow-amber-600/20'"
-                  class="h-10 px-4 rounded-xl text-white text-xs font-bold shadow-md transition flex items-center gap-1.5 cursor-pointer active:scale-95 whitespace-nowrap">
-                  <i :class="isAllProblematicPartsReplaced(selectedAssemblyItem || selectedHoldItem) ? 'fa-solid fa-hammer' : 'fa-solid fa-forward-step'"
-                    class="text-[11px]"></i>
+                <!-- Tombol LANJUT TF 1 / PROSES BERIKUTNYA -->
+                <button type="button"
+                  @click="proceedHoldItem(selectedAssemblyItem || selectedHoldItem)"
+                  class="h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition flex items-center gap-1.5 cursor-pointer active:scale-95 whitespace-nowrap">
+                  <i class="fa-solid fa-circle-arrow-right text-[11px]"></i>
                   <span>{{ getHoldProceedButtonLabel(selectedAssemblyItem || selectedHoldItem) }}</span>
                 </button>
 
@@ -632,8 +642,8 @@
               <div class="grid grid-cols-3 gap-2">
                 <!-- Part 15 -->
                 <div class="p-2.5 rounded-xl border text-center transition relative"
-                  :class="isProblemPart('15') ? 'bg-red-50/70 border-red-300 ring-1 ring-red-300' : 'bg-slate-50 border-slate-200'">
-                  <span v-if="isProblemPart('15')"
+                  :class="(!isFunctionalHoldItem(selectedHoldItem) && isProblemPart('15')) ? 'bg-red-50/70 border-red-300 ring-1 ring-red-300' : 'bg-slate-50 border-slate-200'">
+                  <span v-if="!isFunctionalHoldItem(selectedHoldItem) && isProblemPart('15')"
                     class="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded text-[8px] bg-red-500 text-white font-black leading-none">Bermasalah</span>
                   <span v-else
                     class="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded text-[8px] bg-emerald-500 text-white font-black leading-none">Normal</span>
@@ -644,8 +654,8 @@
 
                 <!-- Part 1 -->
                 <div class="p-2.5 rounded-xl border text-center transition relative"
-                  :class="isProblemPart('1') ? 'bg-red-50/70 border-red-300 ring-1 ring-red-300' : 'bg-slate-50 border-slate-200'">
-                  <span v-if="isProblemPart('1')"
+                  :class="(!isFunctionalHoldItem(selectedHoldItem) && isProblemPart('1')) ? 'bg-red-50/70 border-red-300 ring-1 ring-red-300' : 'bg-slate-50 border-slate-200'">
+                  <span v-if="!isFunctionalHoldItem(selectedHoldItem) && isProblemPart('1')"
                     class="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded text-[8px] bg-red-500 text-white font-black leading-none">Bermasalah</span>
                   <span v-else
                     class="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded text-[8px] bg-emerald-500 text-white font-black leading-none">Normal</span>
@@ -656,8 +666,8 @@
 
                 <!-- Part 12 -->
                 <div class="p-2.5 rounded-xl border text-center transition relative"
-                  :class="isProblemPart('12') ? 'bg-red-50/70 border-red-300 ring-1 ring-red-300' : 'bg-slate-50 border-slate-200'">
-                  <span v-if="isProblemPart('12')"
+                  :class="(!isFunctionalHoldItem(selectedHoldItem) && isProblemPart('12')) ? 'bg-red-50/70 border-red-300 ring-1 ring-red-300' : 'bg-slate-50 border-slate-200'">
+                  <span v-if="!isFunctionalHoldItem(selectedHoldItem) && isProblemPart('12')"
                     class="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded text-[8px] bg-red-500 text-white font-black leading-none">Bermasalah</span>
                   <span v-else
                     class="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded text-[8px] bg-emerald-500 text-white font-black leading-none">Normal</span>
@@ -721,7 +731,7 @@
             <div class="space-y-3">
               <div class="flex items-center justify-between">
                 <label class="block text-[10.5px] font-bold uppercase text-slate-700">
-                  3. Pilih Part Baru Pengganti (Hanya Part Bermasalah):
+                  3. Pilih Part Baru Pengganti dari Stok Gudang (Bebas pilih 1 s/d 3 part):
                 </label>
                 <span class="text-[10px] font-bold"
                   :class="totalPartsToReplace > 0 ? 'text-blue-700' : 'text-slate-500'">
@@ -730,18 +740,20 @@
               </div>
 
               <!-- ================= DROPDOWN PART 15 ================= -->
-              <div v-if="isProblemPart('15')"
-                class="p-3 rounded-xl border border-red-200 bg-red-50/20 ring-1 ring-red-200 space-y-1.5">
+              <div class="p-3 rounded-xl border space-y-1.5"
+                :class="(!isFunctionalHoldItem(selectedHoldItem) && isProblemPart('15')) ? 'border-red-200 bg-red-50/20 ring-1 ring-red-200' : 'border-slate-200 bg-slate-50/30'">
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-2">
                     <span class="font-bold text-slate-800 text-xs">Part 15 (P9)</span>
-                    <span
+                    <span v-if="!isFunctionalHoldItem(selectedHoldItem) && isProblemPart('15')"
                       class="px-1.5 py-0.5 rounded text-[8px] bg-red-500 text-white font-black leading-none">Bermasalah</span>
                     <span class="text-[10.5px] text-slate-500 font-mono">Lama: <strong>{{ selectedHoldItem?.part15_sn ||
                         '-' }}</strong></span>
                   </div>
-                  <span class="text-[10px] font-mono text-slate-400 font-bold">{{
-                    availableReplacePartsByType['15']?.length || 0 }} tersedia</span>
+                  <span class="text-[10px] font-mono text-slate-400 font-bold">
+                    <span v-if="isLoadingPartsByType['15']"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Memuat...</span>
+                    <span v-else>{{ availableReplacePartsByType['15']?.length || 0 }} tersedia</span>
+                  </span>
                 </div>
 
                 <div class="relative">
@@ -787,7 +799,11 @@
                         <span>Tetap {{ selectedHoldItem?.part15_sn || '-' }}</span>
                         <span class="text-[10.5px] text-slate-400 font-sans font-normal">(Tidak diganti)</span>
                       </div>
-                      <div v-if="getFilteredPartsForType('15').length === 0"
+                      <div v-if="isLoadingPartsByType['15']"
+                        class="py-3 text-center text-xs text-slate-400">
+                        <i class="fa-solid fa-spinner fa-spin mr-1"></i> Memuat stok...
+                      </div>
+                      <div v-else-if="getFilteredPartsForType('15').length === 0"
                         class="py-3 text-center text-xs text-slate-400">
                         Tidak ada stok Part 15 tersedia
                       </div>
@@ -811,18 +827,20 @@
               </div>
 
               <!-- ================= DROPDOWN PART 1 ================= -->
-              <div v-if="isProblemPart('1')"
-                class="p-3 rounded-xl border border-red-200 bg-red-50/20 ring-1 ring-red-200 space-y-1.5">
+              <div class="p-3 rounded-xl border space-y-1.5"
+                :class="(!isFunctionalHoldItem(selectedHoldItem) && isProblemPart('1')) ? 'border-red-200 bg-red-50/20 ring-1 ring-red-200' : 'border-slate-200 bg-slate-50/30'">
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-2">
                     <span class="font-bold text-slate-800 text-xs">Part 1</span>
-                    <span
+                    <span v-if="!isFunctionalHoldItem(selectedHoldItem) && isProblemPart('15')"
                       class="px-1.5 py-0.5 rounded text-[8px] bg-red-500 text-white font-black leading-none">Bermasalah</span>
                     <span class="text-[10.5px] text-slate-500 font-mono">Lama: <strong>{{ selectedHoldItem?.part1_sn ||
                         '-' }}</strong></span>
                   </div>
-                  <span class="text-[10px] font-mono text-slate-400 font-bold">{{
-                    availableReplacePartsByType['1']?.length || 0 }} tersedia</span>
+                  <span class="text-[10px] font-mono text-slate-400 font-bold">
+                    <span v-if="isLoadingPartsByType['1']"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Memuat...</span>
+                    <span v-else>{{ availableReplacePartsByType['1']?.length || 0 }} tersedia</span>
+                  </span>
                 </div>
 
                 <div class="relative">
@@ -868,7 +886,11 @@
                         <span>Tetap {{ selectedHoldItem?.part1_sn || '-' }}</span>
                         <span class="text-[10.5px] text-slate-400 font-sans font-normal">(Tidak diganti)</span>
                       </div>
-                      <div v-if="getFilteredPartsForType('1').length === 0"
+                      <div v-if="isLoadingPartsByType['1']"
+                        class="py-3 text-center text-xs text-slate-400">
+                        <i class="fa-solid fa-spinner fa-spin mr-1"></i> Memuat stok...
+                      </div>
+                      <div v-else-if="getFilteredPartsForType('1').length === 0"
                         class="py-3 text-center text-xs text-slate-400">
                         Tidak ada stok Part 1 tersedia
                       </div>
@@ -891,18 +913,20 @@
               </div>
 
               <!-- ================= DROPDOWN PART 12 ================= -->
-              <div v-if="isProblemPart('12')"
-                class="p-3 rounded-xl border border-red-200 bg-red-50/20 ring-1 ring-red-200 space-y-1.5">
+              <div class="p-3 rounded-xl border space-y-1.5"
+                :class="(!isFunctionalHoldItem(selectedHoldItem) && isProblemPart('12')) ? 'border-red-200 bg-red-50/20 ring-1 ring-red-200' : 'border-slate-200 bg-slate-50/30'">
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-2">
                     <span class="font-bold text-slate-800 text-xs">Part 12</span>
-                    <span
+                    <span v-if="!isFunctionalHoldItem(selectedHoldItem) && isProblemPart('15')"
                       class="px-1.5 py-0.5 rounded text-[8px] bg-red-500 text-white font-black leading-none">Bermasalah</span>
                     <span class="text-[10.5px] text-slate-500 font-mono">Lama: <strong>{{ selectedHoldItem?.part12_sn ||
                         '-' }}</strong></span>
                   </div>
-                  <span class="text-[10px] font-mono text-slate-400 font-bold">{{
-                    availableReplacePartsByType['12']?.length || 0 }} tersedia</span>
+                  <span class="text-[10px] font-mono text-slate-400 font-bold">
+                    <span v-if="isLoadingPartsByType['12']"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Memuat...</span>
+                    <span v-else>{{ availableReplacePartsByType['12']?.length || 0 }} tersedia</span>
+                  </span>
                 </div>
 
                 <div class="relative">
@@ -948,7 +972,11 @@
                         <span>Tetap {{ selectedHoldItem?.part12_sn || '-' }}</span>
                         <span class="text-[10.5px] text-slate-400 font-sans font-normal">(Tidak diganti)</span>
                       </div>
-                      <div v-if="getFilteredPartsForType('12').length === 0"
+                      <div v-if="isLoadingPartsByType['12']"
+                        class="py-3 text-center text-xs text-slate-400">
+                        <i class="fa-solid fa-spinner fa-spin mr-1"></i> Memuat stok...
+                      </div>
+                      <div v-else-if="getFilteredPartsForType('12').length === 0"
                         class="py-3 text-center text-xs text-slate-400">
                         Tidak ada stok Part 12 tersedia
                       </div>

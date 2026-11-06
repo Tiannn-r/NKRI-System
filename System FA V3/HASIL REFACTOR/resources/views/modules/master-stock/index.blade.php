@@ -2,29 +2,6 @@
       <!-- ================= TAB 5: MASTER DB INVENTORY MONITOR ================= -->
       <section v-if="currentTab === 'master'" class="space-y-4 sm:space-y-6">
 
-        <!-- Admin Danger Zone Reset Banner (Visible only for Admin) -->
-        <div
-          v-if="userRole === 'admin' || userRole === 'Super Admin' || String(userRole || '').toLowerCase().includes('admin') || userDepartment === 'administrator'"
-          class="bg-red-50/80 border-2 border-red-200 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
-          <div class="flex items-center space-x-3 text-red-800">
-            <div
-              class="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center text-lg flex-shrink-0">
-              <i class="fa-solid fa-triangle-exclamation"></i>
-            </div>
-            <div>
-              <h4 class="font-black text-sm sm:text-base leading-tight">Danger Zone: Bersihkan Database Tray & Rakitan
-              </h4>
-              <p class="text-xs text-red-600 font-medium">Kosongkan seluruh data Tray & riwayat Perakitan dan kembalikan
-                9.000 Master Stock ke status <strong>Tersedia</strong>.</p>
-            </div>
-          </div>
-          <button @click="showResetDbModal = true"
-            class="bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-md shadow-red-600/30 transition flex items-center justify-center space-x-1.5 self-start sm:self-auto flex-shrink-0 active:scale-95 min-h-[38px]">
-            <i class="fa-solid fa-trash-can"></i>
-            <span>Kosongkan Database Tray</span>
-          </button>
-        </div>
-
         <!-- Quick Hint Bar -->
         <div
           class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-600 flex items-center justify-between">
@@ -303,7 +280,7 @@
                     + 1 }}</td>
                   <td class="p-3 font-sans font-bold text-red-700">
                     <div>P9 Part {{ m.part_type }}</div>
-                    <span v-if="m.is_replaced_from_assy"
+                    <span v-if="m.is_replaced_from_assy && !['Declined', 'Decline', 'Pending Verif Admin'].includes(m.effective_status) && !['Declined', 'Decline', 'Pending Verif Admin'].includes(m.stock_status)"
                       class="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[8.5px] bg-amber-100 text-amber-800 font-bold border border-amber-200 uppercase tracking-tight">
                       Part Diganti
                     </span>

@@ -394,11 +394,11 @@
                         </span>
                       </td>
                       <td class="p-3 text-center whitespace-nowrap">
-                        <span v-if="it.warehouse_receipt_status === 'ACCEPTED' || it.warehouse_receipt_status === 'ACC'"
+                        <span v-if="it.warehouse_receipt_status === 'ACCEPTED' || it.warehouse_receipt_status === 'ACC' || it.verified_status === 'ACC' || it.verified_status === 'ACCEPTED'"
                           class="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase bg-emerald-100 text-emerald-800 border border-emerald-300 inline-flex items-center gap-1 shadow-xs">
                           <i class="fa-solid fa-lock text-[9px] text-emerald-700"></i> ACC
                         </span>
-                        <span v-else-if="it.warehouse_receipt_status === 'DECLINED'"
+                        <span v-else-if="it.warehouse_receipt_status === 'DECLINED' || it.verified_status === 'DECLINED' || it.is_declined"
                           class="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase bg-rose-100 text-rose-800 border border-rose-300 inline-flex items-center gap-1 shadow-xs"
                           :title="it.declined_reason || 'Ditolak fisik oleh gudang'">
                           <i class="fa-solid fa-lock text-[9px] text-rose-700"></i> DECLINED (Terkunci)
@@ -413,7 +413,7 @@
                       </td>
                       <td class="p-3 text-center whitespace-nowrap">
                         <!-- If already ACC / ACCEPTED: Allow Cetak Label -->
-                        <div v-if="it.warehouse_receipt_status === 'ACCEPTED' || it.warehouse_receipt_status === 'ACC'"
+                        <div v-if="it.warehouse_receipt_status === 'ACCEPTED' || it.warehouse_receipt_status === 'ACC' || it.verified_status === 'ACC' || it.verified_status === 'ACCEPTED'"
                           class="flex items-center justify-center gap-1.5">
                           <button type="button" @click="openLabelPreview(it)"
                             class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg text-[11px] shadow-xs transition inline-flex items-center gap-1.5 active:scale-95 cursor-pointer"
@@ -423,7 +423,7 @@
                           </button>
                         </div>
                         <!-- If declined: Locked -->
-                        <div v-else-if="it.warehouse_receipt_status === 'DECLINED'">
+                        <div v-else-if="it.warehouse_receipt_status === 'DECLINED' || it.verified_status === 'DECLINED' || it.is_declined">
                           <span
                             class="text-[11px] font-bold text-rose-500 italic flex items-center justify-center gap-1">
                             <i class="fa-solid fa-ban text-[10px]"></i> Unit Ditolak

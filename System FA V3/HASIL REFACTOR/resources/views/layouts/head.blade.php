@@ -21,6 +21,17 @@
     }
   </script>
 
+  <!-- Suppress Tailwind CDN production warning in console -->
+  <script>
+    (function() {
+      var _w = console.warn;
+      console.warn = function() {
+        if (arguments[0] && typeof arguments[0] === "string" && arguments[0].indexOf("cdn.tailwindcss.com should not be used in production") !== -1) return;
+        _w.apply(console, arguments);
+      };
+    })();
+  </script>
+
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -40,7 +51,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
   <!-- Vue 3 CDN -->
-  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 
   <!-- ExcelJS for Rich Styled Excel Export (Colors, auto column width, A4 print ready) -->
   <script src="/exceljs.min.js"></script>

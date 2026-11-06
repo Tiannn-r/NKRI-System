@@ -68,10 +68,7 @@
                     <i class="fa-solid fa-hand text-[10px] text-amber-500"></i> Hold: <strong
                       class="font-mono font-bold">{{ currentReportCounts.hold }}</strong>
                   </span>
-                  <span v-if="currentReportCounts.other > 0" class="text-purple-700 flex items-center gap-1">
-                    <i class="fa-solid fa-triangle-exclamation text-[10px] text-purple-500"></i> Non-Good: <strong
-                      class="font-mono font-bold">{{ currentReportCounts.other }}</strong>
-                  </span>
+
                 </template>
               </div>
             </div>
@@ -558,9 +555,9 @@
                     {{ formatDateTime(it.finished_at || it.tray_created_at) }}
                   </td>
                   <td class="p-2.5 sm:p-3 w-36 text-center whitespace-nowrap font-sans">
-                    <span :class="getStatusBadgeClass(it.original_assembly_status || it.assembly_status || it.status || 'Good')"
-                      class="px-2 py-0.5 rounded text-[10px] font-black uppercase border inline-block">
-                      {{ it.original_assembly_status || it.assembly_status || it.status || 'Good' }}
+                    <span :class="getStatusTextClass(it.original_assembly_status || it.assembly_status || it.status || 'Good')"
+                      class="text-xs uppercase tracking-wide">
+                      {{ formatDocumentStatusText(it.original_assembly_status || it.assembly_status || it.status || 'Good') }}
                     </span>
                   </td>
                   <td class="p-2.5 sm:p-3 min-w-[180px] text-slate-500 font-sans italic text-xs">
@@ -720,9 +717,9 @@
                     {{ formatDateTime(it.created_at) }}
                   </td>
                   <td class="p-2.5 sm:p-3 w-36 text-center whitespace-nowrap font-sans">
-                    <span :class="getStatusBadgeClass(it.status)"
-                      class="text-[10px] font-black uppercase px-2 py-0.5 rounded-lg border inline-block">
-                      {{ it.status }}
+                    <span :class="getStatusTextClass(it.status)"
+                      class="text-xs uppercase tracking-wide">
+                      {{ formatDocumentStatusText(it.status) }}
                     </span>
                   </td>
                   <td class="p-2.5 sm:p-3 min-w-[180px] font-sans text-xs">
@@ -890,9 +887,9 @@
                     {{ formatDateTime(it.created_at) }}
                   </td>
                   <td class="p-2.5 sm:p-3 w-36 text-center whitespace-nowrap font-sans">
-                    <span :class="getStatusBadgeClass(it.status)"
-                      class="text-[10px] font-black uppercase px-2 py-0.5 rounded-lg border inline-block">
-                      {{ it.status }}
+                    <span :class="getStatusTextClass(it.status)"
+                      class="text-xs uppercase tracking-wide">
+                      {{ formatDocumentStatusText(it.status) }}
                     </span>
                   </td>
                   <td class="p-2.5 sm:p-3 min-w-[180px] font-sans text-xs">
@@ -1062,13 +1059,9 @@
                     {{ formatDateTime(it.warehouse_receipt_at || it.verified_at || it.qc_tested_at || it.created_at) }}
                   </td>
                   <td class="p-2.5 sm:p-3 w-36 text-center whitespace-nowrap font-sans">
-                    <span :class="{
-                      'bg-emerald-100 text-emerald-800 border-emerald-300': it.warehouse_receipt_status === 'ACCEPTED' || it.verified_status === 'Verified',
-                      'bg-rose-100 text-rose-800 border-rose-300': it.warehouse_receipt_status === 'DECLINED' || it.verified_status === 'Declined',
-                      'bg-amber-100 text-amber-800 border-amber-300': it.warehouse_receipt_status === 'PENDING' || !it.warehouse_receipt_status || (it.status && it.status.includes('Menunggu'))
-                    }" class="px-2 py-0.5 rounded text-[10px] font-black uppercase border inline-block">
-                      {{ it.warehouse_receipt_status === 'ACCEPTED' ? 'ACC' : (it.warehouse_receipt_status ===
-                      'DECLINED' ? 'Ditolak (Decline)' : 'Menunggu Receipts') }}
+                    <span :class="getStatusTextClass(it.warehouse_receipt_status === 'ACCEPTED' ? 'Good' : (it.warehouse_receipt_status === 'DECLINED' ? 'Scrap' : 'Hold'))"
+                      class="text-xs uppercase tracking-wide">
+                      {{ it.warehouse_receipt_status === 'ACCEPTED' ? 'ACC' : (it.warehouse_receipt_status === 'DECLINED' ? 'DECLINED' : 'MENUNGGU RECEIPTS') }}
                     </span>
                   </td>
                   <td class="p-2.5 sm:p-3 min-w-[180px] font-sans text-xs">
@@ -1369,9 +1362,9 @@
                       <!-- 2. JIKA PERAKITAN -->
                       <template v-if="reportSubTab === 'assembly'">
                         <td class="p-2.5 text-center font-sans">
-                          <span :class="getStatusBadgeClass(getAssemblyStageStatus(it))"
-                            class="text-[10px] font-black uppercase px-2 py-0.5 rounded-lg border inline-block">
-                            {{ getAssemblyStageStatus(it) }}
+                          <span :class="getStatusTextClass(getAssemblyStageStatus(it))"
+                            class="text-xs uppercase tracking-wide">
+                            {{ formatDocumentStatusText(getAssemblyStageStatus(it)) }}
                           </span>
                         </td>
                         <td class="p-2.5 font-sans text-slate-600 text-xs">
@@ -1396,9 +1389,9 @@
                       <!-- 3. JIKA TEST FUNCTIONAL 1 (TF1) -->
                       <template v-else-if="reportSubTab === 'assy_test'">
                         <td class="p-2.5 text-center font-sans">
-                          <span :class="getStatusBadgeClass(getAssemblyStageStatus(it))"
-                            class="text-[10px] font-black uppercase px-2 py-0.5 rounded-lg border inline-block">
-                            {{ getAssemblyStageStatus(it) }}
+                          <span :class="getStatusTextClass(getAssemblyStageStatus(it))"
+                            class="text-xs uppercase tracking-wide">
+                            {{ formatDocumentStatusText(getAssemblyStageStatus(it)) }}
                           </span>
                         </td>
                         <td class="p-2.5 text-center font-sans">
@@ -1430,9 +1423,9 @@
                       <!-- 4. JIKA TEST FUNCTIONAL 2 (QC) -->
                       <template v-else-if="reportSubTab === 'qc_test'">
                         <td class="p-2.5 text-center font-sans">
-                          <span :class="getStatusBadgeClass(getAssemblyStageStatus(it))"
-                            class="text-[10px] font-black uppercase px-2 py-0.5 rounded-lg border inline-block">
-                            {{ getAssemblyStageStatus(it) }}
+                          <span :class="getStatusTextClass(getAssemblyStageStatus(it))"
+                            class="text-xs uppercase tracking-wide">
+                            {{ formatDocumentStatusText(getAssemblyStageStatus(it)) }}
                           </span>
                         </td>
                         <td class="p-2.5 text-center font-sans">
@@ -1469,9 +1462,9 @@
                       <!-- 5. JIKA RECEIPTS (WH/GR) -->
                       <template v-else-if="reportSubTab === 'warehouse_receipt'">
                         <td class="p-2.5 text-center font-sans">
-                          <span :class="getStatusBadgeClass(getAssemblyStageStatus(it))"
-                            class="text-[10px] font-black uppercase px-2 py-0.5 rounded-lg border inline-block">
-                            {{ getAssemblyStageStatus(it) }}
+                          <span :class="getStatusTextClass(getAssemblyStageStatus(it))"
+                            class="text-xs uppercase tracking-wide">
+                            {{ formatDocumentStatusText(getAssemblyStageStatus(it)) }}
                           </span>
                         </td>
                         <td class="p-2.5 text-center font-sans">

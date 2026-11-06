@@ -596,14 +596,14 @@
               activeDetailSlot.qc_failure_reasons || activeDetailSlot.reason }}</p>
           </div>
 
-          <!-- 4.5a: Hasil 15 Tahap Uji Perakitan (TF1) -->
+          <!-- 4.5a: Hasil Pengujian Fungsional Perakitan (TF1) -->
           <div
             v-if="(activeDetailSlot.parsed_tf1_checklist && activeDetailSlot.parsed_tf1_checklist.length) || activeDetailSlot.tf1_doc_number || activeDetailSlot.assy_doc_number || activeDetailSlot.process_stage === 'assy_test' || (activeDetailSlot.process_stage === 'warehouse_receipt' && (activeDetailSlot.tf1_doc_number || activeDetailSlot.assy_doc_number || (activeDetailSlot.parsed_checklist && activeDetailSlot.parsed_checklist.length)))"
             class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
             <div class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center justify-between">
               <div class="flex items-center gap-1.5">
                 <i class="fa-solid fa-list-check text-indigo-600"></i>
-                <span>Hasil 15 Tahap Uji Perakitan (TF1)</span>
+                <span>Hasil Pengujian Fungsional Perakitan (TF1)</span>
               </div>
               <span
                 v-if="activeDetailSlot.tf1_doc_number || (activeDetailSlot.assy_doc_number && activeDetailSlot.assy_doc_number.toUpperCase().startsWith('ASSY/QC')) || (activeDetailSlot.process_stage === 'assy_test' && activeDetailSlot.doc_number)"
@@ -614,16 +614,15 @@
               </span>
             </div>
 
-            <!-- Mini 15 Stages Badges Grid -->
+            <!-- Mini 17 Stages Badges Grid / Menunggu Uji TF 1 -->
             <div
-              v-if="activeDetailSlot.status && (activeDetailSlot.status.includes('Menunggu') || activeDetailSlot.status.includes('Belum'))"
+              v-if="!activeDetailSlot.is_tf1_tested"
               class="p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-xs flex items-center gap-2 font-medium">
               <i class="fa-solid fa-clock text-amber-600"></i>
-              <span>Status: <strong>{{ activeDetailSlot.status }}</strong> (Unit belum diuji oleh operator
-                assembly).</span>
+              <span>Status TF 1: <strong>Menunggu Uji TF 1</strong> (Unit rakitan belum dilakukan pengujian fungsional oleh operator TF 1).</span>
             </div>
             <div
-              v-else-if="(activeDetailSlot.parsed_tf1_checklist && activeDetailSlot.parsed_tf1_checklist.length) || (activeDetailSlot.process_stage === 'assy_test' && activeDetailSlot.parsed_checklist && activeDetailSlot.parsed_checklist.length)"
+              v-else-if="activeDetailSlot.is_tf1_tested && ((activeDetailSlot.parsed_tf1_checklist && activeDetailSlot.parsed_tf1_checklist.length) || (activeDetailSlot.process_stage === 'assy_test' && activeDetailSlot.parsed_checklist && activeDetailSlot.parsed_checklist.length))"
               class="grid grid-cols-5 gap-1 text-[8.5px] font-mono">
               <div
                 v-for="t in (activeDetailSlot.parsed_tf1_checklist && activeDetailSlot.parsed_tf1_checklist.length ? activeDetailSlot.parsed_tf1_checklist : activeDetailSlot.parsed_checklist)"
@@ -640,25 +639,56 @@
               </div>
             </div>
 
-            <!-- Summary count TF1 -->
+            <!-- Summary count TF1 & Toggle Detail -->
             <div
-              v-if="(activeDetailSlot.parsed_tf1_checklist && activeDetailSlot.parsed_tf1_checklist.length) || (activeDetailSlot.process_stage === 'assy_test' && activeDetailSlot.parsed_checklist && activeDetailSlot.parsed_checklist.length)"
-              class="flex items-center gap-2 text-[10px] pt-0.5">
-              <span v-if="(activeDetailSlot.tf1_good_count || activeDetailSlot.checklist_good_count || 0) > 0"
-                class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold">
-                <i class="fa-solid fa-check text-[8px]"></i>
-                {{ activeDetailSlot.tf1_good_count || activeDetailSlot.checklist_good_count || 0 }} Good
-              </span>
-              <span v-if="(activeDetailSlot.tf1_fail_count || activeDetailSlot.checklist_fail_count || 0) > 0"
-                class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-red-100 text-red-800 border border-red-300 font-bold">
-                <i class="fa-solid fa-xmark text-[8px]"></i>
-                {{ activeDetailSlot.tf1_fail_count || activeDetailSlot.checklist_fail_count }} Not Good
-              </span>
-              <span v-if="(activeDetailSlot.tf1_pending_count || activeDetailSlot.checklist_pending_count || 0) > 0"
-                class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-300 font-bold">
-                <i class="fa-solid fa-minus text-[8px]"></i>
-                {{ activeDetailSlot.tf1_pending_count || activeDetailSlot.checklist_pending_count }} Pending
-              </span>
+              v-if="activeDetailSlot.is_tf1_tested && ((activeDetailSlot.parsed_tf1_checklist && activeDetailSlot.parsed_tf1_checklist.length) || (activeDetailSlot.process_stage === 'assy_test' && activeDetailSlot.parsed_checklist && activeDetailSlot.parsed_checklist.length))"
+              class="flex items-center justify-between text-[10px] pt-1 border-t border-slate-200/80">
+              <div class="flex items-center gap-2">
+                <span v-if="(activeDetailSlot.tf1_good_count || activeDetailSlot.checklist_good_count || 0) > 0"
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold">
+                  <i class="fa-solid fa-check text-[8px]"></i>
+                  {{ activeDetailSlot.tf1_good_count || activeDetailSlot.checklist_good_count || 0 }} Good
+                </span>
+                <span v-if="(activeDetailSlot.tf1_fail_count || activeDetailSlot.checklist_fail_count || 0) > 0"
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-red-100 text-red-800 border border-red-300 font-bold">
+                  <i class="fa-solid fa-xmark text-[8px]"></i>
+                  {{ activeDetailSlot.tf1_fail_count || activeDetailSlot.checklist_fail_count }} Not Good
+                </span>
+                <span v-if="(activeDetailSlot.tf1_pending_count || activeDetailSlot.checklist_pending_count || 0) > 0"
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-300 font-bold">
+                  <i class="fa-solid fa-minus text-[8px]"></i>
+                  {{ activeDetailSlot.tf1_pending_count || activeDetailSlot.checklist_pending_count }} Pending
+                </span>
+              </div>
+              <button type="button" @click="showDetailChecklistFull = !showDetailChecklistFull"
+                class="text-indigo-600 hover:text-indigo-800 font-bold text-[10.5px] flex items-center gap-1 cursor-pointer transition">
+                <span>{{ showDetailChecklistFull ? 'Tutup Rincian' : 'Lihat ' + (activeDetailSlot.parsed_tf1_checklist?.length || activeDetailSlot.parsed_checklist?.length || 17) + ' Parameter Uji' }}</span>
+                <i :class="showDetailChecklistFull ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'" class="text-[9px]"></i>
+              </button>
+            </div>
+
+            <!-- Tabel Rincian 17 Parameter Pengujian Fungsional TF 1 -->
+            <div v-if="showDetailChecklistFull && (activeDetailSlot.parsed_tf1_checklist?.length || activeDetailSlot.parsed_checklist?.length)"
+              class="mt-2 space-y-1.5 border-t border-slate-200 pt-2 max-h-56 overflow-y-auto animate-fadeIn">
+              <div v-for="t in (activeDetailSlot.parsed_tf1_checklist?.length ? activeDetailSlot.parsed_tf1_checklist : activeDetailSlot.parsed_checklist)" :key="t.test_num"
+                class="p-2 rounded-xl border text-xs flex items-start justify-between gap-2.5 transition"
+                :class="String(t.status || '').toUpperCase() === 'GOOD' ? 'bg-emerald-50/50 border-emerald-200' : (String(t.status || '').toUpperCase() === 'NOT_GOOD' ? 'bg-red-50/70 border-red-200' : 'bg-white border-slate-200')">
+                <div class="space-y-0.5 min-w-0">
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <span class="font-mono font-black text-[10px] px-1.5 py-0.2 rounded"
+                      :class="String(t.status || '').toUpperCase() === 'GOOD' ? 'bg-emerald-200 text-emerald-900' : 'bg-slate-200 text-slate-700'">
+                      #{{ t.test_num }}
+                    </span>
+                    <span class="font-bold text-slate-900 text-[11px]">{{ t.name }}</span>
+                    <span v-if="t.category" class="text-[9px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-semibold uppercase tracking-wider">{{ t.category }}</span>
+                  </div>
+                  <p v-if="t.description" class="text-[10px] text-slate-500 leading-tight whitespace-pre-line">{{ t.description }}</p>
+                </div>
+                <span class="px-2 py-0.5 rounded font-black text-[10px] uppercase shrink-0"
+                  :class="String(t.status || '').toUpperCase() === 'GOOD' ? 'bg-emerald-600 text-white' : (String(t.status || '').toUpperCase() === 'NOT_GOOD' ? 'bg-red-600 text-white' : 'bg-slate-200 text-slate-700')">
+                  {{ t.status }}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -2063,7 +2093,7 @@
                 <i class="fa-solid fa-arrows-rotate text-[9px]"></i> DIRAKIT ULANG
               </span>
               <span
-                v-else-if="selectedAdminSetDetail.assy_test_status === 'Good' || selectedAdminSetDetail.assy_doc_number || ['qc', 'QC'].includes(selectedAdminSetDetail.process_stage) || selectedAdminSetDetail.stage === 'QC' || ['HOLD_QC', 'REWORK_QC', 'GOOD', 'GOOD_QC'].includes(selectedAdminSetDetail.qc_status) || selectedAdminSetDetail.qc_tested_at || selectedAdminSetDetail.qc_doc_number"
+                v-else-if="((selectedAdminSetDetail.assy_test_status === 'Good' || selectedAdminSetDetail.assy_tested_at) && !['HOLD', 'REWORK', 'PENDING', 'BELUM DIUJI'].includes(String(selectedAdminSetDetail.assy_test_status || '').toUpperCase())) || ['qc', 'QC'].includes(selectedAdminSetDetail.process_stage) || selectedAdminSetDetail.stage === 'QC' || ['HOLD_QC', 'REWORK_QC', 'GOOD', 'GOOD_QC'].includes(selectedAdminSetDetail.qc_status) || selectedAdminSetDetail.qc_tested_at || selectedAdminSetDetail.qc_doc_number"
                 class="px-2 py-0.5 rounded-md font-black text-[10px] uppercase bg-emerald-100 text-emerald-900 border border-emerald-300 inline-flex items-center gap-1">
                 <i class="fa-solid fa-check text-[9px]"></i> GOOD
               </span>
@@ -4347,7 +4377,9 @@
             <div>
               <h3 class="font-black text-base text-slate-900 leading-tight">Tempel Massal Serial Number</h3>
               <p class="text-[11px] text-slate-500">
-                Peti #{{ batchPasteTarget.crateIdx + 1 }} — Dus {{ batchPasteTarget.boxNum }} (Maks 10 SN per Dus)
+                <span v-if="batchPasteTarget.isUnit">Alokasi massal unit satuan</span>
+                <span v-else-if="batchPasteTarget.mode === 'crate'">Peti #{{ batchPasteTarget.crateIdx + 1 }} (Maks 20 SN per Peti)</span>
+                <span v-else>Dus #{{ batchPasteTarget.boxNum }} (Maks 10 SN per Dus)</span>
               </p>
             </div>
           </div>
@@ -4380,6 +4412,130 @@ K1101621
             class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-md shadow-indigo-600/25 flex items-center gap-1.5 transition cursor-pointer min-h-[42px]">
             <i class="fa-solid fa-check"></i>
             <span>Terapkan ke Dus</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= MODAL BULKING DATA SERIAL NUMBER (PACKING LIST STANDALONE) ================= -->
+    <div v-if="showLabelBulkModal"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto no-print">
+      <div
+        class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-xl w-full p-4 sm:p-6 shadow-2xl space-y-4 my-auto">
+        <!-- Header -->
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div class="flex items-center gap-2.5">
+            <div
+              class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black text-base shadow-xs">
+              <i class="fa-solid fa-list-check"></i>
+            </div>
+            <div>
+              <h3 class="font-black text-base text-slate-900 leading-tight">Input Bulking Serial Number</h3>
+              <p class="text-[11px] text-slate-500">
+                Alokasi data Serial Number massal ke kemasan {{ labelForm.package_type === 'crate' ? 'Peti' : 'Dus' }}
+              </p>
+            </div>
+          </div>
+          <button type="button" @click="closeLabelBulkModal"
+            class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg transition cursor-pointer">
+            <i class="fa-solid fa-xmark text-lg"></i>
+          </button>
+        </div>
+
+        <!-- Scope & Mode Options -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 border border-slate-200/90 rounded-2xl p-3 text-xs">
+          <!-- Pilihan Jangkauan / Target -->
+          <div class="space-y-1.5">
+            <label class="font-bold text-slate-700 flex items-center gap-1.5">
+              <i class="fa-solid fa-crosshairs text-emerald-600"></i>
+              <span>Target Alokasi:</span>
+            </label>
+            <select v-model="labelBulkScope"
+              class="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 font-bold focus:outline-none focus:border-emerald-600">
+              <option value="all">Mulai dari Awal ({{ labelForm.package_type === 'crate' ? 'Peti 1' : 'Dus 1' }})</option>
+              <option value="from_active">Mulai dari {{ labelForm.package_type === 'crate' ? 'Peti' : 'Dus' }} Aktif (Ke-{{ activeLabelCrateIndex + 1 }})</option>
+              <option value="active_only">Hanya {{ labelForm.package_type === 'crate' ? 'Peti' : 'Dus' }} Ini Saja (Ke-{{ activeLabelCrateIndex + 1 }})</option>
+            </select>
+          </div>
+
+          <!-- Pilihan Mode Pengisian -->
+          <div class="space-y-1.5">
+            <label class="font-bold text-slate-700 flex items-center gap-1.5">
+              <i class="fa-solid fa-sliders text-emerald-600"></i>
+              <span>Metode Pengisian:</span>
+            </label>
+            <select v-model="labelBulkMode"
+              class="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 font-bold focus:outline-none focus:border-emerald-600">
+              <option value="overwrite">Timpa berurutan dari slot pertama</option>
+              <option value="empty_only">Hanya isi slot yang masih kosong</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Textarea Input Bulking -->
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-bold text-slate-700 flex items-center gap-1">
+              <span>Daftar Serial Number:</span>
+              <span class="text-slate-400 font-normal">(Paste dari Excel / Scan Barcode)</span>
+            </label>
+            <button v-if="labelBulkRawText" type="button" @click="labelBulkRawText = ''"
+              class="text-[11px] font-bold text-slate-400 hover:text-red-600 transition cursor-pointer">
+              Bersihkan
+            </button>
+          </div>
+          <textarea v-model="labelBulkRawText" rows="6"
+            placeholder="Tempelkan daftar Serial Number di sini (satu per baris, koma, atau spasi)...
+Contoh:
+C1101624
+G1101625
+K1101621
+..."
+            class="w-full bg-slate-50 border border-slate-300 focus:border-emerald-600 focus:bg-white rounded-xl p-3 text-xs font-mono font-bold text-slate-900 shadow-2xs transition min-h-[140px] focus:outline-none"></textarea>
+        </div>
+
+        <!-- Live Validation / Analisis Data -->
+        <div v-if="parsedLabelBulkSNs.length > 0" class="space-y-2">
+          <div class="flex items-center justify-between text-xs bg-slate-100 rounded-xl px-3 py-2 border border-slate-200">
+            <span class="font-bold text-slate-700 flex items-center gap-1.5">
+              <i class="fa-solid fa-chart-pie text-emerald-600"></i>
+              <span>Total Terdeteksi: <strong>{{ labelBulkStats.total }} SN</strong></span>
+            </span>
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                <i class="fa-solid fa-check mr-0.5"></i> {{ labelBulkStats.validCount }} Lolos Gudang
+              </span>
+              <span v-if="labelBulkStats.unverifiedCount > 0"
+                class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                <i class="fa-solid fa-triangle-exclamation mr-0.5"></i> {{ labelBulkStats.unverifiedCount }} Belum Verifikasi
+              </span>
+              <span v-if="labelBulkStats.duplicatesCount > 0"
+                class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 border border-red-200">
+                <i class="fa-solid fa-copy mr-0.5"></i> {{ labelBulkStats.duplicatesCount }} Duplikat
+              </span>
+            </div>
+          </div>
+
+          <!-- Alert jika ada SN belum lolos gudang -->
+          <div v-if="labelBulkStats.unverifiedCount > 0"
+            class="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-[11px] leading-relaxed">
+            <i class="fa-solid fa-circle-exclamation text-amber-600 mr-1"></i>
+            <strong>Perhatian:</strong> Ditemukan <strong>{{ labelBulkStats.unverifiedCount }} SN</strong> yang belum diverifikasi penerimaan fisik gudang. Pastikan nomor seri sudah benar untuk mencegah human error.
+          </div>
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+          <button type="button" @click="closeLabelBulkModal"
+            class="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 text-xs font-bold transition cursor-pointer min-h-[40px]">
+            Batal
+          </button>
+          <button type="button" @click="applyLabelBulkData"
+            :disabled="parsedLabelBulkSNs.length === 0"
+            :class="parsedLabelBulkSNs.length === 0 ? 'opacity-40 cursor-not-allowed bg-slate-300 text-slate-500' : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/25 cursor-pointer'"
+            class="px-5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 transition min-h-[40px]">
+            <i class="fa-solid fa-check"></i>
+            <span>Terapkan Data Bulking ({{ parsedLabelBulkSNs.length }} SN)</span>
           </button>
         </div>
       </div>

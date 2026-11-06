@@ -58,18 +58,6 @@
                 <span>Database Customer</span>
               </button>
 
-              <button type="button" @click="doSubTab = 'settings'"
-                :class="doSubTab === 'settings' ? 'bg-red-600 text-white font-black shadow-md shadow-red-600/25 ring-2 ring-red-400/30' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold'"
-                class="px-4 py-2.5 rounded-xl text-xs flex items-center gap-2 transition cursor-pointer min-h-[42px]"
-                title="Buka Pengaturan Format Dokumen & Integrasi Cloudinary">
-                <i class="fa-solid fa-gear text-sm"></i>
-                <span>Pengaturan DO</span>
-                <span v-if="doSettings.cloudinary?.configured"
-                  class="w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-emerald-200 inline-block"
-                  title="Cloudinary Aktif & Siap Akses Luar"></span>
-                <span v-else class="w-2 h-2 rounded-full bg-amber-400 ring-2 ring-amber-200 inline-block"
-                  title="Cloudinary Belum Diatur"></span>
-              </button>
             </div>
           </div>
         </div>
@@ -117,13 +105,6 @@
                   <i class="fa-solid fa-magnifying-glass-location"></i>
                   <span>Buka Tracking</span>
                 </a>
-                <button type="button" @click="doSubTab = 'settings'"
-                  class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-xs px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition cursor-pointer min-h-[38px]"
-                  title="Konfigurasi Kredensial Cloudinary & Format Dokumen">
-                  <i class="fa-solid fa-cloud-arrow-up text-xs"></i>
-                  <span>Pengaturan Cloud</span>
-                  <span v-if="doSettings.cloudinary?.configured" class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                </button>
               </div>
             </div>
 
@@ -1424,27 +1405,119 @@
                 <h4 class="font-black text-sm text-slate-900">Alokasi Serial Number Unit</h4>
               </div>
               <div class="flex items-center gap-2">
-                <button type="button" @click="autoFillAvailableSNsForLabel"
-                  class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow-xs flex items-center justify-center transition cursor-pointer min-h-[38px]">
-                  <span>Isi Cepat</span>
+                <button type="button" @click="openLabelBulkModal"
+                  class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow-xs flex items-center gap-1.5 transition cursor-pointer min-h-[38px]"
+                  title="Input data Serial Number secara bulking / tempel massal">
+                  <i class="fa-solid fa-list-check text-xs"></i>
+                  <span>Input Bulking SN</span>
                 </button>
               </div>
             </div>
 
-            <!-- Stepper Antar Peti/Dus -->
-            <div v-if="labelForm.crates.length > 1" class="flex flex-wrap items-center gap-1.5 pb-2">
-              <button v-for="(c, cIdx) in labelForm.crates" :key="cIdx" type="button"
-                @click="activeLabelCrateIndex = cIdx"
-                :class="activeLabelCrateIndex === cIdx ? 'bg-emerald-600 text-white font-black shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold'"
-                class="px-3 py-1.5 rounded-lg text-xs transition cursor-pointer flex items-center gap-1.5">
-                <span>{{ labelForm.package_type === 'crate' ? 'Peti ' + (cIdx + 1) : 'Dus ' + (cIdx + 1) }}</span>
-                <span class="text-[10px] font-mono opacity-80">({{ (labelForm.package_type === 'box' ? (c.box_id ||
-                  (c.boxes && c.boxes[0] && c.boxes[0].box_id) || c.crate_id) : c.crate_id) || '-' }})</span>
-                <span class="text-[9.5px] px-1.5 py-0.2 rounded font-mono font-bold"
-                  :class="getLabelCrateFilledCount(cIdx) === getLabelCrateRequiredCount() ? (activeLabelCrateIndex === cIdx ? 'bg-emerald-800 text-white' : 'bg-emerald-100 text-emerald-800') : (activeLabelCrateIndex === cIdx ? 'bg-amber-500 text-white' : 'bg-amber-100 text-amber-800')">
-                  {{ getLabelCrateFilledCount(cIdx) }}/{{ getLabelCrateRequiredCount() }}
-                </span>
-              </button>
+            <!-- Stepper Antar Peti/Dus dengan Pagination Rapih & Simetris -->
+            <div v-if="labelForm.crates.length > 1" class="bg-slate-50/70 border border-slate-200/90 rounded-2xl p-3 sm:p-4 space-y-3">
+              <!-- Toolbar Atas: Info Status & Kontrol Navigasi -->
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 border-b border-slate-200/80">
+                <!-- Info Status Kemasan & Jangkauan -->
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200/70 text-xs font-bold">
+                    <i class="fa-solid fa-boxes-stacked text-emerald-600 text-[11px]"></i>
+                    <span>Total {{ labelForm.crates.length.toLocaleString('id-ID') }} {{ labelForm.package_type === 'crate' ? 'Peti' : 'Dus' }}</span>
+                  </span>
+                  <span class="text-slate-300 hidden sm:inline">|</span>
+                  <span class="text-xs text-slate-600 font-medium">
+                    Menampilkan <strong class="text-slate-800">{{ ((labelCratePage - 1) * labelCratesPerPage) + 1 }}</strong> - <strong class="text-slate-800">{{ Math.min(labelCratePage * labelCratesPerPage, labelForm.crates.length) }}</strong>
+                  </span>
+                </div>
+
+                <!-- Kontrol Navigasi Halaman Compact (Muncul jika > 1 Halaman) -->
+                <div v-if="totalLabelCratePages > 1" class="flex items-center gap-1.5 self-end sm:self-auto flex-wrap">
+                  <!-- Tombol First & Prev -->
+                  <div class="inline-flex rounded-lg shadow-2xs border border-slate-200 bg-white p-0.5">
+                    <button type="button" @click="setLabelCratePage(1)" :disabled="labelCratePage <= 1"
+                      :class="labelCratePage <= 1 ? 'opacity-30 cursor-not-allowed text-slate-400' : 'text-slate-700 hover:bg-slate-100 hover:text-emerald-700 cursor-pointer'"
+                      class="w-7 h-7 rounded-md flex items-center justify-center text-xs transition" title="Halaman Pertama">
+                      <i class="fa-solid fa-angles-left text-[10px]"></i>
+                    </button>
+                    <button type="button" @click="prevLabelCratePage" :disabled="labelCratePage <= 1"
+                      :class="labelCratePage <= 1 ? 'opacity-30 cursor-not-allowed text-slate-400' : 'text-slate-700 hover:bg-slate-100 hover:text-emerald-700 cursor-pointer'"
+                      class="w-7 h-7 rounded-md flex items-center justify-center text-xs transition" title="Halaman Sebelumnya">
+                      <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                    </button>
+                  </div>
+
+                  <!-- Input Halaman Aktif -->
+                  <div class="flex items-center gap-1 text-xs bg-white border border-slate-200 px-2 py-1 rounded-lg shadow-2xs">
+                    <span class="text-slate-500 font-medium">Hal</span>
+                    <input type="number" min="1" :max="totalLabelCratePages" :value="labelCratePage"
+                      @change="onLabelCratePageInput($event)"
+                      @keyup.enter="onLabelCratePageInput($event)"
+                      class="w-12 text-center font-bold text-slate-800 bg-slate-50 border border-slate-300 rounded px-1 py-0.5 text-xs focus:outline-none focus:border-emerald-600 focus:bg-white">
+                    <span class="text-slate-500 font-medium">/ {{ totalLabelCratePages }}</span>
+                  </div>
+
+                  <!-- Tombol Next & Last -->
+                  <div class="inline-flex rounded-lg shadow-2xs border border-slate-200 bg-white p-0.5">
+                    <button type="button" @click="nextLabelCratePage" :disabled="labelCratePage >= totalLabelCratePages"
+                      :class="labelCratePage >= totalLabelCratePages ? 'opacity-30 cursor-not-allowed text-slate-400' : 'text-slate-700 hover:bg-slate-100 hover:text-emerald-700 cursor-pointer'"
+                      class="w-7 h-7 rounded-md flex items-center justify-center text-xs transition" title="Halaman Berikutnya">
+                      <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                    </button>
+                    <button type="button" @click="setLabelCratePage(totalLabelCratePages)" :disabled="labelCratePage >= totalLabelCratePages"
+                      :class="labelCratePage >= totalLabelCratePages ? 'opacity-30 cursor-not-allowed text-slate-400' : 'text-slate-700 hover:bg-slate-100 hover:text-emerald-700 cursor-pointer'"
+                      class="w-7 h-7 rounded-md flex items-center justify-center text-xs transition" title="Halaman Terakhir">
+                      <i class="fa-solid fa-angles-right text-[10px]"></i>
+                    </button>
+                  </div>
+
+                  <!-- Lompat Cepat ke Dus / Peti Tertentu -->
+                  <div class="flex items-center gap-1 pl-1">
+                    <input type="number" min="1" :max="labelForm.crates.length" placeholder="No..."
+                      v-model.number="quickJumpTarget"
+                      @keyup.enter="jumpToLabelCrate(quickJumpTarget)"
+                      class="w-14 text-center text-xs font-semibold bg-white border border-slate-200 rounded-lg px-1.5 py-1 text-slate-700 placeholder-slate-400 focus:outline-none focus:border-emerald-600 shadow-2xs">
+                    <button type="button" @click="jumpToLabelCrate(quickJumpTarget)"
+                      class="px-2 py-1 bg-white hover:bg-emerald-600 hover:text-white text-slate-700 rounded-lg text-xs font-bold border border-slate-200 transition cursor-pointer shadow-2xs"
+                      title="Lompat ke Nomor Ini">
+                      Ke
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Grid Stepper Kartu Dus/Peti: Simetris 5 Kolom x 2 Baris (Tepat 10 Tombol per Halaman) -->
+              <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                <button v-for="item in pagedLabelCrates" :key="item.originalIndex" type="button"
+                  @click="selectLabelCrate(item.originalIndex)"
+                  :class="activeLabelCrateIndex === item.originalIndex 
+                    ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-300 border-emerald-600' 
+                    : 'bg-white hover:bg-slate-100/80 text-slate-700 border-slate-200 hover:border-slate-300 shadow-2xs'"
+                  class="border rounded-xl p-2 sm:p-2.5 transition-all cursor-pointer flex flex-col justify-between text-left min-h-[52px] group">
+                  
+                  <!-- Baris Atas: Label & Status SN Terisi -->
+                  <div class="flex items-center justify-between gap-1 w-full">
+                    <span class="text-xs font-black truncate"
+                      :class="activeLabelCrateIndex === item.originalIndex ? 'text-white' : 'text-slate-800'">
+                      {{ labelForm.package_type === 'crate' ? 'Peti ' + (item.originalIndex + 1) : 'Dus ' + (item.originalIndex + 1) }}
+                    </span>
+                    <span class="text-[9.5px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0"
+                      :class="getLabelCrateFilledCount(item.originalIndex) === getLabelCrateRequiredCount(item.originalIndex)
+                        ? (activeLabelCrateIndex === item.originalIndex ? 'bg-emerald-800 text-white' : 'bg-emerald-100 text-emerald-800')
+                        : (activeLabelCrateIndex === item.originalIndex ? 'bg-emerald-700 text-emerald-100' : 'bg-slate-100 text-slate-600')">
+                      {{ getLabelCrateFilledCount(item.originalIndex) }}/{{ getLabelCrateRequiredCount(item.originalIndex) }}
+                    </span>
+                  </div>
+
+                  <!-- Baris Bawah: Monospace Container ID -->
+                  <div class="mt-1 flex items-center justify-between text-[10px] font-mono truncate w-full"
+                    :class="activeLabelCrateIndex === item.originalIndex ? 'text-emerald-100' : 'text-slate-500'">
+                    <span class="truncate">
+                      {{ (labelForm.package_type === 'box' ? (item.crate.box_id || (item.crate.boxes && item.crate.boxes[0] && item.crate.boxes[0].box_id) || item.crate.crate_id) : item.crate.crate_id) || '-' }}
+                    </span>
+                    <i v-if="activeLabelCrateIndex === item.originalIndex" class="fa-solid fa-circle-check text-[10px] text-emerald-200 shrink-0 ml-1"></i>
+                  </div>
+                </button>
+              </div>
             </div>
 
             <!-- Detail Isi Peti / Dus Aktif -->
@@ -1462,8 +1535,8 @@
                     (labelForm.crates[activeLabelCrateIndex]?.boxes?.length || 1) + ' Dus' }})
                   </span>
                   <span class="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                    :class="getLabelCrateFilledCount(activeLabelCrateIndex) === getLabelCrateRequiredCount() ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-amber-100 text-amber-800 border border-amber-300'">
-                    {{ getLabelCrateFilledCount(activeLabelCrateIndex) }} / {{ getLabelCrateRequiredCount() }} SN Terisi
+                    :class="getLabelCrateFilledCount(activeLabelCrateIndex) === getLabelCrateRequiredCount(activeLabelCrateIndex) ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-amber-100 text-amber-800 border border-amber-300'">
+                    {{ getLabelCrateFilledCount(activeLabelCrateIndex) }} / {{ getLabelCrateRequiredCount(activeLabelCrateIndex) }} SN Terisi
                   </span>
                 </div>
                 <span class="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded">
@@ -1491,25 +1564,69 @@
 
                   <!-- Slot Input SN 1 to 10 -->
                   <div
-                    :class="labelForm.package_type === 'box' ? 'grid grid-cols-1 sm:grid-cols-2 gap-2.5' : 'space-y-1.5'">
-                    <div v-for="(item, sIdx) in box.items" :key="sIdx" class="flex items-center gap-2">
-                      <span class="w-6 text-[10px] font-bold text-slate-400 font-mono text-right shrink-0">
-                        #{{ sIdx + 1 }}
-                      </span>
-                      <input type="text" v-model="item.serial_number" placeholder="Pilih / ketik SN..."
-                        list="available-label-sns"
-                        :class="item.serial_number ? 'border-emerald-500 bg-emerald-50/30' : 'border-slate-300 bg-white'"
-                        class="w-full border rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-slate-800 focus:outline-none focus:border-emerald-600 transition min-h-[34px]">
+                    :class="labelForm.package_type === 'box' ? 'grid grid-cols-1 sm:grid-cols-2 gap-2.5' : 'space-y-2'">
+                    <div v-for="(item, sIdx) in box.items" :key="sIdx" class="space-y-0.5">
+                      <div class="flex items-center gap-2">
+                        <span class="w-6 text-[10px] font-bold text-slate-400 font-mono text-right shrink-0">
+                          #{{ sIdx + 1 }}
+                        </span>
+                        <div class="relative w-full">
+                          <input type="text" v-model="item.serial_number"
+                            @input="onLabelSNInput(item)"
+                            @change="onLabelSNInput(item)"
+                            @blur="onLabelSNInput(item)"
+                            placeholder="Pilih / ketik SN..."
+                            :list="'available-label-sns-' + activeLabelCrateIndex + '-' + bIdx + '-' + sIdx"
+                            :class="{
+                              'border-rose-500 bg-rose-50/70 text-rose-900 ring-2 ring-rose-300': getLabelSlotStatus(item) === 'duplicate' || getLabelSlotStatus(item) === 'invalid',
+                              'border-emerald-500 bg-emerald-50/30 text-emerald-900': getLabelSlotStatus(item) === 'valid',
+                              'border-slate-300 bg-white text-slate-800': getLabelSlotStatus(item) === 'empty'
+                            }"
+                            class="w-full border rounded-lg pl-2.5 pr-7 py-1.5 text-xs font-mono font-bold focus:outline-none focus:border-emerald-600 transition min-h-[34px]">
+                          <button v-if="item.serial_number" type="button" @click="item.serial_number = ''; onLabelSNInput(item)"
+                            class="absolute right-2 top-2 text-slate-400 hover:text-rose-600 transition cursor-pointer"
+                            title="Hapus Serial Number">
+                            <i class="fa-solid fa-xmark text-xs"></i>
+                          </button>
+                          <datalist :id="'available-label-sns-' + activeLabelCrateIndex + '-' + bIdx + '-' + sIdx">
+                            <option v-for="sn in getAvailableSNsForLabelSlot(item.serial_number)" :key="sn" :value="sn">{{ sn }}</option>
+                          </datalist>
+                        </div>
+                      </div>
+                      <div v-if="getLabelSlotStatus(item) === 'duplicate'" class="text-[9.5px] font-bold text-rose-600 ml-8 flex items-center gap-1">
+                        <i class="fa-solid fa-circle-exclamation text-[9px]"></i>
+                        <span>Nomor seri duplikat! Sudah diinput pada slot lain.</span>
+                      </div>
+                      <div v-else-if="getLabelSlotStatus(item) === 'invalid'" class="text-[9.5px] font-bold text-amber-600 ml-8 flex items-center gap-1">
+                        <i class="fa-solid fa-triangle-exclamation text-[9px]"></i>
+                        <span>SN belum lolos gudang (belum ACC penerimaan fisik).</span>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <!-- Datalist SN Lulus QC -->
-            <datalist id="available-label-sns">
-              <option v-for="sn in availableFinishedSNs" :key="sn" :value="sn">{{ sn }}</option>
-            </datalist>
+              <!-- Tombol Navigasi Cepat Dus/Peti Sebelumnya & Selanjutnya -->
+              <div v-if="labelForm.crates.length > 1" class="flex items-center justify-between pt-3 border-t border-slate-200">
+                <button type="button" @click="prevLabelCrate" :disabled="activeLabelCrateIndex <= 0"
+                  :class="activeLabelCrateIndex <= 0 ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200' : 'bg-white text-slate-700 hover:bg-slate-50 border-slate-300 font-bold cursor-pointer shadow-xs'"
+                  class="px-3.5 py-2 rounded-xl border text-xs flex items-center gap-2 transition min-h-[36px]">
+                  <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                  <span>{{ labelForm.package_type === 'crate' ? 'Peti' : 'Dus' }} Sebelumnya</span>
+                </button>
+                <div class="text-xs font-bold text-slate-700 font-mono flex items-center gap-1.5">
+                  <span class="bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
+                    {{ labelForm.package_type === 'crate' ? 'Peti' : 'Dus' }} {{ (activeLabelCrateIndex + 1).toLocaleString('id-ID') }} dari {{ labelForm.crates.length.toLocaleString('id-ID') }}
+                  </span>
+                </div>
+                <button type="button" @click="nextLabelCrate" :disabled="activeLabelCrateIndex >= labelForm.crates.length - 1"
+                  :class="activeLabelCrateIndex >= labelForm.crates.length - 1 ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200' : 'bg-emerald-600 text-white hover:bg-emerald-700 font-bold cursor-pointer shadow-xs'"
+                  class="px-3.5 py-2 rounded-xl text-xs flex items-center gap-2 transition min-h-[36px]">
+                  <span>{{ labelForm.package_type === 'crate' ? 'Peti' : 'Dus' }} Berikutnya</span>
+                  <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                </button>
+              </div>
+            </div>
           </div>
 
           <!-- KARTU 3: CATATAN & AKSI SIMPAN / CETAK -->
@@ -2139,9 +2256,11 @@
                         <i class="fa-solid fa-boxes-stacked text-[11px]"></i>
                         <span>Pilih ID Peti</span>
                       </button>
-                      <button type="button" @click="autofillSingleCrate(activeContainerIndex)"
-                        class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition flex items-center justify-center cursor-pointer shadow-2xs">
-                        <span>Isi Cepat</span>
+                      <button type="button" @click="openBatchPasteModal(activeContainerIndex, 1, false, 'crate')"
+                        class="bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                        title="Tempel data Serial Number secara bulking ke Peti ini">
+                        <i class="fa-solid fa-paste text-[10px]"></i>
+                        <span>Bulking SN Peti</span>
                       </button>
                     </div>
                   </div>
@@ -2267,9 +2386,11 @@
                         <i class="fa-solid fa-box-open text-[11px]"></i>
                         <span>Pilih ID Dus</span>
                       </button>
-                      <button type="button" @click="autofillSingleBox(activeContainerIndex)"
-                        class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition flex items-center justify-center cursor-pointer shadow-2xs">
-                        <span>Isi Cepat</span>
+                      <button type="button" @click="openBatchPasteModal(0, activeContainerIndex + 1, false, 'box')"
+                        class="bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                        title="Tempel data Serial Number secara bulking ke Dus ini">
+                        <i class="fa-solid fa-paste text-[10px]"></i>
+                        <span>Bulking SN Dus</span>
                       </button>
                     </div>
                   </div>
@@ -2377,16 +2498,11 @@
                         <i class="fa-solid fa-plus text-[10px]"></i>
                         <span>Tambah Baris</span>
                       </button>
-                      <button type="button" @click="autofillAllUnits"
-                        class="bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition flex items-center justify-center cursor-pointer shadow-2xs"
-                        title="Isi otomatis semua unit kosong dari stok yang ada">
-                        <span>Isi Cepat</span>
-                      </button>
                       <button type="button" @click="openBatchPasteModal(0, 1, true)"
-                        class="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 border border-indigo-200 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer shadow-2xs"
-                        title="Tempel daftar serial number satuan">
+                        class="bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                        title="Input data Serial Number satuan secara bulking">
                         <i class="fa-solid fa-paste text-[10px]"></i>
-                        <span>Tempel SN</span>
+                        <span>Bulking SN Satuan</span>
                       </button>
                     </div>
                   </div>
@@ -2523,12 +2639,12 @@
 
           <!-- Search & Filter Bar -->
           <div class="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-xs space-y-3.5">
-            <!-- Filter Grid: Search, Doc DO, Tanggal Mulai, Tanggal Selesai -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <!-- Search query -->
-              <div>
+            <!-- Filter Grid: Search, Lacak SN, Doc DO, Urutan, Tanggal Mulai, Tanggal Selesai -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+              <!-- Search query umum -->
+              <div class="lg:col-span-2">
                 <label class="block text-[10px] font-bold text-slate-500 mb-1">
-                  <i class="fa-solid fa-magnifying-glass mr-1"></i> Cari Data:
+                  <i class="fa-solid fa-magnifying-glass mr-1"></i> Cari Data DO:
                 </label>
                 <div class="relative">
                   <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-xs"></i>
@@ -2537,18 +2653,54 @@
                 </div>
               </div>
 
+              <!-- Lacak Serial Number Part 15 Langsung -->
+              <div class="lg:col-span-2">
+                <label class="block text-[10px] font-bold text-emerald-700 mb-1 flex items-center justify-between">
+                  <span><i class="fa-solid fa-barcode mr-1 text-emerald-600"></i> Lacak SN Part 15 (Tracking):</span>
+                  <span class="text-[9px] text-slate-400 font-normal">Tekan Enter / Klik Lacak</span>
+                </label>
+                <div class="flex items-center gap-1.5">
+                  <div class="relative flex-1">
+                    <i class="fa-solid fa-crosshairs absolute left-3 top-3 text-emerald-500 text-xs"></i>
+                    <input type="text" v-model="doSearchSN" @keyup.enter="trackSerialNumberDirect"
+                      placeholder="Input SN (FA-2610-001 / P9...)"
+                      class="w-full bg-emerald-50/50 border border-emerald-300 focus:border-emerald-600 focus:bg-white rounded-xl pl-8 pr-3 py-2 text-xs font-bold font-mono text-emerald-950 uppercase transition min-h-[38px]">
+                  </div>
+                  <button type="button" @click="trackSerialNumberDirect" :disabled="isTrackingSN || !doSearchSN.trim()"
+                    class="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 min-h-[38px] shadow-xs cursor-pointer whitespace-nowrap">
+                    <i class="fa-solid fa-magnifying-glass-location text-xs" :class="{'fa-spin': isTrackingSN}"></i>
+                    <span>Lacak</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Filter Urutan Tanggal -->
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 mb-1">
+                  <i class="fa-solid fa-arrow-down-up-across-line mr-1 text-indigo-600"></i> Urutan Tanggal:
+                </label>
+                <select v-model="doSortOrder"
+                  class="w-full bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-indigo-600 min-h-[38px] cursor-pointer">
+                  <option value="desc">Terbaru (Paling Atas) ▼</option>
+                  <option value="asc">Terlama (Paling Atas) ▲</option>
+                </select>
+              </div>
+
               <!-- Filter Dokumen DO / Surat Jalan -->
               <div>
                 <label class="block text-[10px] font-bold text-slate-500 mb-1">
                   <i class="fa-solid fa-file-invoice mr-1 text-red-600"></i> Filter Doc DO:
                 </label>
                 <select v-model="doDocFilter"
-                  class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-red-600 min-h-[38px] cursor-pointer">
+                  class="w-full bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-red-600 min-h-[38px] cursor-pointer">
                   <option value="">Semua Dokumen DO</option>
                   <option v-for="doc in distinctDODocNumbers" :key="doc" :value="doc">{{ doc }}</option>
                 </select>
               </div>
+            </div>
 
+            <!-- Baris Tambahan: Tanggal Dari & Sampai -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-slate-100">
               <!-- Filter Tanggal Dari -->
               <div>
                 <label class="block text-[10px] font-bold text-slate-500 mb-1">
@@ -2580,14 +2732,6 @@
                   dokumen DO</span>
               </div>
               <div class="flex items-center gap-2">
-                <button type="button" @click="doSubTab = 'settings'"
-                  title="Konfigurasi Kredensial Cloudinary & Pengaturan Surat Jalan"
-                  class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 min-h-[38px] cursor-pointer">
-                  <i class="fa-solid fa-gear text-xs"></i>
-                  <span>Pengaturan DO</span>
-                  <span v-if="doSettings.cloudinary?.configured" class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                  <span v-else class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                </button>
                 <button type="button" @click="syncAllDOsToCloud" :disabled="isBatchSyncingCloud"
                   title="Unggah semua dokumen Packing List yang belum tersimpan di Cloudinary agar QR Code aktif di luar jaringan"
                   class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 min-h-[38px] cursor-pointer shadow-xs">
@@ -2610,6 +2754,103 @@
             </div>
           </div>
 
+          <!-- KARTU HASIL PELACAKAN SERIAL NUMBER (TRACKING RESULT CARD) -->
+          <div v-if="snTrackingResult" class="bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 border-2 border-emerald-500/80 rounded-2xl p-4 sm:p-5 shadow-md animate-fadeIn relative space-y-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black shadow-md shadow-emerald-600/30 text-lg">
+                  <i class="fa-solid fa-box-check"></i>
+                </div>
+                <div>
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-600 text-white shadow-xs">
+                      HASIL PELACAKAN SERIAL NUMBER
+                    </span>
+                    <span class="text-sm font-mono font-black text-emerald-950 bg-white px-2.5 py-0.5 rounded-md border border-emerald-300">
+                      {{ snTrackingResult.serial_number }}
+                    </span>
+                  </div>
+                  <p class="text-xs text-slate-600 font-medium mt-0.5">
+                    Unit teridentifikasi pada database logistik pengiriman pabrik.
+                  </p>
+                </div>
+              </div>
+              <button type="button" @click="snTrackingResult = null" title="Tutup Hasil Pelacakan"
+                class="text-slate-400 hover:text-slate-600 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/80 transition cursor-pointer">
+                <i class="fa-solid fa-xmark text-sm"></i>
+              </button>
+            </div>
+
+            <!-- Grid 4 Kolom: Pengiriman Ke, Peti Ke, Dus Ke, Slot -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+              <!-- Pengiriman ke-X -->
+              <div class="bg-white/95 backdrop-blur-xs border border-emerald-200 rounded-xl p-3 shadow-2xs">
+                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                  <i class="fa-solid fa-truck-fast text-emerald-600"></i> Pengiriman Ke:
+                </div>
+                <div class="text-lg font-black text-slate-900 mt-0.5">
+                  Pengiriman #{{ snTrackingResult.delivery_seq || 1 }}
+                </div>
+                <div class="text-[11px] text-slate-600 font-semibold truncate mt-0.5" :title="snTrackingResult.do_number">
+                  {{ snTrackingResult.do_number }}
+                </div>
+              </div>
+
+              <!-- Peti ke-Y -->
+              <div class="bg-white/95 backdrop-blur-xs border border-teal-200 rounded-xl p-3 shadow-2xs">
+                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                  <i class="fa-solid fa-pallet text-teal-600"></i> Peti Ke:
+                </div>
+                <div class="text-lg font-black text-teal-800 mt-0.5">
+                  Peti #{{ snTrackingResult.crate_number || 1 }}
+                </div>
+                <div class="text-[11px] text-teal-700 font-mono font-bold truncate mt-0.5" :title="snTrackingResult.crate_id">
+                  ID: {{ snTrackingResult.crate_id }}
+                </div>
+              </div>
+
+              <!-- Dus ke-Z -->
+              <div class="bg-white/95 backdrop-blur-xs border border-blue-200 rounded-xl p-3 shadow-2xs">
+                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                  <i class="fa-solid fa-box text-blue-600"></i> Dus Ke:
+                </div>
+                <div class="text-lg font-black text-blue-800 mt-0.5">
+                  Dus #{{ snTrackingResult.box_number || 1 }}
+                </div>
+                <div class="text-[11px] text-blue-700 font-mono font-bold truncate mt-0.5" :title="snTrackingResult.box_id">
+                  ID: {{ snTrackingResult.box_id }}
+                </div>
+              </div>
+
+              <!-- Slot & Tanggal -->
+              <div class="bg-white/95 backdrop-blur-xs border border-amber-200 rounded-xl p-3 shadow-2xs">
+                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                  <i class="fa-solid fa-location-dot text-amber-600"></i> Posisi Slot:
+                </div>
+                <div class="text-lg font-black text-amber-700 mt-0.5">
+                  Slot #{{ snTrackingResult.slot_number || 1 }}
+                </div>
+                <div class="text-[11px] text-slate-500 font-semibold truncate mt-0.5">
+                  {{ snTrackingResult.do_date || snTrackingResult.customer_name }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Footer Action Card -->
+            <div class="flex items-center justify-between pt-1 border-t border-emerald-200/60 text-xs">
+              <span class="text-[11px] text-slate-600 font-medium">
+                Penerima / Instansi: <strong class="text-slate-900">{{ snTrackingResult.customer_name }}</strong>
+              </span>
+              <div class="flex items-center gap-2">
+                <button v-if="snTrackingResult.delivery_id" type="button" @click="openDODetailView(snTrackingResult.delivery_id)"
+                  class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs shadow-xs transition flex items-center gap-1.5 cursor-pointer">
+                  <i class="fa-solid fa-eye text-xs"></i>
+                  <span>Buka Dokumen DO</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
           <!-- Tabel Riwayat DO -->
           <div v-if="filteredDOList.length > 0"
             class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
@@ -2619,7 +2860,12 @@
                   <tr>
                     <th class="p-3.5 w-12 text-center">No</th>
                     <th class="p-3.5">No. Surat Jalan</th>
-                    <th class="p-3.5">Tanggal</th>
+                    <th @click="toggleDOSortOrder" class="p-3.5 cursor-pointer hover:bg-slate-100 transition select-none" title="Klik untuk membalik urutan tanggal">
+                      <div class="flex items-center gap-1.5">
+                        <span>Tanggal</span>
+                        <i class="fa-solid text-[10px] text-indigo-600" :class="doSortOrder === 'desc' ? 'fa-arrow-down-wide-short' : 'fa-arrow-up-wide-short'"></i>
+                      </div>
+                    </th>
                     <th class="p-3.5">Penerima (Customer)</th>
                     <th class="p-3.5">Kontrak / Referensi</th>
                     <th class="p-3.5 text-center w-28 whitespace-nowrap">Kuantitas</th>
@@ -3262,312 +3508,6 @@
           </div>
         </div>
 
-        <!-- ================= SUB-TAB 4: SETTINGAN DO & PACKING LIST ================= -->
-        <div v-if="doSubTab === 'settings'" class="max-w-4xl mx-auto space-y-5 animate-fadeIn">
-          <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs space-y-6">
-            <div class="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div>
-                <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
-                  <i class="fa-solid fa-sliders text-red-600"></i>
-                  <span>Pengaturan Standar Dokumen Surat Jalan &amp; Packing List</span>
-                </h3>
-                <p class="text-xs text-slate-500 mt-0.5">
-                  Konfigurasi kop surat, data default kontrak, penerbit dokumen (PPIC), dan parameter penomoran
-                  otomatis.
-                </p>
-              </div>
-              <button type="button" @click="saveDOSettings" :disabled="isSavingDOSettings"
-                class="bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md shadow-red-600/25 flex items-center gap-2 transition cursor-pointer min-h-[40px]">
-                <i class="fa-solid fa-floppy-disk" :class="{'fa-spin': isSavingDOSettings}"></i>
-                <span>{{ isSavingDOSettings ? 'Menyimpan...' : 'Simpan Pengaturan' }}</span>
-              </button>
-            </div>
-
-            <!-- 1. Identitas Perusahaan (Header / Footer) -->
-            <div class="space-y-4">
-              <h4
-                class="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2 text-red-700">
-                <i class="fa-solid fa-building"></i>
-                <span>1. Identitas Perusahaan &amp; Alamat Resmi (Kop Dokumen)</span>
-              </h4>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div class="space-y-1.5 sm:col-span-2">
-                  <label class="text-xs font-bold text-slate-700">Nama Perusahaan / Instansi Penerbit</label>
-                  <input type="text" v-model="doSettings.company_name"
-                    class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-red-600 focus:bg-white transition min-h-[40px]">
-                </div>
-                <div class="space-y-1.5">
-                  <label class="text-xs font-bold text-slate-700">Alamat Kantor Pusat (Head Office)</label>
-                  <textarea v-model="doSettings.head_office" rows="3"
-                    class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-xs font-semibold text-slate-800 focus:outline-none focus:border-red-600 focus:bg-white transition leading-relaxed min-h-[75px] resize-y"></textarea>
-                </div>
-                <div class="space-y-1.5">
-                  <label class="text-xs font-bold text-slate-700">Alamat Pabrik (Factory)</label>
-                  <textarea v-model="doSettings.factory_address" rows="3"
-                    class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-xs font-semibold text-slate-800 focus:outline-none focus:border-red-600 focus:bg-white transition leading-relaxed min-h-[75px] resize-y"></textarea>
-                </div>
-                <div class="space-y-1.5 sm:col-span-2">
-                  <label class="text-xs font-bold text-slate-700">Email Kontak Perusahaan</label>
-                  <input type="email" v-model="doSettings.contact_email"
-                    class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-800 focus:outline-none focus:border-red-600 focus:bg-white transition min-h-[40px]">
-                </div>
-              </div>
-            </div>
-
-            <!-- 2. Penerima Standar & Kontrak Pengadaan -->
-            <div class="space-y-4 pt-4 border-t border-slate-100">
-              <h4
-                class="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2 text-red-700">
-                <i class="fa-solid fa-file-shield"></i>
-                <span>2. Default Penerima (Customer) &amp; Kontrak Pengadaan</span>
-              </h4>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div class="space-y-1.5">
-                  <label class="text-xs font-bold text-slate-700">Nama Instansi Penerima Standar</label>
-                  <input type="text" v-model="doSettings.default_customer_name"
-                    class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-red-600 focus:bg-white transition min-h-[40px]">
-                </div>
-                <div class="space-y-1.5">
-                  <label class="text-xs font-bold text-slate-700">Nomor Kontrak Pengadaan Standar</label>
-                  <input type="text" v-model="doSettings.default_contract_number"
-                    class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-slate-800 focus:outline-none focus:border-red-600 focus:bg-white transition min-h-[40px]">
-                </div>
-                <div class="space-y-1.5 sm:col-span-2">
-                  <label class="text-xs font-bold text-slate-700">Alamat Lengkap Pengiriman Standar</label>
-                  <textarea v-model="doSettings.default_customer_address" rows="3"
-                    class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-xs font-semibold text-slate-800 focus:outline-none focus:border-red-600 focus:bg-white transition leading-relaxed min-h-[85px] resize-y"></textarea>
-                </div>
-                <div class="space-y-1.5 sm:col-span-2">
-                  <label class="text-xs font-bold text-slate-700">Nama Program Pengadaan Standar</label>
-                  <input type="text" v-model="doSettings.default_program_name"
-                    class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-red-600 focus:bg-white transition min-h-[40px]">
-                </div>
-              </div>
-            </div>
-
-            <!-- 3. Pejabat Penerbit Dokumen (PPIC) -->
-            <div class="space-y-4 pt-4 border-t border-slate-100">
-              <h4
-                class="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2 text-red-700">
-                <i class="fa-solid fa-signature"></i>
-                <span>3. Pejabat Penerbit Dokumen Resmi (PPIC)</span>
-              </h4>
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div class="space-y-1.5">
-                  <label class="text-xs font-bold text-slate-700">Nama Pejabat / Staf</label>
-                  <input type="text" v-model="doSettings.default_issuer_name"
-                    class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-red-600 focus:bg-white transition min-h-[40px]">
-                </div>
-                <div class="space-y-1.5">
-                  <label class="text-xs font-bold text-slate-700">Jabatan</label>
-                  <input type="text" v-model="doSettings.default_issuer_title"
-                    class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-red-600 focus:bg-white transition min-h-[40px]">
-                </div>
-                <div class="space-y-1.5">
-                  <label class="text-xs font-bold text-slate-700">Departemen</label>
-                  <input type="text" v-model="doSettings.default_issuer_department"
-                    class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-red-600 focus:bg-white transition min-h-[40px]">
-                </div>
-              </div>
-            </div>
-
-            <!-- 4. Format Nomor Dokumen & Standar Kapasitas -->
-            <div class="space-y-4 pt-4 border-t border-slate-100">
-              <h4
-                class="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2 text-red-700">
-                <i class="fa-solid fa-barcode"></i>
-                <span>4. Format Kode Penomoran &amp; Kapasitas Fisik</span>
-              </h4>
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div class="space-y-1.5">
-                  <label class="text-xs font-bold text-slate-700">Prefix Surat Jalan</label>
-                  <input type="text" v-model="doSettings.do_prefix"
-                    class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-slate-800 focus:outline-none focus:border-red-600 focus:bg-white transition min-h-[40px]">
-                  <p class="text-[10px] text-slate-400 font-mono">Format: 001{prefix}MM/YYYY</p>
-                </div>
-                <div class="space-y-1.5">
-                  <label class="text-xs font-bold text-slate-700">Prefix Packing List</label>
-                  <input type="text" v-model="doSettings.pl_prefix"
-                    class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-slate-800 focus:outline-none focus:border-red-600 focus:bg-white transition min-h-[40px]">
-                  <p class="text-[10px] text-slate-400 font-mono">Format: 004{prefix}MM/YYYY</p>
-                </div>
-                <div class="space-y-1.5">
-                  <label class="text-xs font-bold text-slate-700">Prefix ID Peti</label>
-                  <input type="text" v-model="doSettings.crate_prefix"
-                    class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-slate-800 focus:outline-none focus:border-red-600 focus:bg-white transition min-h-[40px]">
-                  <p class="text-[10px] text-slate-500 font-mono">Template: YYtahunBBbulan-1(Batch ke berapa)001(peti ke
-                    berapa) &bull; Contoh: 2610-1001</p>
-                </div>
-                <div class="space-y-1.5">
-                  <label class="text-xs font-bold text-slate-700">Kapasitas Peti (Unit)</label>
-                  <input type="number" v-model.number="doSettings.crate_capacity" min="1"
-                    class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-red-600 focus:bg-white transition min-h-[40px]">
-                </div>
-                <div class="space-y-1.5">
-                  <label class="text-xs font-bold text-slate-700">Kapasitas Dus/Pak (Unit)</label>
-                  <input type="number" v-model.number="doSettings.box_capacity" min="1"
-                    class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-red-600 focus:bg-white transition min-h-[40px]">
-                </div>
-
-                <!-- Offset Penomoran Surat Jalan (Auto Reset Per Bulan) -->
-                <div class="sm:col-span-3 bg-red-50/70 p-4 rounded-2xl border border-red-200/90 space-y-2 mt-1">
-                  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                    <label class="text-xs font-black text-red-900 flex items-center gap-2">
-                      <i class="fa-solid fa-arrow-up-1-9 text-red-600"></i>
-                      <span>Nomor Urut Awal / Offset Surat Jalan Bulan Ini</span>
-                    </label>
-                    <span
-                      class="text-[10px] font-bold text-red-700 bg-red-100 px-2.5 py-0.5 rounded-full border border-red-300 self-start sm:self-auto">
-                      <i class="fa-solid fa-rotate-left mr-1"></i>Reset Otomatis Tiap Ganti Bulan
-                    </span>
-                  </div>
-                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                    <div class="space-y-1">
-                      <span class="text-[11px] font-bold text-slate-700 block">Offset DO (Jumlah Pengiriman
-                        Sebelumnya)</span>
-                      <input type="number" v-model.number="doSettings.do_sequence_offset" min="0"
-                        class="w-full bg-white border border-red-300 rounded-xl px-3.5 py-2 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-red-600 min-h-[40px]">
-                      <p class="text-[10.5px] text-slate-500">
-                        Isi <strong>4</strong> jika sudah ada 4 pengiriman di luar sistem, sehingga Surat Jalan
-                        berikutnya dimulai dari <strong>005</strong>.
-                      </p>
-                    </div>
-                    <div class="space-y-1">
-                      <span class="text-[11px] font-bold text-slate-700 block">Bulan Berlaku Offset (Format:
-                        MM/YYYY)</span>
-                      <input type="text" v-model="doSettings.do_offset_month" placeholder="Contoh: 10/2026"
-                        class="w-full bg-white border border-red-300 rounded-xl px-3.5 py-2 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-red-600 min-h-[40px]">
-                      <p class="text-[10.5px] text-slate-500">
-                        Hanya berlaku pada bulan yang ditentukan. Saat bulan berganti (misal ke 11/2026), counter DO dan
-                        ID Peti <strong>otomatis kembali ke 1</strong>.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div class="space-y-1.5 sm:col-span-2 pt-2 border-t border-slate-100">
-                  <div class="flex items-center justify-between">
-                    <label class="text-xs font-bold text-slate-700">Domain / URL Dasar Pelacakan QR (Tracking Base
-                      URL)</label>
-                    <span v-if="doSettings.auto_base_url"
-                      class="text-[10px] text-emerald-700 font-mono font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                      IP Terdeteksi: {{ doSettings.auto_base_url }}
-                    </span>
-                  </div>
-                  <input type="text" v-model="doSettings.tracking_base_url"
-                    :placeholder="doSettings.auto_base_url || 'http://192.168.1.22:8000'"
-                    class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-800 focus:outline-none focus:border-red-600 focus:bg-white transition min-h-[40px]">
-                  <p class="text-[10.5px] text-slate-500">
-                    URL yang akan disematkan ke dalam QR Code Surat Jalan. Masukkan IP/Domain server (contoh:
-                    <code>http://192.168.1.22:8000</code>) agar perangkat HP yang terhubung ke jaringan Wi-Fi bisa langsung
-                    membuka dokumen Packing List.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <!-- Kartu Status Integrasi Cloudinary (Dikelola Terpusat di Portal Admin CMS) -->
-            <div
-              class="bg-gradient-to-br from-slate-900 to-indigo-950 text-white rounded-2xl p-5 border border-indigo-800/40 shadow-lg space-y-4">
-              <div class="flex flex-wrap items-center justify-between gap-3">
-                <div class="flex items-center gap-3">
-                  <div
-                    class="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300">
-                    <i class="fa-solid fa-cloud-arrow-up text-lg"></i>
-                  </div>
-                  <div>
-                    <h4 class="text-sm font-black tracking-tight text-white flex items-center gap-2">
-                      <span>Status Integrasi Cloudinary &amp; QR Code Luar Jaringan</span>
-                      <span v-if="doSettings.cloudinary?.configured"
-                        class="bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1">
-                        <i class="fa-solid fa-circle-check"></i> Aktif &amp; Terkonfigurasi
-                      </span>
-                      <span v-else
-                        class="bg-amber-500/20 text-amber-300 border border-amber-400/30 text-[10px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1">
-                        <i class="fa-solid fa-triangle-exclamation"></i> Belum Dikonfigurasi
-                      </span>
-                    </h4>
-                    <p class="text-[11px] text-slate-300">
-                      Otomatis unggah PDF Packing List ke cloud. QR Code di Surat Jalan dapat langsung diakses publik dari HP /
-                      paket data luar tanpa perlu Wi-Fi pabrik.
-                    </p>
-                  </div>
-                </div>
-
-                <div class="flex items-center gap-2">
-                  <button type="button" @click="testCloudinaryConnection"
-                    :disabled="isTestingCloud || (!cloudForm.cloud_name && !doSettings.cloudinary?.cloud_name)"
-                    class="bg-indigo-600/60 hover:bg-indigo-600 disabled:opacity-50 text-white border border-indigo-400/30 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
-                    <i class="fa-solid" :class="isTestingCloud ? 'fa-spinner fa-spin' : 'fa-plug'"></i>
-                    <span>{{ isTestingCloud ? 'Menguji...' : 'Uji Koneksi Cloud' }}</span>
-                  </button>
-                  <a href="/admin" target="_blank"
-                    class="bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-md">
-                    <i class="fa-solid fa-shield-halved text-red-400"></i>
-                    <span>Kelola di Portal Admin CMS</span>
-                  </a>
-                </div>
-              </div>
-
-              <!-- Info Status Terpusat -->
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-700/60 text-xs">
-                <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-3">
-                  <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Cloud Name Aktif</span>
-                  <strong class="font-mono text-white text-sm">{{ doSettings.cloudinary?.cloud_name || '-' }}</strong>
-                </div>
-                <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-3">
-                  <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Folder Cloud PDF</span>
-                  <strong class="font-mono text-white text-sm">{{ doSettings.cloudinary?.folder || 'nkri-pl' }}</strong>
-                </div>
-                <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-3">
-                  <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Pengelolaan Kredensial</span>
-                  <span class="text-indigo-300 font-semibold text-xs flex items-center gap-1 mt-0.5">
-                    <i class="fa-solid fa-lock text-[10px]"></i> Terpusat di Portal CMS Admin
-                  </span>
-                </div>
-              </div>
-
-              <!-- Hasil Uji Koneksi / Diagnostic Card -->
-              <div v-if="cloudTestResult" class="rounded-xl p-3.5 border text-xs space-y-2 animate-fadeIn"
-                :class="cloudTestResult.ok ? (cloudTestResult.delivery_ok ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-200' : 'bg-amber-950/40 border-amber-500/50 text-amber-200') : 'bg-rose-950/40 border-rose-500/50 text-rose-200'">
-                <div class="flex items-start gap-2.5">
-                  <i class="fa-solid text-base mt-0.5"
-                    :class="cloudTestResult.ok ? (cloudTestResult.delivery_ok ? 'fa-circle-check text-emerald-400' : 'fa-triangle-exclamation text-amber-400') : 'fa-circle-xmark text-rose-400'"></i>
-                  <div class="flex-1 space-y-1">
-                    <div class="font-bold flex items-center justify-between">
-                      <span>{{ cloudTestResult.ok ? (cloudTestResult.delivery_ok ? 'Koneksi Cloudinary Berhasil &amp; Siap Pakai' : 'Upload Berhasil, Namun Delivery PDF Masih Dibatasi Akun Cloudinary!') : 'Koneksi Cloudinary Gagal' }}</span>
-                      <button type="button" @click="cloudTestResult = null"
-                        class="text-slate-400 hover:text-white">&times;</button>
-                    </div>
-                    <p class="text-[11px] leading-relaxed opacity-90">{{ cloudTestResult.note || cloudTestResult.error || cloudTestResult.message }}</p>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Security Notice -->
-              <div
-                class="bg-slate-800/40 rounded-xl p-3 border border-slate-700/50 flex items-start gap-2.5 text-[11px] text-slate-400">
-                <i class="fa-solid fa-shield-halved text-indigo-400 mt-0.5 shrink-0"></i>
-                <div class="leading-relaxed">
-                  <strong>Keamanan Data:</strong> Pengisian dan perubahan kredensial API Secret Cloudinary dipindahkan secara terpusat ke Portal Admin CMS (<a href="/admin" target="_blank" class="text-indigo-300 underline font-bold">/admin</a>) demi memenuhi kepatuhan standar keamanan industri.
-                </div>
-              </div>
-            </div>
-
-            <!-- Bottom Action Bar -->
-            <div class="flex items-center justify-between pt-4 border-t border-slate-100">
-              <button type="button" @click="applySettingsToNewDOForm"
-                class="text-xs font-bold text-slate-700 hover:text-red-700 inline-flex items-center gap-1.5 transition cursor-pointer">
-                <i class="fa-solid fa-arrow-right-to-bracket text-red-600"></i>
-                <span>Terapkan Pengaturan ini ke Form Buat DO Baru</span>
-              </button>
-              <button type="button" @click="saveDOSettings" :disabled="isSavingDOSettings"
-                class="bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow-md shadow-red-600/25 flex items-center gap-2 transition cursor-pointer min-h-[42px]">
-                <i class="fa-solid fa-floppy-disk" :class="{'fa-spin': isSavingDOSettings}"></i>
-                <span>{{ isSavingDOSettings ? 'Menyimpan...' : 'Simpan Pengaturan' }}</span>
-              </button>
-            </div>
-          </div>
-        </div>
 
         <!-- ================= SUB-TAB 3: DATABASE CUSTOMER ================= -->
         <div v-if="doSubTab === 'customers'" class="max-w-4xl mx-auto space-y-4">

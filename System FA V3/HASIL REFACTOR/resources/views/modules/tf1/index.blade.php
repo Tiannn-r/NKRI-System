@@ -158,7 +158,7 @@
                 <i class="fa-solid fa-circle-info text-indigo-600 text-sm"></i>
                 <span class="text-indigo-950 font-medium">
                   Menampilkan <strong>{{ testedGoodSlots.length }}</strong> rakitan pada
-                  Tray <strong class="font-mono">{{ currentTray.tray_code }}</strong>.
+                  Tray <strong class="font-mono">{{ currentTray?.tray_code }}</strong>.
                 </span>
               </div>
               <div class="flex items-center gap-2 font-mono text-[11px]">
@@ -183,7 +183,7 @@
               class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
               <div v-for="(slot, idx) in testedGoodSlots" :key="slot.set_number || idx"
                 class="bg-white border rounded-2xl p-3.5 shadow-sm transition-all duration-200 flex flex-col justify-between relative"
-                :class="(isReassemblySet(slot) || slot.assy_test_status === 'RU' || slot.qc_status === 'RU' || slot.status === 'Dirakit Ulang' || slot.verified_status === 'WAITING_REASSEMBLY') ? 'border-indigo-300 ring-1 ring-indigo-100 bg-indigo-50/20' : ((slot.qc_status === 'HOLD_ASSY' || slot.assy_test_status === 'Hold') ? 'border-amber-300 ring-1 ring-amber-100 bg-amber-50/20' : ((slot.qc_status === 'REWORK_ASSY' || slot.assy_test_status === 'Rework') ? 'border-purple-300 ring-1 ring-purple-100 bg-purple-50/20' : ((slot.assy_doc_number || slot.assy_test_status === 'Good' || slot.qc_status === 'PENDING_QC' || slot.qc_status === 'GOOD' || slot.qc_status === 'HOLD_QC') ? 'border-emerald-300 ring-1 ring-emerald-100 bg-emerald-50/20' : 'border-indigo-200 ring-1 ring-indigo-100 hover:border-indigo-400')))">
+                :class="(isReassemblySet(slot) || slot.assy_test_status === 'RU' || slot.qc_status === 'RU' || slot.status === 'Dirakit Ulang' || slot.verified_status === 'WAITING_REASSEMBLY') ? 'border-indigo-300 ring-1 ring-indigo-100 bg-indigo-50/20' : (isSlotTF1Hold(slot) ? 'border-amber-300 ring-1 ring-amber-100 bg-amber-50/20' : ((slot.qc_status === 'REWORK_ASSY' || slot.assy_test_status === 'Rework') ? 'border-purple-300 ring-1 ring-purple-100 bg-purple-50/20' : (isSlotTF1Good(slot) ? 'border-emerald-300 ring-1 ring-emerald-100 bg-emerald-50/20' : 'border-indigo-200 ring-1 ring-indigo-100 hover:border-indigo-400')))">
 
                 <!-- Slot Card Top Header -->
                 <div class="flex items-center justify-between border-b border-slate-100 pb-2 mb-2.5 min-h-[32px] gap-2">
@@ -192,8 +192,7 @@
                       class="bg-slate-900 text-white text-[11px] font-black px-2 py-0.5 rounded-lg font-mono shrink-0">
                       #{{ slot.set_number }}
                     </span>
-                    <span class="text-[10px] font-bold text-slate-500 font-mono truncate">{{ currentTray.tray_code
-                      }}</span>
+                    <span class="text-[10px] font-bold text-slate-500 font-mono truncate">{{ currentTray?.tray_code }}</span>
                   </div>
 
                   <!-- JIKA ADA DRAFT PROGRES: Tampilkan Progress Bar Persentase di pojok kanan sejajar nama dokumen/tray -->
@@ -228,10 +227,10 @@
                       title="Set dalam proses Perakitan Ulang (RU)">
                       <i class="fa-solid fa-arrows-rotate text-indigo-600 text-[8.5px]"></i> RU
                     </span>
-                    <!-- 1. Hold Test -->
-                    <span v-else-if="slot.qc_status === 'HOLD_ASSY' || slot.assy_test_status === 'Hold'"
+                    <!-- 1. HOLD TF 1 -->
+                    <span v-else-if="isSlotTF1Hold(slot)"
                       class="bg-amber-100 text-amber-900 border border-amber-300 font-black text-[9px] uppercase px-2 py-0.5 rounded-lg inline-flex items-center gap-1 whitespace-nowrap shadow-xs">
-                      <i class="fa-solid fa-hand text-amber-600 text-[8.5px]"></i> Hold Test
+                      <i class="fa-solid fa-hand text-amber-600 text-[8.5px]"></i> HOLD TF 1
                     </span>
                     <!-- 2. Rework Test -->
                     <span v-else-if="slot.qc_status === 'REWORK_ASSY' || slot.assy_test_status === 'Rework'"
@@ -267,7 +266,7 @@
                       </span>
                     </template>
                     <!-- 5. Fresh Good (Lolos Uji TF1 / Ke QC) -->
-                    <template v-else-if="slot.assy_doc_number || slot.assy_test_status === 'Good'">
+                    <template v-else-if="isSlotTF1Good(slot)">
                       <span v-if="slot.qc_status === 'GOOD'"
                         class="bg-emerald-100 text-emerald-900 border border-emerald-300 font-black text-[9px] uppercase px-2 py-0.5 rounded-lg inline-flex items-center gap-1 whitespace-nowrap shadow-xs"
                         title="Lolos Uji Fungsional & Lolos QC">
@@ -335,7 +334,7 @@
                   </div>
                   <!-- Alasan Gagal jika masih Hold / Rework -->
                   <div
-                    v-else-if="(slot.qc_status === 'HOLD_ASSY' || slot.assy_test_status === 'Hold') && (slot.assy_failure_reasons || slot.reason)"
+                    v-else-if="isSlotTF1Hold(slot) && (slot.assy_failure_reasons || slot.reason)"
                     class="p-1.5 border rounded-lg text-[10px] leading-tight space-y-0.5 bg-amber-50 border-amber-200 text-amber-900">
                     <span class="font-bold block uppercase text-[8.5px] text-amber-800">
                       Alasan Gagal:
@@ -395,7 +394,7 @@
                       <i class="fa-solid fa-arrows-rotate text-indigo-600 mr-1 text-[9px]"></i> Status RU
                     </span>
                     <span
-                      v-else-if="slot.assy_test_status === 'Good' || (slot.assy_doc_number && slot.qc_status !== 'HOLD_ASSY' && slot.assy_test_status !== 'Hold')"
+                      v-else-if="isSlotTF1Good(slot)"
                       class="flex-1 text-[10px] text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-center font-bold px-1 text-center shadow-2xs whitespace-nowrap select-none min-h-[34px]"
                       :title="slot.qc_status === 'GOOD' ? 'Unit telah lolos QC' : 'Unit telah lolos uji TF1 dan masuk ke antrean QC'">
                       <i class="fa-solid fa-check text-emerald-600 mr-1 text-[9px]"></i>
@@ -405,13 +404,13 @@
                       class="flex-1 text-[10px] text-purple-800 bg-purple-50 border border-purple-200 rounded-xl flex items-center justify-center font-bold px-1 text-center shadow-2xs whitespace-nowrap select-none min-h-[34px]">
                       <i class="fa-solid fa-rotate-left text-purple-600 mr-1 text-[9px]"></i> Rework Test
                     </span>
-                    <span v-else-if="slot.qc_status === 'HOLD_ASSY' || slot.assy_test_status === 'Hold'"
+                    <span v-else-if="isSlotTF1Hold(slot)"
                       class="flex-1 text-[10px] text-amber-800 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-center font-bold px-1 text-center shadow-2xs whitespace-nowrap select-none min-h-[34px]">
-                      <i class="fa-solid fa-hand text-amber-600 mr-1 text-[9px]"></i> Hold Test
+                      <i class="fa-solid fa-hand text-amber-600 mr-1 text-[9px]"></i> HOLD TF 1
                     </span>
                     <span v-else
                       class="flex-1 text-[10px] text-amber-800 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-center font-bold px-1 text-center shadow-2xs whitespace-nowrap select-none min-h-[34px]">
-                      <i class="fa-solid fa-hand text-amber-600 mr-1 text-[9px]"></i> Hold Test
+                      <i class="fa-solid fa-hand text-amber-600 mr-1 text-[9px]"></i> HOLD TF 1
                     </span>
                   </div>
                 </div>
@@ -624,13 +623,14 @@
                       }}</span>
                   </span>
 
-                  <!-- Tombol Lihat Petunjuk -->
-                  <button type="button" @click="openInstructionGuideModal(currentActiveChecklistItem)"
-                    class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-800 font-bold text-xs border border-indigo-200 transition shadow-2xs shrink-0 cursor-pointer group">
-                    <i class="fa-solid fa-book-open text-xs text-indigo-600 group-hover:text-white transition"></i>
-                    <span>Lihat petunjuk</span>
-                    <span v-if="getTestImagesCount(currentActiveChecklistItem.test_num) > 0"
-                      class="bg-indigo-600 group-hover:bg-white group-hover:text-indigo-900 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full ml-0.5">
+                  <!-- Tombol Lihat Petunjuk Gambar (Hanya muncul jika ada foto dari admin) -->
+                  <button v-if="getTestImagesCount(currentActiveChecklistItem.test_num) > 0"
+                    type="button" @click="openInstructionGuideModal(currentActiveChecklistItem)"
+                    class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-800 font-bold text-xs border border-indigo-200 transition shadow-2xs shrink-0 cursor-pointer group"
+                    title="Lihat foto petunjuk kerja pengujian">
+                    <i class="fa-solid fa-image text-xs text-indigo-600 group-hover:text-white transition"></i>
+                    <span>Lihat Gambar</span>
+                    <span class="bg-indigo-600 group-hover:bg-white group-hover:text-indigo-900 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full ml-0.5">
                       {{ getTestImagesCount(currentActiveChecklistItem.test_num) }}
                     </span>
                   </button>
@@ -994,13 +994,30 @@
               <div>
                 <h3 class="font-black text-base sm:text-lg text-slate-900">Form Penggabungan Assembly Set #{{
                   activeModalIndex + 1 }}</h3>
-                <p class="text-[11px] sm:text-xs text-slate-500 font-mono">Tray: {{ currentTray.tray_code }}</p>
+                <p class="text-[11px] sm:text-xs text-slate-500 font-mono">Tray: {{ currentTray?.tray_code }}</p>
               </div>
             </div>
             <button @click="safeCloseModal(closeModal, !!assyForm.started_at)"
               class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg transition cursor-pointer"
               title="Tutup Modal">
               <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+          </div>
+
+          <!-- Banner Peringatan Jeda dalam Modal -->
+          <div v-if="isWorkstationPaused"
+            class="bg-amber-100 border-2 border-amber-300 text-amber-950 p-3 sm:p-3.5 rounded-xl flex items-center justify-between gap-3 shadow-xs animate-pulse mb-3">
+            <div class="flex items-center gap-2.5">
+              <i class="fa-solid fa-pause text-amber-700 text-base"></i>
+              <div>
+                <strong class="text-xs font-black block">Workstation Sedang Dijeda</strong>
+                <span class="text-[10px] text-amber-800">Klik tombol "Lanjutkan" untuk mengaktifkan kembali perakitan.</span>
+              </div>
+            </div>
+            <button type="button" @click="resumeAssemblyWork"
+              class="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-3.5 py-1.5 rounded-lg shadow-sm transition active:scale-95 flex items-center gap-1.5 cursor-pointer flex-shrink-0">
+              <i class="fa-solid fa-play text-[10px]"></i>
+              <span>Lanjutkan</span>
             </button>
           </div>
 
@@ -1242,14 +1259,16 @@
             </button>
 
             <!-- Button Mulai (Saat Belum Mulai) ATAU Button Selesai (Saat Sudah Mulai) -->
-            <button v-if="!assyForm.started_at" type="button" @click="startAssemblyNow"
-              class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-7 py-2.5 rounded-xl text-xs shadow-md shadow-emerald-600/25 transition flex items-center justify-center space-x-2 active:scale-95 min-h-[40px]">
+            <button v-if="!assyForm.started_at" type="button" @click="startAssemblyNow" :disabled="isWorkstationPaused"
+              :class="isWorkstationPaused ? 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-60' : 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer active:scale-95 shadow-md shadow-emerald-600/25'"
+              class="font-bold px-7 py-2.5 rounded-xl text-xs transition flex items-center justify-center space-x-2 min-h-[40px]">
               <i class="fa-solid fa-play"></i>
               <span>Mulai</span>
             </button>
 
-            <button v-else type="button" @click="saveAssemblyItem(false)"
-              class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-7 py-2.5 rounded-xl text-xs shadow-md shadow-emerald-600/25 transition flex items-center justify-center space-x-2 active:scale-95 min-h-[40px]">
+            <button v-else type="button" @click="saveAssemblyItem(false)" :disabled="isWorkstationPaused"
+              :class="isWorkstationPaused ? 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-60' : 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer active:scale-95 shadow-md shadow-emerald-600/25'"
+              class="font-bold px-7 py-2.5 rounded-xl text-xs transition flex items-center justify-center space-x-2 min-h-[40px]">
               <i class="fa-solid fa-circle-check"></i>
               <span>Selesai</span>
             </button>
