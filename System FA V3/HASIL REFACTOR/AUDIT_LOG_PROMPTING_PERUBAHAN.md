@@ -42,7 +42,7 @@ flowchart TD
 ## 3. Log Kronologis Lengkap Seluruh 176 Prompting & Perubahan Sistem
 
 
-### Log Kronologis Perubahan Sistem (Prompt #024)
+### Log Kronologis Perubahan Sistem (Prompt #025)
 
 | No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
 |:---:|:---:|---|---|---|
@@ -70,3 +70,4 @@ flowchart TD
 | **#022** | `2026-11-09 01:03:24` | **Riwayat & History** | ini juga history di tf 1 ketika di click detail dan dilihat persetnya kok hasilnya gada tf 1nnya? malah yang di perakitan ada tf 1 nya kok aneh | Mengisolasi detail riwayat perakitan, TF1, dan TF2 agar hanya menampilkan hasil proses pada tahap tersebut. |
 | **#023** | `2026-11-09 01:12:53` | **Riwayat & History** | ini juga di detail perakitan harusnya munculin hasil perakitannya saja | Mengisolasi detail riwayat perakitan, TF1, dan TF2 agar hanya menampilkan hasil proses pada tahap tersebut. |
 | **#024** | `2026-11-09 01:24:19` | **Riwayat & History** | lakukan ini juga pada history yang lain perakitan berarti menampilkan hasil perakitan, TF 1 berarti menampilkan hasil perakitan dan TF 1, TF 2 berarti menampilkan hasil perakitan, TF 1 dan TF 2, kemudian penerimaan berarti menampilkan hasil perakitan, TF 1, TF 2 dan Penerimaan, dengan syarat syarat yang sudah di tetapkan jika belum dilakukan berarti statusnya pending pada proses tersebut. dan syarat syarat yang sudah diterapkan apakah masih igat? coba jelaskan | Mengisolasi detail riwayat perakitan, TF1, dan TF2 agar hanya menampilkan hasil proses pada tahap tersebut. |
+| **#025** | `2026-11-09 01:28:51` | **Audit Log & Auth** | itu kenapa jadi gitu aktornya? aktornya sesuain aja sama akun yang ngelakuin action tersebut | Standarisasi pencatatan aktor (user pelaku) menggunakan nama lengkap dari akun yang sedang login. |
