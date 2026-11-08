@@ -112,6 +112,18 @@
             ]
           },
           {
+            key: 'delivery_order',
+            title: 'Delivery Order (Logistik & PPIC)',
+            icon: 'fa-solid fa-truck-fast',
+            badgeClass: 'bg-indigo-100 text-indigo-900 border-indigo-300',
+            menus: [
+              { key: 'do_dashboard', title: 'Dashboard DO', icon: 'fa-solid fa-chart-pie', desc: 'Pemantauan status pengiriman & grafik produksi' },
+              { key: 'do_customers', title: 'Database Customer', icon: 'fa-solid fa-users', desc: 'Data master customer tujuan pengiriman' },
+              { key: 'do_packing_list', title: 'Packing List', icon: 'fa-solid fa-boxes-packing', desc: 'Pembuatan & riwayat label packing list' },
+              { key: 'do_surat_jalan', title: 'Surat Jalan (DO)', icon: 'fa-solid fa-file-invoice', desc: 'Penerbitan surat jalan & packing list resmi' }
+            ]
+          },
+          {
             key: 'admin',
             title: 'Administrator',
             icon: 'fa-solid fa-shield-halved',
@@ -132,6 +144,7 @@
           gudang: true,
           perakitan: false,
           qc: false,
+          delivery_order: false,
           admin: false
         });
 
@@ -161,6 +174,10 @@
             report: isAdmin ? 2 : 1,
             history: isAdmin ? 2 : 1,
             delivery_order: isAdmin ? 2 : 0,
+            do_dashboard: isAdmin ? 2 : 1,
+            do_customers: isAdmin ? 2 : 0,
+            do_packing_list: isAdmin ? 2 : 0,
+            do_surat_jalan: isAdmin ? 2 : 0,
             assembly: isAdmin ? 2 : 0,
             reassembly: isAdmin ? 2 : 0,
             assy_testing: isAdmin ? 2 : 0,
@@ -267,8 +284,11 @@
 
           const r = String(userRole.value || '').toLowerCase().trim();
           const dept = String(userDepartment.value || (r === 'gudang' ? 'gudang' : 'assembly')).toLowerCase();
-          if (dept.includes('gudang') || dept.includes('warehouse')) {
-            return ['warehouse', 'work_order', 'production_hold', 'functional_hold', 'returns', 'warehouse_receipt', 'traveler', 'master', 'report', 'history', 'delivery_order'].includes(menuKey);
+          if (['delivery_order', 'do_dashboard', 'do_customers', 'do_packing_list', 'do_surat_jalan'].includes(menuKey)) {
+            return dept.includes('gudang') || dept.includes('warehouse') || dept.includes('delivery') || dept.includes('logistik') || dept.includes('ppic') || r.includes('admin');
+          }
+          if (dept.includes('gudang') || dept.includes('warehouse') || dept.includes('delivery') || dept.includes('logistik') || dept.includes('ppic')) {
+            return ['warehouse', 'work_order', 'production_hold', 'functional_hold', 'returns', 'warehouse_receipt', 'traveler', 'master', 'report', 'history', 'delivery_order', 'do_dashboard', 'do_customers', 'do_packing_list', 'do_surat_jalan'].includes(menuKey);
           } else if (dept.includes('qc') || dept.includes('quality')) {
             return ['qc', 'functional_test', 'production_hold', 'master', 'report', 'history', 'traveler'].includes(menuKey);
           } else {
@@ -493,6 +513,8 @@
           }
 
           let hash = rawHash;
+          let tab = '';
+          let subTab = '';
           if (window.location.pathname.startsWith('/admin') || window.__IS_ADMIN_PORTAL) {
             return { tab: 'users', subTab: 'cms_portal', queryParams: {} };
           }
@@ -520,8 +542,18 @@
             '/master': { tab: 'master' },
             '/history': { tab: 'report' },
             '/laporan': { tab: 'report' },
-            '/delivery': { tab: 'delivery_order' },
-            '/delivery-order': { tab: 'delivery_order' },
+            '/delivery': { tab: 'delivery_order', subTab: 'dashboard' },
+            '/delivery-order': { tab: 'delivery_order', subTab: 'dashboard' },
+            '/packing-list': { tab: 'delivery_order', subTab: 'packing_list' },
+            '/packinglist': { tab: 'delivery_order', subTab: 'packing_list' },
+            '/pl': { tab: 'delivery_order', subTab: 'packing_list' },
+            '/surat-jalan': { tab: 'delivery_order', subTab: 'surat_jalan' },
+            '/suratjalan': { tab: 'delivery_order', subTab: 'surat_jalan' },
+            '/sj': { tab: 'delivery_order', subTab: 'surat_jalan' },
+            '/database-customer': { tab: 'delivery_order', subTab: 'customers' },
+            '/database-do': { tab: 'delivery_order', subTab: 'customers' },
+            '/customers': { tab: 'delivery_order', subTab: 'customers' },
+            '/dashboard-do': { tab: 'delivery_order', subTab: 'dashboard' },
             '/verifikasi': { tab: 'users', subTab: 'verify_set' }
           };
 
@@ -546,9 +578,6 @@
 
           const savedTab = localStorage.getItem('activeTab') || '';
           const savedSubTab = normalizeAdminSubTab(localStorage.getItem('activeAdminSubTab') || 'verify_set');
-
-          let tab = '';
-          let subTab = '';
 
           if (hash.includes('/')) {
             const parts = hash.split('/');
@@ -774,6 +803,7 @@
           gudang: false,
           perakitan: false,
           qc: false,
+          delivery_order: (initialRoute && initialRoute.tab === 'delivery_order') || false,
           admin: false
         });
 
@@ -828,6 +858,23 @@
           'report': '/history',
           'delivery_order': '/delivery',
           'users': '/verifikasi'
+        };
+
+        const resolveCleanUrl = (tab, subTab = null) => {
+          if (tab === 'delivery_order') {
+            const sub = subTab || (deliveryModule && deliveryModule.doSubTab ? deliveryModule.doSubTab.value : 'dashboard');
+            if (sub === 'packing_list' || sub === 'label_pl_only' || sub === 'labels_history') return '/packing-list';
+            if (sub === 'surat_jalan' || sub === 'form' || sub === 'history') return '/surat-jalan';
+            if (sub === 'customers' || sub === 'database_do') return '/database-customer';
+            return '/delivery';
+          }
+          if (tab === 'users') {
+            return '/verifikasi';
+          }
+          if (tab === 'report') {
+            return '/history';
+          }
+          return TAB_CLEAN_URLS[tab] || ('/' + tab);
         };
 
         const navigateTo = (tab, subTab = null, isFromPopState = false) => {
@@ -893,19 +940,23 @@
             reportSubTab.value = targetSub;
             targetHash = '#report/' + targetSub;
             targetKey = 'report/' + targetSub;
-            if (targetSub === 'wo') {
-              loadLaporan();
-              loadTrays();
-              if (!assemblyResults.value || !assemblyResults.value.length) loadAssemblyResults();
-            } else if (targetSub === 'assembly') {
-              loadAssemblyResults();
-              loadLaporan();
-            } else if (targetSub === 'assy_test') {
-              loadAssyTestReports();
-            } else if (targetSub === 'qc_test') {
-              loadQCTestReports();
-            } else if (targetSub === 'warehouse_receipt') {
-              loadWarehouseReceiptReports();
+            if (reportsModule && typeof reportsModule.initReportsTab === 'function') {
+              reportsModule.initReportsTab(targetSub);
+            } else {
+              if (targetSub === 'wo') {
+                if (typeof loadLaporan === 'function') loadLaporan();
+                if (typeof loadTrays === 'function') loadTrays();
+                if (typeof loadAssemblyResults === 'function' && (!assemblyResults.value || !assemblyResults.value.length)) loadAssemblyResults();
+              } else if (targetSub === 'assembly') {
+                if (typeof loadAssemblyResults === 'function') loadAssemblyResults();
+                if (typeof loadLaporan === 'function') loadLaporan();
+              } else if (targetSub === 'assy_test') {
+                if (typeof loadAssyTestReports === 'function') loadAssyTestReports();
+              } else if (targetSub === 'qc_test') {
+                if (typeof loadQCTestReports === 'function') loadQCTestReports();
+              } else if (targetSub === 'warehouse_receipt') {
+                if (typeof loadWarehouseReceiptReports === 'function') loadWarehouseReceiptReports();
+              }
             }
             // Load active subtab only (lazy on-demand)
           } else {
@@ -918,8 +969,17 @@
                 loadQCPendingItems();
               }
             } else if (tab === 'delivery_order') {
+              targetHash = subTab ? `#delivery_order/${subTab}` : '#delivery_order';
+              targetKey = subTab ? `delivery_order/${subTab}` : 'delivery_order';
+              if (subTab) {
+                if (deliveryModule && typeof deliveryModule.setDoSubTab === 'function') {
+                  deliveryModule.setDoSubTab(subTab);
+                } else if (deliveryModule && deliveryModule.doSubTab) {
+                  deliveryModule.doSubTab.value = subTab;
+                }
+              }
               if (deliveryModule && typeof deliveryModule.initDeliveryTab === 'function') {
-                deliveryModule.initDeliveryTab();
+                deliveryModule.initDeliveryTab(subTab);
               }
             } else if (tab === 'master') {
               loadMasterData();
@@ -995,25 +1055,8 @@
             }
           }
 
-          // Clean URL Address Bar Mapper
-          const TAB_CLEAN_URLS = {
-            'assembly': '/perakitan',
-            'assy_testing': '/tf1',
-            'qc': '/qc',
-            'warehouse': '/work-order',
-            'production_hold': '/hasil-perakitan',
-            'functional_hold': '/hasil-test',
-            'warehouse_receipt': '/penerimaan',
-            'reassembly': '/rakit-ulang',
-            'returns': '/pengembalian',
-            'traveler': '/traveler',
-            'master': '/master-stok',
-            'report': '/history',
-            'delivery_order': '/delivery',
-            'users': '/verifikasi'
-          };
-          const cleanPath = TAB_CLEAN_URLS[tab] || ('/' + tab);
-          const targetUrl = cleanPath;
+          // Clean URL Address Bar Resolver
+          const targetUrl = resolveCleanUrl(tab, subTab);
 
           // Track sequence for back navigation across all roles & tabs
           if (!isFromPopState) {
@@ -1150,6 +1193,13 @@
           options.headers['ngrok-skip-browser-warning'] = 'true';
           if (token) options.headers['Authorization'] = 'Bearer ' + token;
 
+          const actUser = (typeof userName !== 'undefined' && userName?.value) ? userName.value : (localStorage.getItem('username') || '');
+          const actFull = (typeof userFullName !== 'undefined' && userFullName?.value) ? userFullName.value : (localStorage.getItem('full_name') || '');
+          const actRole = (typeof userRole !== 'undefined' && userRole?.value) ? userRole.value : (localStorage.getItem('role') || '');
+          if (actUser) options.headers['X-Actor-Username'] = actUser;
+          if (actFull) options.headers['X-Actor-Fullname'] = encodeURIComponent(actFull);
+          if (actRole) options.headers['X-Actor-Role'] = actRole;
+
           let res;
           try {
             res = await fetch('/api' + path, options);
@@ -1255,6 +1305,7 @@
           labelsHistory: { page: 1, size: 10 },
           returns: { page: 1, size: 10 },
           receiptTray: { page: 1, size: 10 },
+          recentAdded: { page: 1, size: 100 },
         });
 
 
@@ -1390,8 +1441,7 @@
             const s = String(currentStatus).trim();
             const sl = s.toLowerCase();
             if (sl === 'good') return 'Good';
-            if (sl.includes('rework')) return 'Hold -> Rework';
-            if (sl.includes('hold')) return 'Hold';
+            if (sl.includes('rework') || sl.includes('hold')) return 'Hold';
             if (sl.includes('scrap')) return 'Scrap';
             if (sl === 'ru' || sl === 'dirakit ulang') return 'Dirakit Ulang';
             return s;
@@ -1407,8 +1457,7 @@
           parts = parts.map(p => {
             const low = p.toLowerCase();
             if (low === 'good') return 'Good';
-            if (low === 'hold') return 'Hold';
-            if (low === 'rework') return 'Rework';
+            if (low === 'hold' || low === 'rework') return 'Hold';
             if (low === 'scrap') return 'Scrap';
             if (low === 'ru' || low === 'dirakit ulang') return 'Dirakit Ulang';
             return p.charAt(0).toUpperCase() + p.slice(1).toLowerCase();
@@ -1443,6 +1492,29 @@
           return 'bg-slate-50 text-slate-600 border-slate-200';
         };
 
+        const formatExcelDateTime = (dt) => {
+          if (!dt) return '-';
+          const d = new Date(dt);
+          if (isNaN(d.getTime())) return String(dt);
+          const day = d.getDate();
+          const month = d.getMonth() + 1;
+          const year = d.getFullYear();
+          const hours = String(d.getHours()).padStart(2, '0');
+          const mins = String(d.getMinutes()).padStart(2, '0');
+          const secs = String(d.getSeconds()).padStart(2, '0');
+          return `${day}/${month}/${year}, ${hours}.${mins}.${secs}`;
+        };
+
+        const getShiftName = (dt) => {
+          if (!dt) return 'Shift 1';
+          const d = new Date(dt);
+          if (isNaN(d.getTime())) return 'Shift 1';
+          const h = d.getHours();
+          if (h >= 6 && h < 14) return 'Shift 1';
+          if (h >= 14 && h < 22) return 'Shift 2';
+          return 'Shift 3';
+        };
+
         // Shared cross-module reactive state refs
         const activeAssyQCDocSlot = ref(null);
         const warehouseReceiptReports = ref([]);
@@ -1455,6 +1527,8 @@
         // ===================================================================
         if (typeof window.createDeliveryModule === 'function') {
           deliveryModule = window.createDeliveryModule({
+            currentTab,
+            initialSubTab: (initialRoute.tab === 'delivery_order' && initialRoute.subTab) ? initialRoute.subTab : null,
             fetchAPI,
             triggerToast,
             showConfirmCard,
@@ -1733,6 +1807,10 @@
             scrap += (t.scrap_count || 0);
             total += (t.finished_count || 0);
           });
+          const sumCats = good + hold + scrap;
+          if (total !== sumCats && sumCats > 0) {
+            total = sumCats;
+          }
           return { good, hold, scrap, total };
         });
 
@@ -1748,12 +1826,14 @@
           }
           let passed = 0, hold = 0, pending = 0, total = 0;
           list.forEach(t => {
-            const tGoodAssy = t.good_assembly_count || t.good_count || 0;
-            const tTested = t.tested_count || 0;
-            const tPassed = t.good_assy_test_count || tTested;
+            const tGoodAssy = Number(t.good_assembly_count || t.good_count || 0);
+            const tTested = Number(t.tested_count || 0);
+            const tPassed = Number(t.good_assy_test_count !== undefined ? t.good_assy_test_count : (tTested - (t.hold_assy_test_count || 0)));
+            const tHold = Number(t.hold_assy_test_count || 0);
             passed += tPassed;
-            total += tTested;
-            pending += Math.max(0, tGoodAssy - tTested);
+            hold += tHold;
+            total += (tPassed + tHold);
+            pending += Math.max(0, tGoodAssy - (tPassed + tHold));
           });
           return { passed, hold, pending, total };
         });
@@ -1811,6 +1891,18 @@
             currentTrayAssemblies,
             selectedTrayCode,
             inProgressMap,
+            defaultPermissions,
+            parsePermValue,
+            openPermissionCards,
+            loadOperatorsList: (...args) => (typeof loadOperatorsList === 'function' ? loadOperatorsList(...args) : null),
+            formatExcelDateTime,
+            showAdminUnsavedModal,
+            adminUnsavedContext,
+            pendingAdminNavigation,
+            isSavingAdminUnsaved,
+            bypassAdminUnsavedCheck,
+            getSelectedAssemblyItem: () => (typeof holdsModule !== 'undefined' && holdsModule?.selectedAssemblyItem ? holdsModule.selectedAssemblyItem.value : null),
+            getSelectedHoldItem: () => (typeof holdsModule !== 'undefined' && holdsModule?.selectedHoldItem ? holdsModule.selectedHoldItem.value : null),
             loadTrays: (...args) => (typeof loadTrays === 'function' ? loadTrays(...args) : null),
             loadQCPendingItems: (...args) => (typeof loadQCPendingItems === 'function' ? loadQCPendingItems(...args) : null),
             loadProductionHoldItems: (...args) => (typeof loadProductionHoldItems === 'function' ? loadProductionHoldItems(...args) : null),
@@ -1873,6 +1965,7 @@
             currentTab,
             selectedTrayCode,
             currentTray,
+            currentTrayAssemblies,
             traysList,
             traySlots,
             activeAssyQCDocSlot,
@@ -1919,6 +2012,7 @@
           whQCQualifiedItems,
           whGRQualifiedItems,
           travelerAssyOperator,
+          isAllSetsReturnedWithoutFinish,
           getInspectorQC,
           currentTravelerMO,
           currentTravelerMOSuffix,
@@ -1995,11 +2089,30 @@
         // Open Read-Only Detail Modal for Completed Slot
         const openDetailModal = (slot, index, explicitContext = null) => {
           if (!slot) return;
-          const context = explicitContext ||
-            (slot.stage === 'QC' ? 'qc_test' :
-              slot.stage === 'ASSY' ? 'assy_test' :
-                (slot.warehouse_receipt_by || slot.warehouse_doc_number || slot.verified_by_user) ? 'warehouse_receipt' :
-                  (currentTab.value === 'report' ? reportSubTab.value : (currentTab.value === 'assy_testing' ? 'assy_test' : (currentTab.value === 'qc' ? 'qc_test' : 'assembly'))));
+          let context = explicitContext;
+          if (!context) {
+            if (currentTab.value === 'report') {
+              context = reportSubTab.value || 'assembly';
+            } else if (currentTab.value === 'assy_testing') {
+              context = 'assy_test';
+            } else if (currentTab.value === 'qc') {
+              context = 'qc_test';
+            } else if (currentTab.value === 'warehouse_receipt' || currentTab.value === 'gudang') {
+              context = 'warehouse_receipt';
+            } else if (currentTab.value === 'assembly' || currentTab.value === 'perakitan') {
+              context = 'assembly';
+            } else if (slot.process_stage) {
+              context = slot.process_stage;
+            } else if (slot.stage === 'QC') {
+              context = 'qc_test';
+            } else if (slot.stage === 'ASSY') {
+              context = 'assy_test';
+            } else if (slot.warehouse_receipt_by || slot.warehouse_doc_number || slot.verified_by_user) {
+              context = 'warehouse_receipt';
+            } else {
+              context = 'assembly';
+            }
+          }
 
           // 1. Parse TF1 Checklist (17 Parameter Uji Fungsional P9)
           const p9TF1Defaults = [
@@ -2026,16 +2139,25 @@
           let parsedTF1 = null;
           if (Array.isArray(rawTF1)) parsedTF1 = rawTF1;
           else if (typeof rawTF1 === 'string') {
-            try { parsedTF1 = JSON.parse(rawTF1); } catch (_) { parsedTF1 = null; }
+            try {
+              parsedTF1 = JSON.parse(rawTF1);
+              if (typeof parsedTF1 === 'string') {
+                try { parsedTF1 = JSON.parse(parsedTF1); } catch (_) {}
+              }
+            } catch (_) { parsedTF1 = null; }
           }
 
           const hasActualTF1Checklist = Array.isArray(parsedTF1) && parsedTF1.length > 0;
-          const hasValidTF1Status = Boolean(slot.assy_test_status && !['PENDING', 'Pending', 'Belum Diuji'].includes(slot.assy_test_status));
-          const hasValidTF1Time = Boolean(slot.assy_tested_at);
+          const hasValidTF1Status = Boolean(
+            (slot.assy_test_status && !['PENDING', 'Pending', 'Belum Diuji'].includes(slot.assy_test_status)) ||
+            (context === 'assy_test' && slot.status && !['PENDING', 'Pending', 'Belum Diuji', 'Menunggu Test Functional 1'].includes(slot.status))
+          );
+          const hasValidTF1Time = Boolean(slot.assy_tested_at || slot.tested_at || slot.created_at);
           const isAlreadyInNextStage = (context === 'qc_test' || context === 'warehouse_receipt' || slot.stage === 'QC' || Boolean(slot.qc_status && slot.qc_status !== 'PENDING') || Boolean(slot.qc_tested_at));
 
-          // Set rakitan yang belum diuji TF 1 (masih di perakitan / belum ada catatan uji) TIDAK boleh menampilkan status tested
+          // Set rakitan yang sudah diuji TF 1
           const isTF1Tested = hasActualTF1Checklist ||
+            (context === 'assy_test' && hasValidTF1Status) ||
             (hasValidTF1Time && hasValidTF1Status) ||
             (isAlreadyInNextStage && slot.assy_test_status !== 'PENDING' && slot.assy_test_status !== 'Belum Diuji');
 
@@ -2062,7 +2184,7 @@
                 notes: c.notes || ''
               };
             });
-          } else if (isTF1Tested && (slot.assy_test_status === 'Good' || isAlreadyInNextStage)) {
+          } else if (isTF1Tested && (slot.assy_test_status === 'Good' || slot.status === 'Good' || slot.status === 'OK' || isAlreadyInNextStage)) {
             finalTF1Checklist = p9TF1Defaults.map(def => ({
               test_num: def.num,
               name: def.name,
@@ -2132,23 +2254,17 @@
             else originDoc = getFormattedDocCode(slot.tray_code, 'wo');
           }
 
-          let slotStatus = (context === 'assembly')
-            ? (slot.original_assembly_status || slot.assembly_status || slot.status || 'Good')
-            : (slot.status || slot.assembly_status || slot.warehouse_receipt_status || 'Good');
-          // Untuk history & dokumen: jika status adalah 'Dirakit Ulang', tampilkan hasil aktual perakitan ulang
-          // Hasil aktual ada di assy_status_history (last real status setelah RU selesai)
-          const slotStatusLow = String(slotStatus).toLowerCase();
-          if (slotStatusLow === 'dirakit ulang' || slotStatusLow === 'ru') {
-            const lastActualStatus = String(slot.assy_status_history || '').trim();
-            if (lastActualStatus) {
-              const lastLow = lastActualStatus.toLowerCase();
-              if (lastLow === 'good') slotStatus = 'Good (RU)';
-              else if (lastLow === 'hold') slotStatus = 'Hold (RU)';
-              else if (lastLow === 'pending') slotStatus = 'Dirakit Ulang';
-              else slotStatus = 'Dirakit Ulang';
-            } else {
-              slotStatus = 'Dirakit Ulang';
-            }
+          let slotStatus = 'Good';
+          if (context === 'assembly') {
+            slotStatus = slot.original_assembly_status || (slot.assembly_status && !['Dirakit Ulang', 'RU'].includes(slot.assembly_status) ? slot.assembly_status : null) || (slot.status && !['Dirakit Ulang', 'RU'].includes(slot.status) ? slot.status : null) || 'Good';
+          } else if (context === 'assy_test') {
+            slotStatus = slot.assy_test_status || (slot.status && !['Dirakit Ulang', 'RU'].includes(slot.status) ? slot.status : null) || 'Good';
+          } else if (context === 'qc_test') {
+            slotStatus = slot.qc_test_status || slot.qc_status || (slot.status && !['Dirakit Ulang', 'RU'].includes(slot.status) ? slot.status : null) || 'Good';
+          } else if (context === 'warehouse_receipt') {
+            slotStatus = slot.warehouse_receipt_status || slot.verified_status || (slot.status && !['Dirakit Ulang', 'RU'].includes(slot.status) ? slot.status : null) || 'Good';
+          } else {
+            slotStatus = slot.status || slot.assembly_status || 'Good';
           }
           if (context !== 'assembly') {
             if (slot.assy_test_status === 'Pending' || slot.qc_test_status === 'Pending' || slotStatus === 'Pending') {
@@ -2168,8 +2284,8 @@
             status: slotStatus,
             started_at: slot.started_at || slot.created_at || slot.tray_created_at,
             finished_at: slot.finished_at || slot.created_at,
-            tested_at: slot.created_at || slot.tested_at || slot.assy_tested_at,
-            assy_tested_at: slot.assy_tested_at || slot.tested_at || null,
+            tested_at: slot.tested_at || slot.assy_tested_at || slot.created_at,
+            assy_tested_at: slot.assy_tested_at || slot.tested_at || slot.created_at || null,
             assy_test_status: slot.assy_test_status || (context === 'assy_test' ? slot.status : null),
             pic_assembly: slot.pic_assembly || slot.operator || slot.assigned_operator || (travelerTray.value && travelerTray.value.assigned_operator ? travelerTray.value.assigned_operator : '-'),
             pic_assembly_name: slot.pic_assembly_name || getOperatorFullName(slot.pic_assembly) || getOperatorFullName(slot.operator) || (slot.operator || slot.assigned_operator ? getOperatorFullName(slot.operator || slot.assigned_operator) : null) || (travelerTray.value && travelerTray.value.assigned_operator ? getOperatorFullName(travelerTray.value.assigned_operator) : null) || slot.pic_assembly || '-',
@@ -2213,42 +2329,58 @@
           });
         };
 
+        const isTF1ResultCardVisible = (slot) => {
+          if (!slot) return false;
+          // Di modal perakitan atau work order, HANYA tampilkan hasil perakitan saja (jangan tampilkan TF 1)
+          if (slot.process_stage === 'assembly' || slot.process_stage === 'wo') return false;
+          if (currentTab.value === 'assembly') return false;
+          if (currentTab.value === 'report' && (reportSubTab.value === 'assembly' || reportSubTab.value === 'wo')) return false;
+
+          // Muncul pada stage TF 1 (assy_test), TF 2 / QC (qc_test), dan Penerimaan Gudang (warehouse_receipt)
+          // Jika belum diuji, card TF 1 akan otomatis menampilkan status "Menunggu Uji TF 1" (Pending)
+          if (slot.process_stage === 'assy_test' || slot.process_stage === 'qc_test' || slot.process_stage === 'warehouse_receipt') return true;
+          if (currentTab.value === 'assy_testing' || currentTab.value === 'qc' || currentTab.value === 'warehouse_receipt') return true;
+          if (currentTab.value === 'report' && ['assy_test', 'qc_test', 'warehouse_receipt'].includes(reportSubTab.value)) return true;
+
+          return Boolean(slot.is_tf1_tested || slot.tf1_doc_number || (slot.parsed_tf1_checklist && slot.parsed_tf1_checklist.length));
+        };
+
         const isWarehouseReceiptVisible = (slot) => {
           if (!slot) return false;
-          // Di modal khusus perakitan / TF1 / TF2, jangan tampilkan card verifikasi gudang
-          if (slot.process_stage === 'assembly' || slot.process_stage === 'assy_test' || slot.process_stage === 'qc_test') {
+          // Di modal perakitan, TF 1, QC / TF 2, atau WO, jangan tampilkan card verifikasi penerimaan gudang
+          if (slot.process_stage === 'assembly' || slot.process_stage === 'assy_test' || slot.process_stage === 'qc_test' || slot.process_stage === 'wo') {
             return false;
           }
-          const rawQcStatus = String(slot.qc_status || slot.qc_test_status || '').toUpperCase();
-          const hasQcChecklist = Array.isArray(slot.parsed_tf2_checklist) && slot.parsed_tf2_checklist.length > 0;
-
-          const isQCLolos = (rawQcStatus === 'GOOD' || rawQcStatus === 'GOOD_QC' || rawQcStatus === 'ACC' || rawQcStatus === 'ACCEPTED') ||
-            (hasQcChecklist && (slot.tf2_fail_count || 0) === 0 && (slot.tf2_good_count || 0) > 0);
-
-          if (!isQCLolos) {
+          if (currentTab.value === 'assembly' || currentTab.value === 'assy_testing' || currentTab.value === 'qc') {
+            return false;
+          }
+          if (currentTab.value === 'report' && (reportSubTab.value === 'assembly' || reportSubTab.value === 'assy_test' || reportSubTab.value === 'qc_test' || reportSubTab.value === 'wo')) {
             return false;
           }
 
-          const isAtWarehouseStage = slot.process_stage === 'warehouse_receipt' ||
-            Boolean(slot.warehouse_receipt_status) ||
-            Boolean(slot.warehouse_doc_number) ||
-            Boolean(slot.warehouse_receipt_by) ||
-            Boolean(slot.warehouse_receipt_at) ||
-            currentTab.value === 'warehouse_receipt' ||
-            (currentTab.value === 'report' && reportSubTab.value === 'warehouse_receipt');
+          // Muncul HANYA pada stage Penerimaan Gudang (warehouse_receipt)
+          // Jika belum diverifikasi, card Gudang akan otomatis menampilkan status "MENUNGGU RECEIPTS (WH/GR)" (Pending)
+          if (slot.process_stage === 'warehouse_receipt') return true;
+          if (currentTab.value === 'warehouse_receipt') return true;
+          if (currentTab.value === 'report' && reportSubTab.value === 'warehouse_receipt') return true;
 
-          return isAtWarehouseStage;
+          return Boolean(slot.warehouse_receipt_status || slot.warehouse_doc_number || slot.warehouse_receipt_by || slot.warehouse_receipt_at);
         };
 
         const isQCResultCardVisible = (slot) => {
           if (!slot) return false;
+          // Di modal perakitan, TF 1, atau WO, jangan tampilkan card QC
+          if (slot.process_stage === 'assembly' || slot.process_stage === 'assy_test' || slot.process_stage === 'wo') return false;
+          if (currentTab.value === 'assembly' || currentTab.value === 'assy_testing') return false;
+          if (currentTab.value === 'report' && (reportSubTab.value === 'assembly' || reportSubTab.value === 'assy_test' || reportSubTab.value === 'wo')) return false;
+
+          // Muncul pada stage TF 2 / QC (qc_test) dan Penerimaan Gudang (warehouse_receipt)
+          // Jika belum diuji, card QC akan otomatis menampilkan status "Menunggu QC" (Pending)
           if (slot.process_stage === 'qc_test' || slot.process_stage === 'warehouse_receipt') return true;
           if (currentTab.value === 'qc' || currentTab.value === 'warehouse_receipt') return true;
-          if (currentTab.value === 'report' && (reportSubTab.value === 'qc_test' || reportSubTab.value === 'warehouse_receipt')) return true;
-          if (slot.qc_doc_number || slot.qc_test_doc_number) return true;
-          if (slot.qc_status || slot.qc_test_status) return true;
-          if (Array.isArray(slot.parsed_tf2_checklist) && slot.parsed_tf2_checklist.length > 0) return true;
-          return false;
+          if (currentTab.value === 'report' && ['qc_test', 'warehouse_receipt'].includes(reportSubTab.value)) return true;
+
+          return Boolean(slot.qc_doc_number || slot.qc_test_doc_number || slot.qc_status || slot.qc_test_status || (Array.isArray(slot.parsed_tf2_checklist) && slot.parsed_tf2_checklist.length > 0));
         };
 
         const getQCReportStatus = (slot) => {
@@ -2279,29 +2411,7 @@
 
         // renderQRCodeDetail moved to public/js/modules/traveler.js (Fase 2I)
 
-        // getEffectiveFinishedAt & formatDuration hoisted above
-        const formatExcelDateTime = (dt) => {
-          if (!dt) return '-';
-          const d = new Date(dt);
-          if (isNaN(d.getTime())) return String(dt);
-          const day = d.getDate();
-          const month = d.getMonth() + 1;
-          const year = d.getFullYear();
-          const hours = String(d.getHours()).padStart(2, '0');
-          const mins = String(d.getMinutes()).padStart(2, '0');
-          const secs = String(d.getSeconds()).padStart(2, '0');
-          return `${day}/${month}/${year}, ${hours}.${mins}.${secs}`;
-        };
-
-        const getShiftName = (dt) => {
-          if (!dt) return 'Shift 1';
-          const d = new Date(dt);
-          if (isNaN(d.getTime())) return 'Shift 1';
-          const h = d.getHours();
-          if (h >= 6 && h < 14) return 'Shift 1';
-          if (h >= 14 && h < 22) return 'Shift 2';
-          return 'Shift 3';
-        };
+        // formatExcelDateTime & getShiftName hoisted above (Fase 2)
 
         const exportTrayToExcel = async (code = null) => {
           triggerToast('Info', 'Format ekspor Traveler tersedia melalui cetak PDF/ZPL pada tab Traveler.', 'info');
@@ -2426,34 +2536,87 @@
           });
         };
 
+        const getSetEffectiveStatus = (slot) => {
+          if (!slot) return '';
+          // Mengacu murni pada status rakitan set (original_assembly_status || status)
+          const raw = String(slot.original_assembly_status || slot.status || '').trim().toLowerCase();
+          if (raw.includes('good') || raw === 'tersedia') return 'good';
+          if (raw.includes('hold') || raw === 'tertahan') return 'hold';
+          if (raw.includes('scrap') || raw === 'afkir' || raw.includes('decline')) return 'scrap';
+          if (raw.includes('rework') || raw.includes('ru') || raw.includes('dirakit ulang')) return 'rework';
+          return raw;
+        };
+
+        const isSetAllocatedForReassembly = (slot) => {
+          if (!slot) return false;
+          // 1. Jika tray yang sedang dibuka adalah tray PU itu sendiri:
+          if (currentTray && currentTray.value && (/-PU/i.test(currentTray.value.tray_code || '') || /\/PU\//i.test(currentTray.value.tray_code || ''))) {
+            return true;
+          }
+          // 2. Jika set di tray lama sudah dialokasikan ke operator / tray PU (reregistered):
+          const isRereg = Boolean(slot.is_reregistered) && (slot.is_reregistered === 1 || slot.is_reregistered === true || slot.is_reregistered === '1');
+          const hasSuffix = Boolean(slot.rereg_wo_suffix && String(slot.rereg_wo_suffix).trim());
+          const hasOp = Boolean(slot.rereg_pending_operator && String(slot.rereg_pending_operator).trim());
+          return isRereg || hasSuffix || hasOp;
+        };
+
+        const isSetPendingReassemblyAllocation = (slot) => {
+          if (!slot) return false;
+          if (isSetAllocatedForReassembly(slot)) return false;
+
+          const st = String(slot.status || '').trim().toLowerCase();
+          const vStat = String(slot.verified_status || '').trim().toUpperCase();
+          const qcSt = String(slot.qc_status || '').trim().toUpperCase();
+          const assyTestSt = String(slot.assy_test_status || '').trim().toUpperCase();
+
+          if (['WAITING_REASSEMBLY', 'APPROVED_REASSEMBLY'].includes(vStat)) return true;
+          if (st === 'dirakit ulang' || st === 'ru' || qcSt === 'RU' || assyTestSt === 'RU') return true;
+          if (typeof isReassemblySet === 'function' && isReassemblySet(slot)) return true;
+          return false;
+        };
+
+        const getSetPUDocNumber = (slot) => {
+          if (!slot || !isSetAllocatedForReassembly(slot)) return '';
+          if (slot.pu_doc_number) return slot.pu_doc_number;
+          if (slot.rereg_wo_suffix) {
+            const num = String(slot.rereg_wo_suffix).replace(/\D/g, '').padStart(6, '0') || '000001';
+            return `WH/ASSY/PU/${num}`;
+          }
+          if (currentTray && currentTray.value && (/-PU/i.test(currentTray.value.tray_code || '') || /\/PU\//i.test(currentTray.value.tray_code || ''))) {
+            return getFormattedDocCode(currentTray.value.tray_code, 'assy_rework');
+          }
+          return '';
+        };
+
         const getDefectivePartClass = (slot, partType) => {
           if (!isPartDefective(slot, partType)) {
-            if (slot && slot.status && slot.status.toLowerCase() !== 'good') {
+            const eff = getSetEffectiveStatus(slot);
+            if (eff && eff !== 'good') {
               return 'text-slate-700 bg-white/90 border border-slate-200';
             }
             return 'text-slate-600 bg-slate-50 border-slate-100';
           }
-          const s = (slot && slot.status ? slot.status : '').toLowerCase();
-          if (s === 'hold') return 'border-2 border-amber-500 bg-amber-100/90 text-amber-950 font-bold shadow-xs';
-          if (s === 'scrap') return 'border-2 border-red-500 bg-red-100/90 text-red-950 font-bold shadow-xs';
-          if (s === 'rework') return 'border-2 border-purple-500 bg-purple-100/90 text-purple-950 font-bold shadow-xs';
-          return 'border-2 border-red-500 bg-red-100/90 text-red-950 font-bold shadow-xs';
+          const eff = getSetEffectiveStatus(slot);
+          if (eff === 'hold') return 'border-2 border-amber-500 bg-amber-50 text-amber-950 font-bold shadow-xs';
+          if (eff === 'scrap') return 'border-2 border-red-500 bg-red-50 text-red-950 font-bold shadow-xs';
+          if (eff === 'rework') return 'border-2 border-purple-500 bg-purple-50 text-purple-950 font-bold shadow-xs';
+          return 'border-2 border-red-500 bg-red-50 text-red-950 font-bold shadow-xs';
         };
 
         const getDefectiveLabelClass = (slot, partType) => {
           if (!isPartDefective(slot, partType)) return 'text-slate-400';
-          const s = (slot && slot.status ? slot.status : '').toLowerCase();
-          if (s === 'hold') return 'text-amber-800 font-extrabold';
-          if (s === 'scrap') return 'text-red-800 font-extrabold';
-          if (s === 'rework') return 'text-purple-800 font-extrabold';
+          const eff = getSetEffectiveStatus(slot);
+          if (eff === 'hold') return 'text-amber-800 font-extrabold';
+          if (eff === 'scrap') return 'text-red-800 font-extrabold';
+          if (eff === 'rework') return 'text-purple-800 font-extrabold';
           return 'text-red-800 font-extrabold';
         };
 
         const getDefectiveBadgeClass = (slot) => {
-          const s = (slot && slot.status ? slot.status : '').toLowerCase();
-          if (s === 'hold') return 'bg-amber-500 text-white';
-          if (s === 'scrap') return 'bg-red-600 text-white';
-          if (s === 'rework') return 'bg-purple-600 text-white';
+          const eff = getSetEffectiveStatus(slot);
+          if (eff === 'hold') return 'bg-amber-500 text-white';
+          if (eff === 'scrap') return 'bg-red-600 text-white';
+          if (eff === 'rework') return 'bg-purple-600 text-white';
           return 'bg-red-600 text-white';
         };
 
@@ -2466,22 +2629,40 @@
           if (actual === 'good') {
             return partType === '15' ? 'font-bold text-slate-900' : 'text-slate-800';
           }
-          const s = (item && item.status ? item.status : '').toLowerCase();
-          if (s === 'hold') return 'font-black text-amber-600';
-          if (s === 'scrap') return 'font-black text-red-600';
-          if (s === 'rework') return 'font-black text-purple-600';
+          const eff = getSetEffectiveStatus(item);
+          if (eff === 'hold') return 'font-black text-amber-600';
+          if (eff === 'scrap') return 'font-black text-red-600';
+          if (eff === 'rework') return 'font-black text-purple-600';
           return 'font-black text-red-600';
         };
 
         const getItemCardClass = (slot, index) => {
+          if (!slot) return 'bg-slate-50/80 border-slate-200 opacity-80';
           if (slot.status === 'RETURNED') return 'bg-amber-50/40 border-dashed border-amber-300 ring-1 ring-amber-200/70 opacity-80';
-          if (slot.status === 'Good') return 'bg-white border-emerald-300 ring-1 ring-emerald-200';
-          if (slot.status === 'Hold') return 'bg-amber-50/70 border-amber-300 ring-1 ring-amber-200';
-          if (slot.status === 'Scrap') return 'bg-red-50/70 border-red-300 ring-1 ring-red-200';
-          if (slot.status === 'Rework') return 'bg-purple-50/70 border-purple-300 ring-1 ring-purple-200';
-          if (slot.started_at) return 'bg-amber-50/40 border-amber-400 ring-2 ring-amber-300 shadow-md animate-pulse-border';
-          if (index === firstUnfinishedIndex.value) return 'bg-white border-red-500 ring-2 ring-red-200 shadow-md';
-          return 'bg-slate-50/80 border-slate-200 opacity-80';
+
+          // Sesuai status hasil perakitan set:
+          // Kalo Good yaudah hijau (tetap hijau meskipun ada dokumen perubahan PU)
+          // Begitupun Hold dengan warna kuning, dan Scrap dengan warna merah
+          if (slot.status || slot.finished_at || slot.original_assembly_status) {
+            const eff = getSetEffectiveStatus(slot);
+            if (eff === 'good') {
+              return 'bg-white border-2 border-emerald-400 ring-1 ring-emerald-200/80 shadow-xs';
+            }
+            if (eff === 'hold') {
+              return 'bg-amber-50/50 border-2 border-amber-400 ring-1 ring-amber-200/80 shadow-xs';
+            }
+            if (eff === 'scrap') {
+              return 'bg-red-50/50 border-2 border-red-400 ring-1 ring-red-200/80 shadow-xs';
+            }
+            if (eff === 'rework') {
+              return 'bg-purple-50/50 border-2 border-purple-400 ring-1 ring-purple-200/80 shadow-xs';
+            }
+            return 'bg-white border-2 border-slate-300 shadow-xs';
+          }
+
+          if (slot.started_at) return 'bg-amber-50/40 border-2 border-amber-400 ring-2 ring-amber-300 shadow-md animate-pulse-border';
+          if (index === firstUnfinishedIndex.value) return 'bg-white border-2 border-red-500 ring-2 ring-red-200 shadow-md';
+          return 'bg-slate-50/80 border border-slate-200 opacity-80';
         };
 
         const getStatusBadgeClass = (status) => {
@@ -2494,19 +2675,20 @@
           if (s === 'returned' || s === 'dikembalikan') return 'bg-amber-100 text-amber-800 border-amber-300';
           if (s === 'good' || s === 'tersedia') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
           if (s === 'supplied') return 'bg-blue-50 text-blue-700 border-blue-200';
-          if (s === 'hold') return 'bg-amber-50 text-amber-700 border-amber-200';
+          if (s === 'hold' || s === 'rework') return 'bg-amber-50 text-amber-700 border-amber-200';
+          if (s === 'ru' || s === 'dirakit ulang' || s === 'rakit ulang') return 'bg-purple-50 text-purple-700 border-purple-200';
           if (s === 'scrap') return 'bg-red-50 text-red-700 border-red-200';
-          if (s === 'rework') return 'bg-purple-50 text-purple-700 border-purple-200';
-          if (s === 'decline' || s === 'declined' || s === 'pending verif admin') return 'bg-rose-50 text-rose-700 border-rose-200';
+          if (s === 'pending verif admin' || s === 'menunggu verif') return 'bg-blue-50 text-blue-800 border-blue-200';
+          if (s === 'decline' || s === 'declined') return 'bg-rose-50 text-rose-700 border-rose-200';
           return 'bg-slate-100 text-slate-700 border-slate-200';
         };
 
         const getStatusTextClass = (status) => {
           if (!status || status === '-') return 'text-slate-500 font-bold';
           const s = String(status).toLowerCase().trim();
-          if (['good', 'tersedia', 'pass', 'terima', 'accepted', 'completed'].includes(s)) return 'text-emerald-600 font-bold';
-          if (['hold', 'hold_assy', 'hold_qc', 'pending'].includes(s) || s.includes('menunggu')) return 'text-amber-600 font-bold';
-          if (['rework', 'rework_assy', 'rework_qc', 'ru', 'dirakit ulang'].includes(s)) return 'text-purple-600 font-bold';
+          if (['good', 'tersedia', 'pass', 'terima', 'accepted', 'acc', 'completed'].includes(s) || (s.includes('good') && !s.includes('not'))) return 'text-emerald-600 font-bold';
+          if (['hold', 'hold_assy', 'hold_qc', 'pending', 'rework', 'rework_assy', 'rework_qc'].includes(s) || s.includes('menunggu') || s.includes('belum') || s.startsWith('hold')) return 'text-amber-600 font-bold';
+          if (['ru', 'dirakit ulang', 'rakit ulang'].includes(s)) return 'text-purple-600 font-bold';
           if (['scrap', 'rusak', 'not_good', 'decline', 'declined', 'fail'].includes(s)) return 'text-red-600 font-bold';
           return 'text-slate-600 font-bold';
         };
@@ -2732,124 +2914,128 @@
         }
 
         // Bridge holdsModule methods & state for internal app.js usage
+        // Provide safe fallback refs so Vue template never gets undefined.value crashes
+        const _nullRef = (def = null) => ref(def);
+        const _nullRefArr = () => ref([]);
+        const _nullFn = () => {};
         const {
           isReassemblySet: holdsIsReassemblySet,
-          isTravelerItemAssembled,
-          getTravelerItemActualStatus,
-          getAssemblyStageStatus,
-          getItemStartTime,
-          getItemFinishTime,
-          assemblyResults,
-          isLoadingAssemblyResults,
-          assemblyResultsStatusFilter,
-          selectedProductionOperator,
-          selectedProductionDocAssy,
-          productionSearchQuery,
-          productionViewMode,
-          loadAssemblyResults,
-          assemblyResultsSummary,
-          distinctAssemblyOperators,
-          distinctAssyDocNumbers,
+          isTravelerItemAssembled = _nullFn,
+          getTravelerItemActualStatus = _nullFn,
+          getAssemblyStageStatus = _nullFn,
+          getItemStartTime = _nullFn,
+          getItemFinishTime = _nullFn,
+          assemblyResults = _nullRefArr(),
+          isLoadingAssemblyResults = _nullRef(false),
+          assemblyResultsStatusFilter = _nullRef(''),
+          selectedProductionOperator = _nullRef(''),
+          selectedProductionDocAssy = _nullRef(''),
+          productionSearchQuery = _nullRef(''),
+          productionViewMode = _nullRef('grouped'),
+          loadAssemblyResults = _nullFn,
+          assemblyResultsSummary = _nullRef({}),
+          distinctAssemblyOperators = _nullRefArr(),
+          distinctAssyDocNumbers = _nullRefArr(),
           isAssyDocDropdownOpen: holdsIsAssyDocDropdownOpen,
-          assyDocSearchText,
-          toggleAssyDocDropdown,
-          selectAssyDocFromDropdown,
-          filteredAssyDocNumbers,
-          calculateAssemblyDuration,
-          filteredGroupedAssemblyResults,
-          flatFilteredAssemblyResults,
-          filteredAssemblyResults,
-          pagedAssemblyResults,
-          totalPgAssemblyResults,
-          productionHoldList,
-          productionProductsList,
-          selectedProductionProduct,
-          productionSourceFilter,
-          functionalHoldViewMode,
-          isLoadingProductionHold,
-          loadProductionProducts,
+          assyDocSearchText = _nullRef(''),
+          toggleAssyDocDropdown = _nullFn,
+          selectAssyDocFromDropdown = _nullFn,
+          filteredAssyDocNumbers = _nullRefArr(),
+          calculateAssemblyDuration = _nullFn,
+          filteredGroupedAssemblyResults = _nullRef({}),
+          flatFilteredAssemblyResults = _nullRefArr(),
+          filteredAssemblyResults = _nullRefArr(),
+          pagedAssemblyResults = _nullRefArr(),
+          totalPgAssemblyResults = _nullRef(0),
+          productionHoldList = _nullRefArr(),
+          productionProductsList = _nullRefArr(),
+          selectedProductionProduct = _nullRef(''),
+          productionSourceFilter = _nullRef(''),
+          functionalHoldViewMode = _nullRef('grouped'),
+          isLoadingProductionHold = _nullRef(false),
+          loadProductionProducts = _nullFn,
           loadProductionHoldItems: holdsLoadProductionHoldItems,
-          isItemInReassemblyProcess,
-          baseProductionHoldList,
-          productionHoldCounts,
-          filteredProductionHoldList,
-          productionHoldCount,
-          pagedProductionHoldList,
-          totalPgProductionHold,
-          isAllProblematicPartsReplaced,
-          getHoldProceedButtonLabel,
-          getHoldProceedButtonTitle,
-          getItemPendingLabel,
-          isItemPendingAdmin,
-          isFunctionalHoldItem,
-          proceedHoldItem,
-          showAssemblyDetailModal,
-          selectedAssemblyItem,
-          selectedAssemblyTray,
-          showHoldDetailModal,
-          selectedHoldItem,
-          selectedHoldTray,
-          openAssemblyDetailModal,
-          openHoldDetailModal,
-          transferSingleSetToWarehouse,
-          confirmReturnTrayToWarehouse,
-          showReregisterSubModal,
-          reregisterTargetStatus,
-          reregOperator,
-          reregisterReason,
-          isSubmittingReregisterSetAction,
-          availableReregisterStatuses,
-          openReregisterSubModal,
-          submitReregisterSetAction,
-          showReplacePartModal,
-          replaceOldStatus,
-          replaceReason,
-          isSubmittingReplacePartAction,
-          showAllReplaceParts,
-          replaceSelections,
-          replaceDropdownOpen,
-          replaceSearchQueries,
-          availableReplacePartsByType,
-          isLoadingPartsByType,
-          replacePartType,
-          replaceNewSN,
-          availableReplaceParts,
-          isLoadingReplaceParts,
-          isReplacePartDropdownOpen,
-          replacePartSearchQuery,
-          problematicPartTypes,
-          isProblemPart,
-          hasNonProblematicParts,
-          getParsedReplacementHistory,
-          getItemProblemReason,
-          getFilteredPartsForType,
-          filteredReplaceParts,
-          selectReplaceSNForPart,
-          clearReplaceSNForPart,
-          toggleReplaceDropdown,
-          closeAllReplaceDropdowns,
-          selectReplaceNewSN,
-          totalPartsToReplace,
-          loadAllAvailableReplaceParts,
-          openReregisterForPart,
-          closeReplacePartModal,
-          openReplacePartSubModal,
-          onSelectReplacePartType,
-          openReplaceForPart,
-          submitReplacePartAction,
-          pendingReassemblyList,
-          selectedReassemblyIds,
-          selectedReassemblyOperator,
-          isLoadingPendingReassembly,
-          isSubmittingReassemblyDispatch,
-          loadPendingReassembly,
-          pendingReassemblyCount,
-          toggleSelectReassembly,
-          isReassemblySelected,
-          selectAllReassembly,
-          clearSelectedReassembly,
-          submitReassemblyDispatch,
-          openReplaceForHoldItem
+          isItemInReassemblyProcess = _nullFn,
+          baseProductionHoldList = _nullRefArr(),
+          productionHoldCounts = _nullRef({}),
+          filteredProductionHoldList = _nullRefArr(),
+          productionHoldCount = _nullRef(0),
+          pagedProductionHoldList = _nullRefArr(),
+          totalPgProductionHold = _nullRef(0),
+          isAllProblematicPartsReplaced = _nullFn,
+          getHoldProceedButtonLabel = _nullFn,
+          getHoldProceedButtonTitle = _nullFn,
+          getItemPendingLabel = _nullFn,
+          isItemPendingAdmin = _nullFn,
+          isFunctionalHoldItem = _nullFn,
+          proceedHoldItem = _nullFn,
+          showAssemblyDetailModal = _nullRef(false),
+          selectedAssemblyItem = _nullRef(null),
+          selectedAssemblyTray = _nullRef(null),
+          showHoldDetailModal = _nullRef(false),
+          selectedHoldItem = _nullRef(null),
+          selectedHoldTray = _nullRef(null),
+          openAssemblyDetailModal = _nullFn,
+          openHoldDetailModal = _nullFn,
+          transferSingleSetToWarehouse = _nullFn,
+          confirmReturnTrayToWarehouse = _nullFn,
+          showReregisterSubModal = _nullRef(false),
+          reregisterTargetStatus = _nullRef(''),
+          reregOperator = _nullRef(''),
+          reregisterReason = _nullRef(''),
+          isSubmittingReregisterSetAction = _nullRef(false),
+          availableReregisterStatuses = _nullRefArr(),
+          openReregisterSubModal = _nullFn,
+          submitReregisterSetAction = _nullFn,
+          showReplacePartModal = _nullRef(false),
+          replaceOldStatus = _nullRef(''),
+          replaceReason = _nullRef(''),
+          isSubmittingReplacePartAction = _nullRef(false),
+          showAllReplaceParts = _nullRef(false),
+          replaceSelections = _nullRef({}),
+          replaceDropdownOpen = _nullRef({}),
+          replaceSearchQueries = _nullRef({}),
+          availableReplacePartsByType = _nullRef({}),
+          isLoadingPartsByType = _nullRef({}),
+          replacePartType = _nullRef(''),
+          replaceNewSN = _nullRef(''),
+          availableReplaceParts = _nullRefArr(),
+          isLoadingReplaceParts = _nullRef(false),
+          isReplacePartDropdownOpen = _nullRef(false),
+          replacePartSearchQuery = _nullRef(''),
+          problematicPartTypes = _nullRefArr(),
+          isProblemPart = _nullFn,
+          hasNonProblematicParts = _nullFn,
+          getParsedReplacementHistory = _nullFn,
+          getItemProblemReason = _nullFn,
+          getFilteredPartsForType = _nullFn,
+          filteredReplaceParts = _nullRefArr(),
+          selectReplaceSNForPart = _nullFn,
+          clearReplaceSNForPart = _nullFn,
+          toggleReplaceDropdown = _nullFn,
+          closeAllReplaceDropdowns = _nullFn,
+          selectReplaceNewSN = _nullFn,
+          totalPartsToReplace = _nullRef(0),
+          loadAllAvailableReplaceParts = _nullFn,
+          openReregisterForPart = _nullFn,
+          closeReplacePartModal = _nullFn,
+          openReplacePartSubModal = _nullFn,
+          onSelectReplacePartType = _nullFn,
+          openReplaceForPart = _nullFn,
+          submitReplacePartAction = _nullFn,
+          pendingReassemblyList = _nullRefArr(),
+          selectedReassemblyIds = _nullRefArr(),
+          selectedReassemblyOperator = _nullRef(''),
+          isLoadingPendingReassembly = _nullRef(false),
+          isSubmittingReassemblyDispatch = _nullRef(false),
+          loadPendingReassembly = _nullFn,
+          pendingReassemblyCount = _nullRef(0),
+          toggleSelectReassembly = _nullFn,
+          isReassemblySelected = _nullFn,
+          selectAllReassembly = _nullFn,
+          clearSelectedReassembly = _nullFn,
+          submitReassemblyDispatch = _nullFn,
+          openReplaceForHoldItem = _nullFn
         } = holdsModule;
 
         // Reassign hoisted forward references
@@ -2939,6 +3125,7 @@
           totalPgAssyTestReport,
           totalPgQCReport,
           totalPgWarehouseReport,
+          getHistoryAssemblyStatus,
           exportCurrentReportToExcel
         } = reportsModule;
 
@@ -3068,6 +3255,7 @@
           showReturnDetailModal,
           activeReturnTray,
           activeReturnSets,
+          isLoadingReturnDetail,
           isVerifyingReturn,
           verifyingSetIndex,
           pendingReturnsCount,
@@ -3170,13 +3358,7 @@
         // Mobile / Tablet / Hardware & Gesture Back Button Handler
         // -------------------------------------------------------------------
         const getCurrentTabCleanUrl = () => {
-          if (currentTab.value === 'users') {
-            return '/verifikasi';
-          }
-          if (currentTab.value === 'report') {
-            return '/history';
-          }
-          return TAB_CLEAN_URLS[currentTab.value] || ('/' + (currentTab.value || 'perakitan'));
+          return resolveCleanUrl(currentTab.value);
         };
         const getCurrentTabHash = () => {
           return getCurrentTabCleanUrl();
@@ -3360,6 +3542,8 @@
                 navigateTo('report', prev.subTab || 'wo', true);
               } else if (prev.tab === 'users') {
                 navigateTo('users', prev.subTab || 'verify_set', true);
+              } else if (prev.tab === 'delivery_order') {
+                navigateTo('delivery_order', prev.subTab || 'dashboard', true);
               } else {
                 navigateTo(prev.tab, null, true);
               }
@@ -3378,7 +3562,7 @@
           exitGuardArmed = true;
           // Re-push root_sentinel agar kedalaman stack tetap konstan 2 entri (net 0)
           try {
-            window.history.pushState({ type: 'root_sentinel' }, '', (TAB_CLEAN_URLS[currentTab.value] || ('/' + currentTab.value)));
+            window.history.pushState({ type: 'root_sentinel' }, '', getCurrentTabCleanUrl());
           } catch (_) { }
           triggerToast('Keluar Aplikasi', 'Tekan sekali lagi untuk keluar dari sistem.', 'warn');
           clearTimeout(exitGuardTimer);
@@ -3400,7 +3584,7 @@
           const initSubTab = (initRoute && initRoute.subTab) ? initRoute.subTab : null;
           const initKey = initTab === 'users'
             ? `users/${normalizeAdminSubTab(initSubTab) || 'verify_set'}`
-            : (initTab === 'report' ? `report/${initSubTab || 'wo'}` : initTab);
+            : (initTab === 'report' ? `report/${initSubTab || 'wo'}` : (initTab === 'delivery_order' ? `delivery_order/${initSubTab || 'dashboard'}` : initTab));
           _tabNavStack.length = 0;
           _tabNavStack.push({ tab: initTab, subTab: initSubTab, key: initKey });
 
@@ -3434,14 +3618,14 @@
             // Strip any remaining hash from the address bar for pure clean URLs
             try {
               if (window.location.hash && window.history && window.history.replaceState) {
-                const initClean = TAB_CLEAN_URLS[currentTab.value] || ('/' + currentTab.value);
+                const initClean = getCurrentTabCleanUrl();
                 window.history.replaceState({ type: 'tab', key: currentTab.value, tab: currentTab.value }, '', initClean);
               }
             } catch (_) { }
 
             if (currentTab.value === 'delivery_order') {
               if (deliveryModule && typeof deliveryModule.initDeliveryTab === 'function') {
-                deliveryModule.initDeliveryTab();
+                deliveryModule.initDeliveryTab(initialRoute.subTab);
               }
             }
             if (currentTab.value === 'warehouse') {
@@ -3516,9 +3700,12 @@
           ...holdsModule,
           ...reportsModule,
           ...warehouseModule,
+          availablePartsByType: (typeof availablePartsByType === 'function' ? availablePartsByType : () => []),
 
           // Core Global App State & Auth
+          pgState,
           currentTab, defaultTab, userRole, userName, userFullName, operatorName, userDepartment,
+          operatorUsersList, allUsersLookupList, loadOperatorsList, getOperatorFullName,
           userPermissions, managedMenuGroups, managedMenuList, defaultPermissions,
           hasMenuAccess, hasGroupAccess, isMenuReadOnly, hasTabAccess, isAdminUser,
           applyUserPermissionPreset, setGroupPermissions, onPermissionChange,
@@ -3541,14 +3728,17 @@
           liveClock, liveClockString, activeDatabase, fetchDatabaseStatus, swipeDatabase,
 
           // Shared Helpers & Classes
+          defaultCrateIdForNow,
           isPartDefective, getDefectivePartClass, getDefectiveLabelClass, getDefectiveBadgeClass,
-          getDefectiveTableCellClass, getItemCardClass, getStatusBadgeClass, getStatusTextClass,
+          getDefectiveTableCellClass, getItemCardClass, getSetEffectiveStatus,
+          isSetAllocatedForReassembly, isSetPendingReassemblyAllocation, getSetPUDocNumber,
+          getStatusBadgeClass, getStatusTextClass,
           getDocStatusTextClass, formatLifecycleHistory, getStatusHistoryBadgeClass,
           formatDateTime, formatDateOnly, formatTimeOnly, formatDuration, getEffectiveFinishedAt,
           exportTrayToExcel, exportLaporanToExcel, exportToExcel,
 
           // Slot Stage Visibility
-          isWarehouseReceiptVisible, isQCResultCardVisible, getQCReportStatus,
+          isTF1ResultCardVisible, isWarehouseReceiptVisible, isQCResultCardVisible, getQCReportStatus,
 
           // Global Badges & Polling
           assemblyOverallCounts, tf1OverallCounts, gudangTotalBadgeCount,

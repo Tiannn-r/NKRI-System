@@ -253,19 +253,6 @@
                     </div>
                     <i v-if="currentTab === 'report'" class="fa-solid fa-chevron-right text-[10px] text-white"></i>
                   </button>
-
-                  <!-- 8. Delivery Order & PL -->
-                  <button v-if="hasMenuAccess('delivery_order')" type="button" @click="navigateTo('delivery_order')"
-                    :class="currentTab === 'delivery_order' ? 'bg-red-600 text-white font-bold shadow-md shadow-red-600/20' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-medium'"
-                    class="w-full text-left px-3 py-2 rounded-xl text-xs transition flex items-center justify-between group cursor-pointer">
-                    <div class="flex items-center space-x-2.5">
-                      <i class="fa-solid fa-truck-ramp-box text-xs"
-                        :class="currentTab === 'delivery_order' ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'"></i>
-                      <span>Delivery Order &amp; PL</span>
-                    </div>
-                    <i v-if="currentTab === 'delivery_order'"
-                      class="fa-solid fa-chevron-right text-[10px] text-white"></i>
-                  </button>
                 </div>
               </div>
 
@@ -362,7 +349,87 @@
                 </div>
               </div>
 
-              <!-- Group 4: ADMINISTRATOR -->
+              <!-- Group 4: DELIVERY ORDER -->
+              <div v-if="hasGroupAccess('delivery_order')"
+                class="border border-slate-200/90 rounded-2xl overflow-hidden bg-slate-50/60 shadow-xs">
+                <!-- Accordion Header -->
+                <button type="button" @click="toggleSidebarGroup('delivery_order')"
+                  class="w-full px-3.5 py-2.5 flex items-center justify-between text-slate-700 hover:text-indigo-600 hover:bg-slate-100/80 transition cursor-pointer select-none">
+                  <div class="flex items-center space-x-2">
+                    <div
+                      class="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs shadow-xs">
+                      <i class="fa-solid fa-truck-fast text-[10.5px]"></i>
+                    </div>
+                    <span class="text-xs font-black uppercase tracking-wider text-slate-800">Delivery Order</span>
+                  </div>
+                  <div class="flex items-center space-x-1.5">
+                    <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform duration-200"
+                      :class="{ 'rotate-180': sidebarOpen.delivery_order }"></i>
+                  </div>
+                </button>
+
+                <!-- Accordion Body (4 Menus Sesuai Permintaan) -->
+                <div v-show="sidebarOpen.delivery_order"
+                  class="p-1.5 space-y-1 bg-white border-t border-slate-100 animate-fadeIn">
+                  <!-- 1. Dashboard DO -->
+                  <button v-if="hasMenuAccess('do_dashboard') || hasMenuAccess('delivery_order')" type="button"
+                    @click="navigateTo('delivery_order', 'dashboard')"
+                    :class="currentTab === 'delivery_order' && doSubTab === 'dashboard' ? 'bg-red-600 text-white font-bold shadow-md shadow-red-600/20' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-medium'"
+                    class="w-full text-left px-3 py-2 rounded-xl text-xs transition flex items-center justify-between group cursor-pointer">
+                    <div class="flex items-center space-x-2.5">
+                      <i class="fa-solid fa-chart-pie text-xs"
+                        :class="currentTab === 'delivery_order' && doSubTab === 'dashboard' ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'"></i>
+                      <span>Dashboard DO</span>
+                    </div>
+                    <i v-if="currentTab === 'delivery_order' && doSubTab === 'dashboard'"
+                      class="fa-solid fa-chevron-right text-[10px] text-white"></i>
+                  </button>
+
+                  <!-- 2. Database Customer -->
+                  <button v-if="hasMenuAccess('do_customers') || hasMenuAccess('delivery_order')" type="button"
+                    @click="navigateTo('delivery_order', 'customers')"
+                    :class="currentTab === 'delivery_order' && doSubTab === 'customers' ? 'bg-red-600 text-white font-bold shadow-md shadow-red-600/20' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-medium'"
+                    class="w-full text-left px-3 py-2 rounded-xl text-xs transition flex items-center justify-between group cursor-pointer">
+                    <div class="flex items-center space-x-2.5">
+                      <i class="fa-solid fa-users text-xs"
+                        :class="currentTab === 'delivery_order' && doSubTab === 'customers' ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'"></i>
+                      <span>Database Customer</span>
+                    </div>
+                    <i v-if="currentTab === 'delivery_order' && doSubTab === 'customers'"
+                      class="fa-solid fa-chevron-right text-[10px] text-white"></i>
+                  </button>
+
+                  <!-- 3. Packing List -->
+                  <button v-if="hasMenuAccess('do_packing_list') || hasMenuAccess('delivery_order')" type="button"
+                    @click="navigateTo('delivery_order', 'packing_list')"
+                    :class="currentTab === 'delivery_order' && (doSubTab === 'packing_list' || doSubTab === 'label_pl_only' || doSubTab === 'labels_history') ? 'bg-red-600 text-white font-bold shadow-md shadow-red-600/20' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-medium'"
+                    class="w-full text-left px-3 py-2 rounded-xl text-xs transition flex items-center justify-between group cursor-pointer">
+                    <div class="flex items-center space-x-2.5">
+                      <i class="fa-solid fa-boxes-packing text-xs"
+                        :class="currentTab === 'delivery_order' && (doSubTab === 'packing_list' || doSubTab === 'label_pl_only') ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'"></i>
+                      <span>Packing List</span>
+                    </div>
+                    <i v-if="currentTab === 'delivery_order' && (doSubTab === 'packing_list' || doSubTab === 'label_pl_only')"
+                      class="fa-solid fa-chevron-right text-[10px] text-white"></i>
+                  </button>
+
+                  <!-- 4. Surat Jalan -->
+                  <button v-if="hasMenuAccess('do_surat_jalan') || hasMenuAccess('delivery_order')" type="button"
+                    @click="navigateTo('delivery_order', 'surat_jalan')"
+                    :class="currentTab === 'delivery_order' && (doSubTab === 'surat_jalan' || doSubTab === 'form' || doSubTab === 'history') ? 'bg-red-600 text-white font-bold shadow-md shadow-red-600/20' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-medium'"
+                    class="w-full text-left px-3 py-2 rounded-xl text-xs transition flex items-center justify-between group cursor-pointer">
+                    <div class="flex items-center space-x-2.5">
+                      <i class="fa-solid fa-file-invoice text-xs"
+                        :class="currentTab === 'delivery_order' && (doSubTab === 'surat_jalan' || doSubTab === 'form') ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'"></i>
+                      <span>Surat Jalan</span>
+                    </div>
+                    <i v-if="currentTab === 'delivery_order' && (doSubTab === 'surat_jalan' || doSubTab === 'form')"
+                      class="fa-solid fa-chevron-right text-[10px] text-white"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Group 5: ADMINISTRATOR -->
               <div v-if="hasGroupAccess('admin')"
                 class="border border-slate-200/90 rounded-2xl overflow-hidden bg-slate-50/60 shadow-xs">
                 <!-- Accordion Header -->
@@ -502,6 +569,8 @@
 
                 </div>
               </div>
+
+
 
             </div>
           </div>

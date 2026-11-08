@@ -44,7 +44,62 @@
     };
     const getFormattedDocCode = ctx.getFormattedDocCode || function (code, type) { return code || '-'; };
     const getPUDocNumber = ctx.getPUDocNumber || function (code) { return code || '-'; };
-    const getAssemblyStageStatus = ctx.getAssemblyStageStatus || function (it) { return it?.status || 'Good'; };
+    const getHistoryAssemblyStatus = (it) => {
+      if (!it) return 'Good';
+      if (it.original_assembly_status) {
+        const oSt = String(it.original_assembly_status).trim().toLowerCase();
+        if (oSt === 'good') return 'Good';
+        if (oSt === 'hold') return 'Hold';
+        if (oSt === 'scrap') return 'Scrap';
+        if (oSt === 'declined') return 'Declined';
+        if (oSt !== 'ru' && oSt !== 'dirakit ulang' && oSt !== 'rework') {
+          return it.original_assembly_status.charAt(0).toUpperCase() + it.original_assembly_status.slice(1).toLowerCase();
+        }
+      }
+      const rawSt = String(it.assembly_status || it.status || '').trim().toLowerCase();
+      if (rawSt === 'hold') return 'Hold';
+      if (rawSt === 'scrap') return 'Scrap';
+      if (rawSt === 'declined') return 'Declined';
+      if (rawSt && rawSt !== 'ru' && rawSt !== 'dirakit ulang' && rawSt !== 'rework') {
+        return (it.assembly_status || it.status).charAt(0).toUpperCase() + (it.assembly_status || it.status).slice(1).toLowerCase();
+      }
+      return 'Good';
+    };
+    const getAssemblyStageStatus = (it) => {
+      if (!it) return 'Good';
+      if (ctx.getAssemblyStageStatus && typeof ctx.getAssemblyStageStatus === 'function') {
+        const st = ctx.getAssemblyStageStatus(it);
+        if (st) return st;
+      }
+      if (it.original_assembly_status) {
+        const oSt = String(it.original_assembly_status).trim().toLowerCase();
+        if (oSt === 'good') return 'Good';
+        if (oSt === 'hold') return 'Hold';
+        if (oSt === 'scrap') return 'Scrap';
+        if (oSt === 'declined') return 'Declined';
+        if (oSt === 'ru' || oSt === 'dirakit ulang') return 'RU';
+      }
+      const rawSt = String(it.assembly_status || it.status || '').trim().toLowerCase();
+      if (rawSt === 'declined' || Boolean(it.is_declined)) return 'Declined';
+      if (rawSt === 'hold') return 'Hold';
+      if (rawSt === 'scrap') return 'Scrap';
+      if (rawSt === 'ru' || rawSt === 'dirakit ulang') return 'RU';
+      return 'Good';
+    };
+    const formatDocumentStatusText = ctx.formatDocumentStatusText || function (status) {
+      if (!status || status === '-') return '-';
+      const s = String(status).trim().toUpperCase();
+      if (s === 'NOT_GOOD' || s === 'NOT GOOD' || s === 'NG') return 'NOT GOOD';
+      if (s === 'ACC' || s === 'ACCEPTED' || s === 'DITERIMA' || s === 'TERIMA') return 'ACCEPTED';
+      if (s === 'DECLINED' || s === 'DECLINE' || s === 'DITOLAK' || s === 'TOLAK') return 'DECLINED';
+      if (s === 'PASS' || s === 'PASSED' || s === 'GOOD' || s === 'LOLOS' || s.includes('GOOD')) return 'GOOD';
+      if (s === 'HOLD' || s === 'HOLD_ASSY' || s === 'HOLD_QC' || s.startsWith('HOLD')) return 'HOLD';
+      if (s === 'RU' || s === 'DIRAKIT ULANG' || s === 'RAKIT ULANG') return 'DIRAKIT ULANG';
+      if (s === 'REWORK' || s === 'REWORK_ASSY' || s === 'REWORK_QC') return 'HOLD';
+      if (s === 'SCRAP' || s === 'FAIL') return 'SCRAP';
+      if (s === 'PENDING' || s.includes('MENUNGGU') || s.includes('BELUM')) return 'PENDING';
+      return String(status);
+    };
     const loadTrays = ctx.loadTrays || (async () => {});
     const loadAssemblyResults = ctx.loadAssemblyResults || (async () => {});
     const openDetailModal = ctx.openDetailModal || function () {};
@@ -199,6 +254,7 @@
         selectedReportDoc.value = null;
       }
       reportSubTab.value = sub;
+      initReportsTab(sub);
       navigateTo('report', sub, isFromPopState);
     };
 
@@ -409,8 +465,8 @@
       if (f.docNumber) {
         const d = f.docNumber.toLowerCase();
         list = list.filter(it => {
-          const isPU = it.status === 'Dirakit Ulang' || it.qc_status === 'RU' || (typeof isReassemblySet === 'function' && isReassemblySet(it));
-          const assyDoc = (isPU ? getFormattedDocCode(it.tray_code, 'assy_rework') : ((it.assy_doc_number && it.assy_doc_number.toUpperCase().startsWith('WH/ASSY')) ? it.assy_doc_number : getFormattedDocCode(it.tray_code, 'assy'))).toLowerCase();
+          const isPUAllocated = (typeof isSetAllocatedForReassembly === 'function' && isSetAllocatedForReassembly(it)) || Boolean(it.is_reregistered || it.rereg_wo_suffix || it.rereg_pending_operator);
+          const assyDoc = (isPUAllocated ? (getSetPUDocNumber(it) || getFormattedDocCode(it.tray_code, 'assy_rework')) : ((it.assy_doc_number && it.assy_doc_number.toUpperCase().startsWith('WH/ASSY')) ? it.assy_doc_number : getFormattedDocCode(it.tray_code, 'assy'))).toLowerCase();
           const puDoc = getPUDocNumber(it.tray_code).toLowerCase();
           const rawTray = (it.tray_code || '').toLowerCase();
           const suffix = (it.tray_code ? it.tray_code.split('/').pop() : '').toLowerCase();
@@ -528,9 +584,9 @@
       if (f.status && f.status.trim() !== '' && f.status !== 'Semua Status') {
         const targetStatus = f.status.trim().toUpperCase();
         list = list.filter(t => {
-          const isFinished = (t.finished_count >= t.total_sets && t.total_sets > 0) || t.finished_at || t.status === 'Good' || t.status === 'SELESAI';
+          const isFinished = (t.finished_count >= t.total_sets && t.total_sets > 0) || t.finished_at || t.status === 'Good' || t.status === 'SELESAI' || t.session_status === 'COMPLETED_SHIFT' || t.tray_status === 'returned' || t.status === 'returned' || t.status === 'Dikembalikan ke Gudang';
           if (targetStatus === 'SELESAI' || targetStatus === 'COMPLETED') return isFinished;
-          if (targetStatus === 'AKTIF' || targetStatus === 'ACTIVE' || targetStatus === 'IN_PROGRESS') return !isFinished;
+          if (targetStatus === 'AKTIF' || targetStatus === 'ACTIVE' || targetStatus === 'IN_PROGRESS' || targetStatus === 'TERSUPPLY') return !isFinished;
           return String(t.status || t.session_status || '').toUpperCase().includes(targetStatus);
         });
       }
@@ -835,14 +891,22 @@
     const currentReportCounts = computed(() => {
       const sub = reportSubTab.value;
       if (sub === 'wo') {
-        const trays = filteredWOReport.value || [];
-        let finished = 0;
-        let active = 0;
-        trays.forEach(t => {
-          if (t.finished_count >= t.total_sets && t.total_sets > 0) finished++;
-          else active++;
-        });
-        return { total: trays.length, good: finished, hold: active, other: 0 };
+        if (reportViewMode.value === 'doc') {
+          const docList = currentReportDocSummaryList.value || [];
+          const finished = docList.filter(d => d.status === 'SELESAI').length;
+          const active = docList.length - finished;
+          return { total: docList.length, good: finished, hold: active, other: 0 };
+        } else {
+          const trays = filteredWOReport.value || [];
+          let finished = 0;
+          let active = 0;
+          trays.forEach(t => {
+            const isFinished = (t.finished_count >= t.total_sets && t.total_sets > 0) || t.finished_at || t.status === 'Good' || t.status === 'SELESAI' || t.session_status === 'COMPLETED_SHIFT' || t.tray_status === 'returned' || t.status === 'returned' || t.status === 'Dikembalikan ke Gudang';
+            if (isFinished) finished++;
+            else active++;
+          });
+          return { total: trays.length, good: finished, hold: active, other: 0 };
+        }
       } else if (sub === 'assembly') {
         const list = filteredAssemblyReport.value || [];
         let good = 0;
@@ -1087,7 +1151,7 @@
           g.total_units++;
           g.items.push(it);
 
-          const itemSt = (sub === 'assembly') ? getAssemblyStageStatus(it).toUpperCase() : String(status || '').toUpperCase();
+          const itemSt = (sub === 'assembly') ? getHistoryAssemblyStatus(it).toUpperCase() : String(status || '').toUpperCase();
           if (['GOOD', 'OK', 'PASSED', 'SELESAI', 'VERIFIED'].includes(itemSt)) {
             g.good_count++;
           } else if (['HOLD', 'PENDING', 'HOLD_ASSY', 'HOLD_QC'].includes(itemSt)) {
@@ -1109,6 +1173,36 @@
 
       groupsMap.forEach(g => {
         g.items.sort((a, b) => (Number(a.set_number) || 0) - (Number(b.set_number) || 0));
+
+        if (sub === 'wo') {
+          const matchingTray = (traysList.value || []).find(t =>
+            t.tray_code === g.raw_tray_code ||
+            t.tray_code === g.doc_code ||
+            (g.raw_tray_code && t.tray_code && (t.tray_code.includes(g.raw_tray_code) || g.raw_tray_code.includes(t.tray_code)))
+          );
+
+          const isTrayReturnedOrFinished =
+            (matchingTray && (
+              matchingTray.status === 'returned' ||
+              matchingTray.session_status === 'COMPLETED_SHIFT' ||
+              matchingTray.return_verified ||
+              (matchingTray.finished_count >= matchingTray.total_sets && matchingTray.total_sets > 0)
+            )) ||
+            g.items.some(it =>
+              it.session_status === 'COMPLETED_SHIFT' ||
+              it.tray_status === 'returned' ||
+              it.return_verified ||
+              it.status === 'Dikembalikan ke Gudang' ||
+              it.status === 'SELESAI'
+            ) ||
+            (g.items.length > 0 && g.items.every(it =>
+              it.finished_at ||
+              ['GOOD', 'SELESAI', 'DIKEMBALIKAN KE GUDANG', 'DECLINED', 'DECLINE', 'TERSEDIA'].includes(String(it.status || '').toUpperCase())
+            ));
+
+          g.status = isTrayReturnedOrFinished ? 'SELESAI' : 'TERSUPPLY';
+        }
+
         if (!g.operator || g.operator === '-') {
           const itemWithOp = g.items.find(it => it.warehouse_receipt_by_name || it.warehouse_receipt_by || it.verified_by_user || it.pic_warehouse || it.pic_assembly_name || it.pic_assembly || it.tester_full_name || it.tester_username || it.operator);
           if (itemWithOp) {
@@ -1184,7 +1278,12 @@
                 if (sNum) seenSets.add(sNum);
 
                 const matched = setsMap.get(sNum);
-                clean.push(matched ? { ...item, ...matched } : item);
+                const sub = reportSubTab.value;
+                if (sub === 'assy_test' || sub === 'qc_test' || sub === 'warehouse_receipt') {
+                  clean.push(matched ? { ...matched, ...item, status: item.status || matched.status } : item);
+                } else {
+                  clean.push(matched ? { ...item, ...matched, status: matched.status || item.status } : item);
+                }
               });
               clean.sort((a, b) => (Number(a.set_number) || 0) - (Number(b.set_number) || 0));
               docGroup.items = clean;
@@ -1203,13 +1302,16 @@
     const openWOUnitDetail = async (it) => {
       if (!it) return;
       const trayCode = it.tray_code || '-';
+      const isFinished = (it.finished_count >= it.total_sets && it.total_sets > 0) || it.finished_at || it.session_status === 'COMPLETED_SHIFT' || it.tray_status === 'returned' || it.status === 'Good' || it.status === 'SELESAI' || it.status === 'Dikembalikan ke Gudang';
       const docGroup = {
         doc_code: getFormattedDocCode(trayCode, 'wo'),
         raw_tray_code: trayCode,
         origin_doc: it.source_document_mo || 'MO',
         operator: getOperatorFullName(it.pic_warehouse) || it.pic_warehouse || getOperatorFullName(it.assigned_operator) || it.assigned_operator || '-',
         timestamp: it.tray_created_at || it.created_at,
-        status: it.status || it.session_status || 'SELESAI',
+        status: isFinished ? 'SELESAI' : 'TERSUPPLY',
+        session_status: it.session_status,
+        tray_status: it.tray_status,
         total_units: 1,
         good_count: 1,
         hold_count: 0,
@@ -1292,18 +1394,33 @@
             { header: 'Status', width: 14 },
             { header: 'Keterangan', width: 28 }
           ];
-          rawData = (filteredWOReport.value || []).map((t, idx) => [
-            idx + 1,
-            getFormattedDocCode(t.tray_code, 'wo') + (t.set_number ? ' Set #' + t.set_number : ''),
-            t.source_document_mo || '-',
-            t.part15_sn || t.p9_sn || '-',
-            t.part1_sn || '-',
-            t.part12_sn || '-',
-            getOperatorFullName(t.pic_warehouse) || t.pic_warehouse || getOperatorFullName(t.assigned_operator) || t.assigned_operator || '-',
-            t.tray_created_at || t.created_at || '-',
-            (t.finished_count >= t.total_sets && t.total_sets > 0) || t.finished_at || t.status === 'Good' || t.status === 'SELESAI' ? 'SELESAI' : 'TERSUPPLY',
-            t.reason || t.session_status || '-'
-          ]);
+          rawData = (filteredWOReport.value || []).map((t, idx) => {
+            const isFinished = (t.finished_count >= t.total_sets && t.total_sets > 0) || t.finished_at || t.session_status === 'COMPLETED_SHIFT' || t.tray_status === 'returned' || t.status === 'Good' || t.status === 'SELESAI' || t.status === 'Dikembalikan ke Gudang';
+            let keterangan = t.reason;
+            if (!keterangan) {
+              if (t.is_declined || t.status === 'Declined' || t.status === 'Decline') {
+                keterangan = t.declined_reason ? `Dikembalikan ke Gudang (Declined: ${t.declined_reason})` : 'Dikembalikan ke Gudang (Declined)';
+              } else if (t.status === 'Dikembalikan ke Gudang' || (!t.finished_at && (t.session_status === 'COMPLETED_SHIFT' || t.tray_status === 'returned'))) {
+                keterangan = 'Dikembalikan ke Gudang';
+              } else if (isFinished) {
+                keterangan = 'Pengerjaan Selesai';
+              } else {
+                keterangan = 'Tray Tersupply ke Perakitan';
+              }
+            }
+            return [
+              idx + 1,
+              getFormattedDocCode(t.tray_code, 'wo') + (t.set_number ? ' Set #' + t.set_number : ''),
+              t.source_document_mo || '-',
+              t.part15_sn || t.p9_sn || '-',
+              t.part1_sn || '-',
+              t.part12_sn || '-',
+              getOperatorFullName(t.pic_warehouse) || t.pic_warehouse || getOperatorFullName(t.assigned_operator) || t.assigned_operator || '-',
+              t.tray_created_at || t.created_at || '-',
+              isFinished ? 'SELESAI' : 'TERSUPPLY',
+              keterangan
+            ];
+          });
         } else {
           filename = `Laporan_Dokumen_WO_${getTodayDateStr()}.xlsx`;
           title = 'LAPORAN WORK ORDER (RINGKASAN PER DOKUMEN TRAY)';
@@ -1318,16 +1435,16 @@
             { header: 'Waktu Dibuat', width: 20 },
             { header: 'Status Dokumen', width: 16 }
           ];
-          rawData = (filteredWOReport.value || []).map((t, idx) => [
+          rawData = (currentReportDocSummaryList.value || []).map((t, idx) => [
             idx + 1,
-            getFormattedDocCode(t.tray_code, 'wo'),
-            t.source_document_mo || '-',
-            getOperatorFullName(t.pic_warehouse) || t.pic_warehouse || '-',
-            getOperatorFullName(t.assigned_operator) || t.assigned_operator || '-',
-            t.total_sets || 10,
-            t.finished_count || 0,
-            t.tray_created_at || t.created_at || '-',
-            (t.finished_count >= t.total_sets && t.total_sets > 0) || t.finished_at || t.status === 'Good' || t.status === 'SELESAI' ? 'SELESAI' : 'TERSUPPLY'
+            t.doc_code,
+            t.origin_doc || '-',
+            t.operator || '-',
+            t.operator || '-',
+            t.total_units || 0,
+            t.good_count || 0,
+            t.timestamp || '-',
+            t.status || 'TERSUPPLY'
           ]);
         }
       } else if (sub === 'assembly') {
@@ -1347,8 +1464,8 @@
           { header: 'Keterangan Masalah', width: 30 }
         ];
         rawData = (filteredAssemblyReport.value || []).map((it, idx) => {
-          const isPU = it.status === 'Dirakit Ulang' || it.qc_status === 'RU' || (typeof isReassemblySet === 'function' && isReassemblySet(it));
-          const docCode = isPU ? getFormattedDocCode(it.tray_code, 'assy_rework') : ((it.assy_doc_number && it.assy_doc_number.toUpperCase().startsWith('WH/ASSY')) ? it.assy_doc_number : getFormattedDocCode(it.tray_code, 'assy'));
+          const isPUAllocated = (typeof isSetAllocatedForReassembly === 'function' && isSetAllocatedForReassembly(it)) || Boolean(it.is_reregistered || it.rereg_wo_suffix || it.rereg_pending_operator);
+          const docCode = isPUAllocated ? (getSetPUDocNumber(it) || getFormattedDocCode(it.tray_code, 'assy_rework')) : ((it.assy_doc_number && it.assy_doc_number.toUpperCase().startsWith('WH/ASSY')) ? it.assy_doc_number : getFormattedDocCode(it.tray_code, 'assy'));
           return [
             idx + 1,
             docCode,
@@ -1630,6 +1747,8 @@
       totalPgAssyTestReport,
       totalPgQCReport,
       totalPgWarehouseReport,
+      getHistoryAssemblyStatus,
+      formatDocumentStatusText,
       exportCurrentReportToExcel
     };
   };
