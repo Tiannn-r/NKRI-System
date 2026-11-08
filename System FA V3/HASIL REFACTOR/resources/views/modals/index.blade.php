@@ -1,7 +1,7 @@
 @verbatim
     <!-- ================= MODAL CAROUSEL PETUNJUK GAMBAR TESTING POINT ================= -->
     <div v-if="showInstructionGuideModal"
-      class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      class="modal-backdrop-full flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div
         class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-2xl w-full p-4 sm:p-6 shadow-2xl space-y-4 my-auto">
 
@@ -137,7 +137,7 @@
 
     <!-- ================= MODAL PROMPT SOURCE DOCUMENT MO SAAT SIMPAN TRAY ================= -->
     <div v-if="showPromptMOModal" @click.self="safeCloseModal(() => { showPromptMOModal = false; })"
-      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+      class="modal-backdrop-full flex items-center justify-center p-3 sm:p-4">
       <div
         class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-md w-full p-5 sm:p-7 shadow-2xl space-y-4 my-auto relative">
         <button @click="safeCloseModal(() => { showPromptMOModal = false; })"
@@ -197,7 +197,7 @@
 
     <!-- ================= MODAL PREVIEW LABEL P9 (PRINT 80x20mm + QR CODE) ================= -->
     <div v-if="showLabelPreviewModal"
-      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] flex items-center justify-center p-3 sm:p-4">
+      class="modal-backdrop-full modal-backdrop-nested flex items-center justify-center p-3 sm:p-4">
       <div
         class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-lg w-full p-4 sm:p-6 shadow-2xl space-y-4 my-auto">
         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -290,7 +290,7 @@
 
     <!-- ================= MODAL CETAK LABEL BATCH (SEMUA SN ACC DALAM DOKUMEN) ================= -->
     <div v-if="showBatchLabelModal"
-      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] flex items-center justify-center p-3 sm:p-4"
+      class="modal-backdrop-full modal-backdrop-nested flex items-center justify-center p-3 sm:p-4"
       @click.self="showBatchLabelModal = false">
       <div
         class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden">
@@ -437,8 +437,8 @@
     </div>
 
     <!-- ================= MODAL LIHAT DETAIL RAKITAN (SETELAH SELESAI) ================= -->
-    <div v-if="showDetailModal && activeDetailSlot"
-      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div v-if="showDetailModal && activeDetailSlot" @click.self="showDetailModal = false"
+      class="modal-backdrop-full modal-backdrop-nested flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div
         class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-4 my-auto max-h-[92vh] overflow-y-auto">
 
@@ -450,8 +450,20 @@
               #{{ activeDetailSlot.set_number }}
             </div>
             <div>
-              <h3 class="font-black text-base sm:text-lg text-slate-900">Detail Perakitan Set #{{
-                activeDetailSlot.set_number }}</h3>
+              <h3 class="font-black text-base sm:text-lg text-slate-900">
+                <template v-if="activeDetailSlot.process_stage === 'assy_test'">
+                  Detail Uji Fungsional 1 (TF 1) Set #{{ activeDetailSlot.set_number }}
+                </template>
+                <template v-else-if="activeDetailSlot.process_stage === 'qc_test'">
+                  Detail Quality Control (QC) Set #{{ activeDetailSlot.set_number }}
+                </template>
+                <template v-else-if="activeDetailSlot.process_stage === 'warehouse_receipt'">
+                  Detail Penerimaan Gudang Set #{{ activeDetailSlot.set_number }}
+                </template>
+                <template v-else>
+                  Detail Perakitan Set #{{ activeDetailSlot.set_number }}
+                </template>
+              </h3>
               <p class="text-[11px] text-slate-500 font-mono">Tray: {{ activeDetailSlot.tray_code }}</p>
             </div>
           </div>
@@ -493,19 +505,19 @@
             <div class="grid grid-cols-2 gap-2 text-xs font-mono">
               <div class="bg-white p-2 rounded-lg border border-slate-200">
                 <span class="text-[10px] font-sans font-bold text-slate-400 block uppercase">Jam Mulai:</span>
-                <strong class="text-slate-900">{{ formatDateTime(activeDetailSlot.started_at) }}</strong>
+                <strong class="text-slate-900">{{ formatDateTime(activeDetailSlot?.started_at) }}</strong>
               </div>
               <div class="bg-white p-2 rounded-lg border border-slate-200">
                 <span class="text-[10px] font-sans font-bold text-slate-400 block uppercase">Jam Selesai:</span>
-                <strong class="text-slate-900">{{ formatDateTime(activeDetailSlot.finished_at,
-                  activeDetailSlot.started_at) }}</strong>
+                <strong class="text-slate-900">{{ formatDateTime(activeDetailSlot?.finished_at,
+                  activeDetailSlot?.started_at) }}</strong>
               </div>
             </div>
             <div
               class="text-[11px] text-slate-600 bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 flex justify-between items-center">
               <span class="font-sans font-medium text-slate-500">Total Durasi Perakitan:</span>
-              <strong class="font-mono font-bold text-slate-900">{{ formatDuration(activeDetailSlot.started_at,
-                activeDetailSlot.finished_at) }}</strong>
+              <strong class="font-mono font-bold text-slate-900">{{ formatDuration(activeDetailSlot?.started_at,
+                activeDetailSlot?.finished_at) }}</strong>
             </div>
           </div>
 
@@ -578,18 +590,12 @@
           <!-- 4. Catatan / Alasan Status (Jika ada) -->
           <div
             v-if="activeDetailSlot.reason || activeDetailSlot.rework_reason || activeDetailSlot.qc_failure_reasons || activeDetailSlot.assy_failure_reasons"
-            class="p-3 rounded-xl border text-xs space-y-1"
-            :class="(activeDetailSlot.status === 'Rework' || activeDetailSlot.rework_reason) ? 'bg-purple-50 border-purple-200 text-purple-950' : 'bg-amber-50/80 border-amber-200 text-amber-950'">
-            <div class="font-bold flex items-center justify-between uppercase text-[10px]"
-              :class="(activeDetailSlot.status === 'Rework' || activeDetailSlot.rework_reason) ? 'text-purple-800' : 'text-amber-900'">
+            class="p-3 rounded-xl border text-xs space-y-1 bg-amber-50/80 border-amber-200 text-amber-950">
+            <div class="font-bold flex items-center justify-between uppercase text-[10px] text-amber-900">
               <span class="flex items-center gap-1">
-                <i
-                  :class="(activeDetailSlot.status === 'Rework' || activeDetailSlot.rework_reason) ? 'fa-solid fa-rotate-left' : 'fa-solid fa-circle-exclamation'"></i>
-                {{ (activeDetailSlot.status === 'Rework' || activeDetailSlot.rework_reason) ? 'Alasan Kendala / Rework:'
-                : 'Catatan / Alasan Hold:' }}
+                <i class="fa-solid fa-circle-exclamation"></i>
+                Catatan / Alasan Kendala:
               </span>
-              <span v-if="activeDetailSlot.rework_reason"
-                class="text-[8.5px] bg-purple-100 text-purple-800 border border-purple-200 font-mono font-bold px-1.5 py-0.2 rounded">REWORK</span>
             </div>
             <p class="font-medium italic leading-relaxed">{{ formatQCReworkReason(activeDetailSlot) ||
               activeDetailSlot.rework_reason || activeDetailSlot.assy_failure_reasons ||
@@ -598,7 +604,7 @@
 
           <!-- 4.5a: Hasil Pengujian Fungsional Perakitan (TF1) -->
           <div
-            v-if="(activeDetailSlot.parsed_tf1_checklist && activeDetailSlot.parsed_tf1_checklist.length) || activeDetailSlot.tf1_doc_number || activeDetailSlot.assy_doc_number || activeDetailSlot.process_stage === 'assy_test' || (activeDetailSlot.process_stage === 'warehouse_receipt' && (activeDetailSlot.tf1_doc_number || activeDetailSlot.assy_doc_number || (activeDetailSlot.parsed_checklist && activeDetailSlot.parsed_checklist.length)))"
+            v-if="isTF1ResultCardVisible(activeDetailSlot)"
             class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
             <div class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center justify-between">
               <div class="flex items-center gap-1.5">
@@ -813,9 +819,12 @@
           <!-- 5. PIC Operator -->
           <div
             class="flex items-center justify-between text-xs bg-slate-50 p-3 rounded-xl border border-slate-200 text-slate-600">
-            <span class="font-medium text-slate-500">Operator Perakitan (PIC):</span>
-            <strong class="text-slate-900 font-bold">{{ activeDetailSlot.pic_assembly_name ||
-              activeDetailSlot.pic_assembly || '-' }}</strong>
+            <span class="font-medium text-slate-500">
+              {{ activeDetailSlot.process_stage === 'assy_test' ? 'Operator Tester TF 1:' : (activeDetailSlot.process_stage === 'qc_test' ? 'Inspector Quality Control:' : (activeDetailSlot.process_stage === 'warehouse_receipt' ? 'Petugas Gudang:' : 'Operator Perakitan (PIC):')) }}
+            </span>
+            <strong class="text-slate-900 font-bold">
+              {{ activeDetailSlot.process_stage === 'assy_test' ? (activeDetailSlot.pic_tester || activeDetailSlot.pic_assembly_name || '-') : (activeDetailSlot.process_stage === 'qc_test' ? (activeDetailSlot.qc_tester_name || activeDetailSlot.pic_tester || '-') : (activeDetailSlot.process_stage === 'warehouse_receipt' ? (activeDetailSlot.warehouse_receipt_by || activeDetailSlot.pic_warehouse || '-') : (activeDetailSlot.pic_assembly_name || activeDetailSlot.pic_assembly || '-'))) }}
+            </strong>
           </div>
         </div>
 
@@ -832,7 +841,7 @@
 
     <!-- ================= MODAL KONFIRMASI RESET DATABASE TRAY (ADMIN ONLY) ================= -->
     <div v-if="showResetDbModal"
-      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+      class="modal-backdrop-full flex items-center justify-center p-3 sm:p-4">
       <div
         class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4 my-auto text-center">
         <div
@@ -870,7 +879,7 @@
 
     <!-- ================= POPUP NOTIFIKASI HASIL BUAT TRAY GUDANG ================= -->
     <div v-if="showTrayResultPopup"
-      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+      class="modal-backdrop-full flex items-center justify-center p-3 sm:p-4">
       <div
         class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-md w-full p-5 sm:p-7 shadow-2xl space-y-5 my-auto text-center">
         <div
@@ -918,7 +927,7 @@
 
     <!-- ================= POPUP DETAIL PARTS TRAY ================= -->
     <div v-if="showTrayDetailModal"
-      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      class="modal-backdrop-full flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div
         class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-xl w-full p-4 sm:p-6 shadow-2xl space-y-4 my-auto max-h-[92vh] overflow-y-auto">
         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -991,7 +1000,7 @@
 
     <!-- ================= MODAL DRILLDOWN STATUS PART DI MASTER DB ================= -->
     <div v-if="showStatusDrillModal"
-      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      class="modal-backdrop-full flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div
         class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-4xl w-full p-4 sm:p-6 shadow-2xl space-y-4 my-auto max-h-[92vh] flex flex-col">
 
@@ -1003,7 +1012,7 @@
               <i v-if="drillData.status === 'Good'" class="fa-solid fa-circle-check"></i>
               <i v-else-if="drillData.status === 'Hold'" class="fa-solid fa-hand"></i>
               <i v-else-if="drillData.status === 'Scrap'" class="fa-solid fa-trash-can"></i>
-              <i v-else-if="drillData.status === 'Rework'" class="fa-solid fa-rotate-left"></i>
+              
               <i v-else-if="drillData.status === 'Supplied'" class="fa-solid fa-boxes-packing"></i>
               <i v-else class="fa-solid fa-cubes"></i>
             </div>
@@ -1126,20 +1135,6 @@
                       <i class="fa-solid fa-eye text-[10px]"></i>
                       <span>Lihat Detail</span>
                     </span>
-
-                    <!-- Status Decline: Menunggu verifikasi di master stok -->
-                    <span
-                      v-if="item.effective_status === 'Decline' || item.effective_status === 'Declined' || item.effective_status === 'Pending Verif Admin'"
-                      class="text-slate-400 text-[10px] italic font-medium ml-1">
-                      (Menunggu Verif)
-                    </span>
-                    <!-- Tombol Daftar Ulang HANYA muncul jika part lepasan perakitan (ada part yang diganti) -->
-                    <button v-else-if="item.is_replaced_from_assy" @click.stop="openReregisterModal(item)"
-                      class="bg-amber-500 hover:bg-amber-600 text-white px-2 py-0.5 rounded-lg font-bold text-[9.5px] transition flex items-center justify-center gap-1 shadow-xs active:scale-95 cursor-pointer ml-1"
-                      title="Daftarkan Ulang Part Lepasan Perakitan ini">
-                      <i class="fa-solid fa-rotate-left text-[8.5px]"></i>
-                      <span>Daftar Ulang</span>
-                    </button>
                   </div>
                 </td>
               </tr>
@@ -1199,7 +1194,7 @@
 
     <!-- ================= MODAL OVERRIDE STATUS PART (PIHAK GUDANG & ADMIN) ================= -->
     <div v-if="showOverrideModal"
-      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      class="modal-backdrop-full flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div
         class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4 my-auto">
         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -1260,11 +1255,6 @@
                 class="py-2.5 px-2 rounded-xl text-xs transition font-semibold flex items-center justify-center gap-1.5 min-h-[40px] cursor-pointer">
                 <i class="fa-solid fa-hand"></i> Hold
               </button>
-              <button type="button" @click="overrideForm.new_status = 'Rework'"
-                :class="overrideForm.new_status === 'Rework' ? 'bg-purple-600 text-white font-bold ring-2 ring-purple-400 shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'"
-                class="py-2.5 px-2 rounded-xl text-xs transition font-semibold flex items-center justify-center gap-1.5 min-h-[40px] cursor-pointer">
-                <i class="fa-solid fa-rotate-left"></i> Rework
-              </button>
               <button type="button" @click="overrideForm.new_status = 'Scrap'"
                 :class="overrideForm.new_status === 'Scrap' ? 'bg-red-600 text-white font-bold ring-2 ring-red-400 shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'"
                 class="py-2.5 px-2 rounded-xl text-xs transition font-semibold flex items-center justify-center gap-1.5 min-h-[40px] cursor-pointer">
@@ -1280,9 +1270,9 @@
 
           <!-- Alasan / Catatan Override -->
           <div class="space-y-1.5 p-3 rounded-xl border transition-all animate-fadeIn"
-            :class="overrideForm.new_status === 'Tersedia' ? 'bg-emerald-50/80 border-emerald-300' : (overrideForm.new_status === 'Good' ? 'bg-teal-50/80 border-teal-300' : (overrideForm.new_status === 'Hold' ? 'bg-amber-50/80 border-amber-300' : (overrideForm.new_status === 'Rework' ? 'bg-purple-50/80 border-purple-300' : (overrideForm.new_status === 'Decline' ? 'bg-rose-50/80 border-rose-300' : 'bg-red-50/80 border-red-300'))))">
+            :class="overrideForm.new_status === 'Tersedia' ? 'bg-emerald-50/80 border-emerald-300' : (overrideForm.new_status === 'Good' ? 'bg-teal-50/80 border-teal-300' : (overrideForm.new_status === 'Hold' ? 'bg-amber-50/80 border-amber-300' : (overrideForm.new_status === 'Decline' ? 'bg-rose-50/80 border-rose-300' : 'bg-red-50/80 border-red-300')))">
             <label class="block text-xs font-bold uppercase tracking-wider flex items-center justify-between"
-              :class="overrideForm.new_status === 'Tersedia' ? 'text-emerald-900' : (overrideForm.new_status === 'Good' ? 'text-teal-900' : (overrideForm.new_status === 'Hold' ? 'text-amber-900' : (overrideForm.new_status === 'Rework' ? 'text-purple-900' : (overrideForm.new_status === 'Decline' ? 'text-rose-900' : 'text-red-900'))))">
+              :class="overrideForm.new_status === 'Tersedia' ? 'text-emerald-900' : (overrideForm.new_status === 'Good' ? 'text-teal-900' : (overrideForm.new_status === 'Hold' ? 'text-amber-900' : (overrideForm.new_status === 'Decline' ? 'text-rose-900' : 'text-red-900')))">
               <span>
                 <i class="fa-solid fa-pen-to-square mr-1"></i>
                 Alasan / Catatan Override: <span class="text-red-600">*</span>
@@ -1293,7 +1283,7 @@
             </label>
             <textarea v-model="overrideForm.reason" rows="2" placeholder="Tuliskan alasan perubahan status part..."
               class="w-full bg-white border rounded-xl p-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 transition shadow-inner font-sans font-medium"
-              :class="overrideForm.new_status === 'Tersedia' ? 'border-emerald-300 focus:ring-emerald-500' : (overrideForm.new_status === 'Good' ? 'border-teal-300 focus:ring-teal-500' : (overrideForm.new_status === 'Hold' ? 'border-amber-300 focus:ring-amber-500' : (overrideForm.new_status === 'Rework' ? 'border-purple-300 focus:ring-purple-500' : (overrideForm.new_status === 'Decline' ? 'border-rose-300 focus:ring-rose-500' : 'border-red-300 focus:ring-red-500'))))"></textarea>
+              :class="overrideForm.new_status === 'Tersedia' ? 'border-emerald-300 focus:ring-emerald-500' : (overrideForm.new_status === 'Good' ? 'border-teal-300 focus:ring-teal-500' : (overrideForm.new_status === 'Hold' ? 'border-amber-300 focus:ring-amber-500' : (overrideForm.new_status === 'Decline' ? 'border-rose-300 focus:ring-rose-500' : 'border-red-300 focus:ring-red-500')))"></textarea>
           </div>
 
           <div
@@ -1320,7 +1310,7 @@
 
     <!-- ================= MODAL VERIFIKASI AKTUAL FISIK GUDANG (ACC & DECLINE PER SET) ================= -->
     <div v-if="showGudangVerifyModal"
-      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      class="modal-backdrop-full flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div
         class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-5xl w-full p-4 sm:p-6 shadow-2xl space-y-4 my-auto max-h-[94vh] flex flex-col">
 
@@ -1387,8 +1377,8 @@
                 </td>
                 <td class="p-2.5 text-center font-sans">
                   <span v-if="set.verified_status === 'ACC'"
-                    class="bg-emerald-50 text-emerald-700 border border-emerald-300 px-2 py-0.5 rounded-lg font-bold text-[10px] uppercase flex items-center justify-center gap-1">
-                    <i class="fa-solid fa-circle-check text-emerald-600"></i> ACC
+                    class="bg-emerald-50 text-emerald-700 border border-emerald-300 px-2 py-0.5 rounded-lg font-bold text-[10px] uppercase flex items-center justify-center">
+                    ACC
                   </span>
                   <span v-else-if="set.is_declined || set.verified_status === 'DECLINED'"
                     class="bg-amber-50 text-amber-800 border border-amber-300 px-2 py-0.5 rounded-lg font-bold text-[10px] uppercase flex items-center justify-center gap-1">
@@ -1509,7 +1499,7 @@
 
     <!-- ================= SUB-MODAL ACC / OVERRIDE STATUS KONDISI RAKITAN OLEH GUDANG ================= -->
     <div v-if="showAccOverrideModal"
-      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      class="modal-backdrop-full flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div
         class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4 my-auto">
         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -1623,7 +1613,7 @@
 
     <!-- ================= SUB-MODAL KONFIRMASI DECLINE BARANG/PART GUDANG ================= -->
     <div v-if="showDeclineConfirmModal"
-      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] flex items-center justify-center p-3 sm:p-4">
+      class="modal-backdrop-full modal-backdrop-nested flex items-center justify-center p-3 sm:p-4">
       <div
         class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4 my-auto text-center">
         <div
@@ -1662,7 +1652,7 @@
     <!-- ================= SUB-MODAL VERIFIKASI SET DECLINE/SCRAP OLEH ADMIN (LAYOUT PERAKITAN) ================= -->
     <div v-if="showAdminVerifySetModal && activeAdminSet"
       @click.self="safeCloseModal(() => showAdminVerifySetModal = false, hasUnverifiedPartsInActiveSet)"
-      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[65] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      class="modal-backdrop-full flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div
         class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-lg w-full p-4 sm:p-6 shadow-2xl space-y-4 my-auto">
 
@@ -1683,7 +1673,7 @@
                   'Hold QC' : (activeAdminSet.qc_status === 'REWORK_QC' ? 'Hold QC' : (activeAdminSet.assembly_status
                   === 'Rework' || activeAdminSet.status === 'Rework' ? 'Hold' : (activeAdminSet.assembly_status ===
                   'Hold' || activeAdminSet.status === 'Hold' || activeAdminSet.is_hold_test ? 'Hold' :
-                  (activeAdminSet.is_declined || activeAdminSet.verified_status === 'DECLINED' ? 'Decline' :
+                  (activeAdminSet.is_declined || activeAdminSet.verified_status === 'DECLINED' ? ('Declined (' + getDeclinedSource(activeAdminSet) + ')') :
                   (activeAdminSet.assembly_status || activeAdminSet.status || 'Scrap'))))) }}</strong>
               </p>
             </div>
@@ -1780,8 +1770,7 @@
               class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold p-2.5 rounded-xl text-xs shadow-md shadow-emerald-600/20 flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer min-h-[42px]">
               <i class="fa-solid fa-circle-check"></i>
               <span
-                v-if="activeAdminSet.stage === 'QC' || activeAdminSet.qc_status === 'HOLD_QC' || activeAdminSet.qc_status === 'REWORK_QC'">Good
-                (Lanjut Dokumen & Gudang)</span>
+                v-if="activeAdminSet.stage === 'QC' || activeAdminSet.qc_status === 'HOLD_QC' || activeAdminSet.qc_status === 'REWORK_QC'">Lanjut ke Good Receipts</span>
               <span v-else>Good (Lanjut TF 2 / QC)</span>
             </button>
 
@@ -1811,10 +1800,9 @@
           <div class="flex items-center justify-between font-bold">
             <span>Pemeriksaan Fisik Part Rakitan</span>
             <span class="font-mono text-[11px] uppercase">{{ activeAdminSet.qc_status === 'HOLD_QC' ? 'HOLD QC' :
-              (activeAdminSet.qc_status === 'REWORK_QC' ? 'REWORK QC' : (activeAdminSet.assembly_status === 'Rework' ||
-              activeAdminSet.status === 'Rework' ? 'REWORK' : (activeAdminSet.assembly_status === 'Hold' ||
+              (activeAdminSet.qc_status === 'REWORK_QC' ? 'HOLD QC' : (activeAdminSet.assembly_status === 'Rework' || activeAdminSet.status === 'Rework' ? 'HOLD' : (activeAdminSet.assembly_status === 'Hold' ||
               activeAdminSet.status === 'Hold' || activeAdminSet.is_hold_test ? 'HOLD' : (activeAdminSet.is_declined ||
-              activeAdminSet.verified_status === 'DECLINED' ? 'DECLINED' : (activeAdminSet.assembly_status ||
+              activeAdminSet.verified_status === 'DECLINED' ? ('DECLINED (' + getDeclinedSource(activeAdminSet) + ')') : (activeAdminSet.assembly_status ||
               activeAdminSet.status || 'SCRAP'))))) }}</span>
           </div>
           <p class="text-[11px] text-amber-800 leading-relaxed">
@@ -1849,9 +1837,8 @@
                 </span>
                 <span
                   v-else-if="activeAdminSet.qc_status === 'REWORK_QC' || activeAdminSet.assembly_status === 'Rework' || activeAdminSet.status === 'Rework'"
-                  class="bg-purple-50 text-purple-800 border border-purple-300 font-bold text-[10px] uppercase px-2 py-0.5 rounded-md flex items-center gap-1">
-                  <i class="fa-solid fa-rotate-left text-[9px]"></i> {{ activeAdminSet.qc_status === 'REWORK_QC' ?
-                  'Rework QC' : 'Rework' }}
+                  class="bg-amber-50 text-amber-800 border border-amber-300 font-bold text-[10px] uppercase px-2 py-0.5 rounded-md flex items-center gap-1">
+                  <i class="fa-solid fa-hand text-[9px]"></i> Hold
                 </span>
                 <span v-else-if="activeAdminSet.assembly_status === 'Scrap' || activeAdminSet.status === 'Scrap'"
                   class="bg-rose-50 text-rose-700 border border-rose-300 font-bold text-[10px] uppercase px-2 py-0.5 rounded-md flex items-center gap-1">
@@ -1882,8 +1869,8 @@
                 <span>Pulih</span>
               </span>
 
-              <!-- Icon Sampah untuk Menghapus Barang / Part -->
-              <button type="button" :disabled="part.is_submitting" @click="deleteAdminSetPart(part)"
+              <!-- Icon Sampah untuk Menghapus Barang / Part (Hanya jika belum Tersedia) -->
+              <button v-if="part.status !== 'Tersedia'" type="button" :disabled="part.is_submitting" @click="deleteAdminSetPart(part)"
                 class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 hover:border-red-300 font-bold p-2 rounded-xl text-xs transition active:scale-95 flex items-center justify-center cursor-pointer disabled:opacity-50"
                 title="Hapus / Batalkan verifikasi part ini">
                 <i class="fa-solid fa-trash-can text-xs"></i>
@@ -1898,16 +1885,6 @@
           <button @click="showAdminVerifySetModal = false" type="button"
             class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition cursor-pointer">
             Tutup
-          </button>
-
-          <button v-if="activeAdminSet.is_declined || (activeAdminSet.verified_status || '').toUpperCase() === 'DECLINED'"
-            type="button" :disabled="isSubmittingDeclinedRestore"
-            @click="restoreDeclinedSetToAvailable(activeAdminSet)"
-            class="w-full sm:w-auto bg-rose-600 hover:bg-rose-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-md shadow-rose-600/25 transition flex items-center justify-center space-x-1.5 cursor-pointer disabled:opacity-50 active:scale-95"
-            title="Pulihkan seluruh part dalam set declined ini ke Master Stock dengan status Tersedia">
-            <i v-if="isSubmittingDeclinedRestore" class="fa-solid fa-spinner fa-spin"></i>
-            <i v-else class="fa-solid fa-rotate-left mr-1"></i>
-            <span>1-Click Pulihkan Set ke Stok Tersedia</span>
           </button>
 
           <button v-if="hasUnverifiedPartsInActiveSet" type="button" :disabled="isSubmittingAllAdminVerify"
@@ -1929,7 +1906,7 @@
 
     <!-- ================= SUB-MODAL VERIFIKASI PART SCRAP OLEH ADMIN ================= -->
     <div v-if="showAdminVerifyModal"
-      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      class="modal-backdrop-full flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div
         class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4 my-auto">
         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -2009,7 +1986,7 @@
 
     <!-- ================= MODAL DETAIL LENGKAP SATU SET ================= -->
     <div v-if="showAdminSetDetailModal && selectedAdminSetDetail"
-      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      class="modal-backdrop-full flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div class="bg-white border border-slate-200 rounded-3xl max-w-xl w-full p-5 sm:p-6 shadow-2xl space-y-4 my-auto">
         <!-- Header -->
         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -2051,6 +2028,8 @@
                 <h4 class="text-xs font-black text-slate-900">
                   <span v-if="isSetFullyVerified(selectedAdminSetDetail)">Selesai Diverifikasi (Terkunci)</span>
                   <span
+                    v-else-if="selectedAdminSetDetail.is_declined || selectedAdminSetDetail.process_stage === 'declined' || (selectedAdminSetDetail.status || '').toUpperCase() === 'DECLINE' || (selectedAdminSetDetail.verified_status || '').toUpperCase() === 'DECLINED'">{{ getDeclinedSource(selectedAdminSetDetail) === 'GR' ? 'Penerimaan Fisik Gudang (GR) — Ditolak' : 'Pengembalian Tray ke Gudang (PG) — Ditolak' }}</span>
+                  <span
                     v-else-if="selectedAdminSetDetail.process_stage === 'perakitan' || selectedAdminSetDetail.verified_status === 'PENDING_ADMIN_ASSY_REREG'">Pengajuan
                     Rakit Ulang (RU)</span>
                   <span v-else-if="selectedAdminSetDetail.process_stage === 'qc'">Gagal pada: Test Functional 2 (Quality
@@ -2066,8 +2045,8 @@
               <i class="fa-solid fa-lock text-[10px]"></i> Selesai
             </span>
             <span v-else class="px-2.5 py-1 rounded-xl text-xs font-black border shadow-2xs uppercase tracking-wide"
-              :class="(selectedAdminSetDetail.process_stage === 'perakitan' || selectedAdminSetDetail.verified_status === 'PENDING_ADMIN_ASSY_REREG') ? 'bg-indigo-100 text-indigo-900 border-indigo-300' : (selectedAdminSetDetail.display_status && selectedAdminSetDetail.display_status.includes('Scrap') ? 'bg-rose-100 text-rose-800 border-rose-300' : (selectedAdminSetDetail.display_status && selectedAdminSetDetail.display_status.includes('Rework') ? 'bg-purple-100 text-purple-800 border-purple-300' : 'bg-amber-100 text-amber-900 border-amber-300'))">
-              {{ (selectedAdminSetDetail.process_stage === 'perakitan' || selectedAdminSetDetail.verified_status ===
+              :class="(selectedAdminSetDetail.is_declined || selectedAdminSetDetail.process_stage === 'declined' || (selectedAdminSetDetail.status || '').toUpperCase() === 'DECLINE') ? 'bg-rose-100 text-rose-900 border-rose-300' : (selectedAdminSetDetail.process_stage === 'perakitan' || selectedAdminSetDetail.verified_status === 'PENDING_ADMIN_ASSY_REREG') ? 'bg-indigo-100 text-indigo-900 border-indigo-300' : (selectedAdminSetDetail.display_status && selectedAdminSetDetail.display_status.includes('Scrap') ? 'bg-rose-100 text-rose-800 border-rose-300' : (selectedAdminSetDetail.display_status && selectedAdminSetDetail.display_status.includes('Rework') ? 'bg-purple-100 text-purple-800 border-purple-300' : 'bg-amber-100 text-amber-900 border-amber-300'))">
+              {{ (selectedAdminSetDetail.is_declined || selectedAdminSetDetail.process_stage === 'declined' || (selectedAdminSetDetail.status || '').toUpperCase() === 'DECLINE') ? 'DECLINED' : (selectedAdminSetDetail.process_stage === 'perakitan' || selectedAdminSetDetail.verified_status ===
               'PENDING_ADMIN_ASSY_REREG') ? 'Rakit Ulang (RU)' : (selectedAdminSetDetail.display_status || 'Hold Rakitan') }}
             </span>
           </div>
@@ -2078,14 +2057,19 @@
             <div class="flex items-center gap-1.5">
               <span class="font-bold text-slate-700">Test Assembly:</span>
               <span
-                v-if="selectedAdminSetDetail.assy_test_status === 'Hold' || selectedAdminSetDetail.qc_status === 'HOLD_ASSY' || (selectedAdminSetDetail.process_stage === 'test_functional_1' && (selectedAdminSetDetail.assembly_status === 'Hold' || selectedAdminSetDetail.status === 'Hold'))"
+                v-if="selectedAdminSetDetail.is_declined || selectedAdminSetDetail.process_stage === 'declined' || (selectedAdminSetDetail.status || '').toUpperCase() === 'DECLINE'"
+                class="px-2 py-0.5 rounded-md font-black text-[10px] uppercase bg-rose-100 text-rose-900 border border-rose-300 inline-flex items-center gap-1">
+                <i class="fa-solid fa-ban text-[9px]"></i> DECLINED
+              </span>
+              <span
+                v-else-if="selectedAdminSetDetail.assy_test_status === 'Hold' || selectedAdminSetDetail.qc_status === 'HOLD_ASSY' || (selectedAdminSetDetail.process_stage === 'test_functional_1' && (selectedAdminSetDetail.assembly_status === 'Hold' || selectedAdminSetDetail.status === 'Hold'))"
                 class="px-2 py-0.5 rounded-md font-black text-[10px] uppercase bg-amber-100 text-amber-900 border border-amber-300 inline-flex items-center gap-1">
                 <i class="fa-solid fa-hand text-[9px]"></i> HOLD
               </span>
               <span
                 v-else-if="selectedAdminSetDetail.assy_test_status === 'Rework' || (selectedAdminSetDetail.process_stage === 'test_functional_1' && (selectedAdminSetDetail.assembly_status === 'Rework' || selectedAdminSetDetail.status === 'Rework'))"
-                class="px-2 py-0.5 rounded-md font-black text-[10px] uppercase bg-purple-100 text-purple-900 border border-purple-300 inline-flex items-center gap-1">
-                <i class="fa-solid fa-rotate-left text-[9px]"></i> REWORK
+                class="px-2 py-0.5 rounded-md font-black text-[10px] uppercase bg-amber-100 text-amber-900 border border-amber-300 inline-flex items-center gap-1">
+                <i class="fa-solid fa-hand text-[9px]"></i> HOLD
               </span>
               <span
                 v-else-if="selectedAdminSetDetail.status === 'Dirakit Ulang' || selectedAdminSetDetail.qc_status === 'RU' || selectedAdminSetDetail.verified_status === 'COMPLETED_PU'"
@@ -2111,8 +2095,8 @@
               </span>
               <span
                 v-else-if="selectedAdminSetDetail.qc_status === 'REWORK_QC' || selectedAdminSetDetail.qc_status === 'REWORK'"
-                class="px-2 py-0.5 rounded-md font-black text-[10px] uppercase bg-purple-100 text-purple-900 border border-purple-300 inline-flex items-center gap-1">
-                <i class="fa-solid fa-rotate-left text-[9px]"></i> REWORK
+                class="px-2 py-0.5 rounded-md font-black text-[10px] uppercase bg-rose-100 text-rose-900 border border-rose-300 inline-flex items-center gap-1">
+                <i class="fa-solid fa-triangle-exclamation text-[9px]"></i> HOLD
               </span>
               <span
                 v-else-if="selectedAdminSetDetail.qc_status === 'GOOD' || selectedAdminSetDetail.qc_status === 'GOOD_QC'"
@@ -2279,8 +2263,7 @@
                 class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3.5 py-2 rounded-xl text-xs shadow-md shadow-emerald-600/20 transition flex items-center gap-1.5 active:scale-95 cursor-pointer">
                 <i class="fa-solid fa-circle-check"></i>
                 <span
-                  v-if="selectedAdminSetDetail.stage === 'QC' || selectedAdminSetDetail.process_stage === 'qc' || selectedAdminSetDetail.qc_status === 'HOLD_QC' || selectedAdminSetDetail.qc_status === 'REWORK_QC'">Setujui
-                  Good (Lanjut Dokumen & Gudang)</span>
+                  v-if="selectedAdminSetDetail.stage === 'QC' || selectedAdminSetDetail.process_stage === 'qc' || selectedAdminSetDetail.qc_status === 'HOLD_QC' || selectedAdminSetDetail.qc_status === 'REWORK_QC'">Lanjut ke Good Receipts</span>
                 <span v-else>Setujui Good (Lanjut TF 2 / QC)</span>
               </button>
               <!-- Opsi Ganti Part -->
@@ -2290,13 +2273,6 @@
                 <i class="fa-solid fa-wrench"></i>
                 <span>Ganti Part</span>
               </button>
-              <!-- Opsi Buka Keputusan Part Set -->
-              <button type="button"
-                @click="openAdminVerifySetModal(selectedAdminSetDetail); showAdminSetDetailModal = false;"
-                class="bg-slate-900 hover:bg-slate-800 text-white font-bold px-3.5 py-2 rounded-xl text-xs shadow-md transition flex items-center gap-1.5 active:scale-95 cursor-pointer">
-                <i class="fa-solid fa-sliders"></i>
-                <span>Verifikasi Tiap Part</span>
-              </button>
             </div>
           </template>
         </div>
@@ -2305,7 +2281,7 @@
 
     <!-- ================= MODAL DETAIL TRACKING 1 PART SATUAN ================= -->
     <div v-if="showAdminPartDetailModal && selectedAdminPartDetail"
-      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      class="modal-backdrop-full modal-backdrop-nested flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div class="bg-white border border-slate-200 rounded-3xl max-w-xl w-full p-5 sm:p-6 shadow-2xl space-y-4 my-auto">
         <!-- Header -->
         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -2372,7 +2348,7 @@
             <div class="bg-white p-2.5 rounded-xl border border-indigo-100">
               <span class="text-[10px] font-bold text-slate-400 block uppercase">Dokumen MO</span>
               <strong class="text-slate-800 font-mono">
-                {{ selectedAdminPartDetail.previous_mo || '-' }}
+                {{ (selectedAdminPartDetail.previous_mo && !selectedAdminPartDetail.previous_mo.startsWith('WH/ASSY')) ? selectedAdminPartDetail.previous_mo : '-' }}
               </strong>
             </div>
             <div class="bg-white p-2.5 rounded-xl border border-indigo-100">
@@ -2422,12 +2398,11 @@
             <h4 class="font-black text-xs uppercase tracking-wider">Alasan Pelepasan / Di-Hold</h4>
           </div>
           <div class="bg-white border border-slate-200 rounded-xl p-3 text-slate-800 italic leading-relaxed">
-            "{{ selectedAdminPartDetail.reason || selectedAdminPartDetail.stock_last_reason ||
-            selectedAdminPartDetail.audit_log_reason || selectedAdminPartDetail.previous_assembly_reason || 'Tidak ada alasan khusus dicatat pada saat pelepasan part.' }}"
+            "{{ selectedAdminPartDetail.previous_failure_reasons || selectedAdminPartDetail.previous_assembly_reason || selectedAdminPartDetail.audit_log_reason || selectedAdminPartDetail.stock_last_reason || selectedAdminPartDetail.reason || 'Tidak ada alasan khusus dicatat pada saat pelepasan part.' }}"
           </div>
-          <div v-if="selectedAdminPartDetail.previous_failure_reasons"
-            class="text-[11px] text-rose-800 bg-rose-50 border border-rose-200 rounded-xl p-2.5">
-            <strong>Catatan Kegagalan Rakitan Asal:</strong> {{ selectedAdminPartDetail.previous_failure_reasons }}
+          <div v-if="selectedAdminPartDetail.reason && selectedAdminPartDetail.reason !== selectedAdminPartDetail.previous_failure_reasons && selectedAdminPartDetail.reason !== selectedAdminPartDetail.previous_assembly_reason"
+            class="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-2.5">
+            <strong>Catatan Pengajuan Daftar Ulang:</strong> {{ selectedAdminPartDetail.reason }}
           </div>
           <div class="flex items-center justify-between text-[11px] text-slate-500 pt-1">
             <span>Diajukan oleh: <strong>{{ getOperatorFullName(selectedAdminPartDetail.requestor_username)
@@ -2458,7 +2433,7 @@
 
     <!-- ================= MODAL DETAIL PERGANTIAN PART ================= -->
     <div v-if="showAdminReplacementDetailModal && selectedAdminReplacementDetail"
-      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      class="modal-backdrop-full modal-backdrop-nested flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div
         class="bg-white border border-slate-200 rounded-3xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl space-y-4 my-auto max-h-[92vh] overflow-y-auto">
         <!-- Header -->
@@ -2476,6 +2451,20 @@
                 <span class="bg-amber-600 text-white text-[11px] font-black px-2 py-0.5 rounded-lg font-mono">
                   Set #{{ selectedAdminReplacementDetail.set_number }}
                 </span>
+                <!-- Badge Tahap Proses Terakhir -->
+                <span v-if="getReplacementStage(selectedAdminReplacementDetail) === 'qc'"
+                  class="bg-purple-100 text-purple-900 border border-purple-300 font-black text-[10px] uppercase px-2 py-0.5 rounded-lg flex items-center gap-1">
+                  <i class="fa-solid fa-award text-purple-600 text-[9px]"></i> QC (TF 2)
+                </span>
+                <span v-else-if="getReplacementStage(selectedAdminReplacementDetail) === 'test_functional_1'"
+                  class="bg-blue-100 text-blue-900 border border-blue-300 font-black text-[10px] uppercase px-2 py-0.5 rounded-lg flex items-center gap-1">
+                  <i class="fa-solid fa-microchip text-blue-600 text-[9px]"></i> TF 1
+                </span>
+                <span v-else
+                  class="bg-slate-100 text-slate-800 border border-slate-300 font-black text-[10px] uppercase px-2 py-0.5 rounded-lg flex items-center gap-1">
+                  <i class="fa-solid fa-screwdriver-wrench text-slate-600 text-[9px]"></i> Perakitan
+                </span>
+
                 <span
                   v-if="selectedAdminReplacementDetail.replacement_status === 'APPROVED' || selectedAdminReplacementDetail.status === 'APPROVED'"
                   class="bg-emerald-100 text-emerald-900 border border-emerald-300 font-black text-[10px] uppercase px-2 py-0.5 rounded-lg flex items-center gap-1">
@@ -2527,9 +2516,11 @@
                 || selectedAdminReplacementDetail.replacement_requestor) }}</span>
             </div>
             <div>
-              <span class="text-[10px] font-bold text-slate-400 uppercase block">Status Part Lama</span>
-              <span class="font-bold text-amber-800">{{ selectedAdminReplacementDetail.replacement_old_status || 'Hold'
-                }}</span>
+              <span class="text-[10px] font-bold text-slate-400 uppercase block">Tahap Proses Terakhir</span>
+              <span class="font-black uppercase text-[11px]"
+                :class="getReplacementStage(selectedAdminReplacementDetail) === 'qc' ? 'text-purple-800' : (getReplacementStage(selectedAdminReplacementDetail) === 'test_functional_1' ? 'text-blue-800' : 'text-slate-800')">
+                {{ getReplacementStageLabel(selectedAdminReplacementDetail) }}
+              </span>
             </div>
             <div>
               <span class="text-[10px] font-bold text-slate-400 uppercase block">Status Assembly</span>
@@ -2537,16 +2528,29 @@
                 selectedAdminReplacementDetail.status || '-' }}</span>
             </div>
             <div>
-              <span class="text-[10px] font-bold text-slate-400 uppercase block">Pengujian TF1</span>
-              <span class="font-bold uppercase"
-                :class="selectedAdminReplacementDetail.assy_test_status === 'PASS' ? 'text-emerald-700' : 'text-slate-600'">{{
+              <span class="text-[10px] font-bold text-slate-400 uppercase block">Pengujian TF 1</span>
+              <span class="font-bold uppercase text-[11px]"
+                :class="['Good', 'PASS'].includes(selectedAdminReplacementDetail.assy_test_status) ? 'text-emerald-700' : (['Hold TF 1', 'Hold', 'FAIL'].includes(selectedAdminReplacementDetail.assy_test_status) ? 'text-amber-700' : 'text-slate-600')">{{
                 selectedAdminReplacementDetail.assy_test_status || 'Belum Uji' }}</span>
             </div>
             <div>
-              <span class="text-[10px] font-bold text-slate-400 uppercase block">Status QC</span>
-              <span class="font-bold uppercase"
-                :class="selectedAdminReplacementDetail.qc_status === 'PASS' ? 'text-emerald-700' : 'text-slate-600'">{{
+              <span class="text-[10px] font-bold text-slate-400 uppercase block">Status QC (TF 2)</span>
+              <span class="font-bold uppercase text-[11px]"
+                :class="['GOOD', 'PASS'].includes(selectedAdminReplacementDetail.qc_status) ? 'text-emerald-700' : (['HOLD_QC', 'REWORK_QC', 'HOLD'].includes(selectedAdminReplacementDetail.qc_status) ? 'text-rose-700' : 'text-slate-600')">{{
                 selectedAdminReplacementDetail.qc_status || 'Belum QC' }}</span>
+            </div>
+          </div>
+
+          <!-- Alur Tindak Lanjut Verifikasi Rakit Ulang -->
+          <div class="bg-indigo-50/80 border border-indigo-200 rounded-2xl p-3 flex items-start gap-2.5">
+            <div class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0 text-xs font-bold mt-0.5">
+              <i class="fa-solid fa-arrows-rotate"></i>
+            </div>
+            <div class="space-y-0.5 text-xs text-indigo-950">
+              <span class="font-black uppercase text-[10.5px] text-indigo-900 block">Alur Verifikasi Rakit Ulang:</span>
+              <p class="leading-relaxed text-[11px]">
+                Unit Set ini diajukan dari kendala tahap <strong>{{ getReplacementStageLabel(selectedAdminReplacementDetail) }}</strong>. Setelah persetujuan Admin, part rusak akan diperbarui dan unit otomatis masuk ke antrean <strong>Rakit Ulang (RU)</strong> untuk diverifikasi dan dirakit kembali sebelum diuji ulang.
+              </p>
             </div>
           </div>
 
@@ -2692,7 +2696,7 @@
 
     <!-- ================= MODAL DETAIL & TRACKING PART MASTER STOK ================= -->
     <div v-if="showMasterPartTrackingModal"
-      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      class="modal-backdrop-full modal-backdrop-nested flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div
         class="bg-white border border-slate-200 rounded-3xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl space-y-4 my-auto max-h-[92vh] overflow-y-auto">
 
@@ -2769,10 +2773,10 @@
                 :title="masterPartTrackingData?.stock?.last_reason || masterPartTrackingData?.assembly?.reason || '-'">
                 {{ masterPartTrackingData?.stock?.last_reason || masterPartTrackingData?.assembly?.reason || 'Tidak ada catatan khusus' }}
               </p>
-              <span class="text-[9.5px] text-amber-700 block truncate">
+              <span class="text-[9.5px] text-amber-700 block truncate"
+                v-if="(masterPartTrackingData?.stock?.last_operator || masterPartTrackingData?.assembly?.pic_assembly_name || masterPartTrackingData?.assembly?.pic_assembly) && (masterPartTrackingData?.stock?.last_operator !== '-' || masterPartTrackingData?.assembly?.pic_assembly_name !== '-')">
                 Oleh: {{ masterPartTrackingData?.stock?.last_operator ||
-                masterPartTrackingData?.assembly?.pic_assembly_name || masterPartTrackingData?.assembly?.pic_assembly ||
-                '-' }}
+                masterPartTrackingData?.assembly?.pic_assembly_name || masterPartTrackingData?.assembly?.pic_assembly }}
               </span>
             </div>
 
@@ -2780,11 +2784,10 @@
             <div class="p-3 bg-indigo-50/60 border border-indigo-200 rounded-2xl space-y-1">
               <span class="text-[10px] font-bold text-indigo-700 uppercase tracking-wider block">Posisi / Alokasi</span>
               <p class="text-xs font-black text-indigo-950 font-mono truncate">
-                {{ masterPartTrackingData?.tray?.tray_code || selectedMasterPartRow?.tray_code || 'Gudang (Ready)' }}
+                {{ (!masterPartTrackingData?.stock?.allocated_tray_id || masterPartTrackingData?.stock?.status === 'Tersedia') ? 'Gudang (Ready)' : (masterPartTrackingData?.tray?.tray_code || 'Gudang (Ready)') }}
               </p>
               <span class="text-[9.5px] text-indigo-700 block truncate">
-                {{ masterPartTrackingData?.assembly ? 'Terpasang di Set #' + masterPartTrackingData.assembly.set_number
-                : (masterPartTrackingData?.tray ? 'Di dalam Tray ' + masterPartTrackingData.tray.tray_code : 'Belum dialokasikan ke Tray') }}
+                {{ masterPartTrackingData?.stock?.status === 'Tersedia' ? 'Stok bebas, siap alokasi baru' : (masterPartTrackingData?.stock?.allocated_tray_id && masterPartTrackingData?.assembly ? 'Terpasang di Set #' + masterPartTrackingData.assembly.set_number : (masterPartTrackingData?.assembly ? 'Pernah di Set #' + masterPartTrackingData.assembly.set_number + ' (Lepasan)' : 'Belum dialokasikan ke Tray')) }}
               </span>
             </div>
           </div>
@@ -2994,8 +2997,9 @@
                       <span class="text-slate-500">{{ log.old_status }}</span> &rarr;
                       <strong class="text-slate-900">{{ log.new_status }}</strong>
                     </td>
-                    <td class="py-2 px-2 font-medium text-slate-700">{{ getOperatorFullName(log.actor_username) }} ({{
-                      log.actor_role }})</td>
+                    <td class="py-2 px-2 font-medium text-slate-800">
+                      <span class="font-bold text-slate-900 block">{{ (log.actor_full_name && log.actor_full_name !== '-' && log.actor_full_name !== 'operator' && log.actor_full_name !== 'gudang') ? log.actor_full_name : (getOperatorFullName(log.actor_username) !== '-' ? getOperatorFullName(log.actor_username) : (log.actor_username && !['operator','gudang','tester','-'].includes(log.actor_username) ? log.actor_username : 'Administrator NKRI')) }}</span>
+                    </td>
                     <td class="py-2 px-2 text-slate-600 italic leading-relaxed">{{ log.reason || '-' }}</td>
                   </tr>
                 </tbody>
@@ -3047,7 +3051,11 @@
           </button>
 
           <button
-            v-if="masterPartTrackingData?.stock?.is_replaced_from_assy || selectedMasterPartRow?.is_replaced_from_assy"
+            v-if="(masterPartTrackingData?.stock?.is_replaced_from_assy || selectedMasterPartRow?.is_replaced_from_assy)
+              && !String(masterPartTrackingData?.stock?.status || selectedMasterPartRow?.effective_status || selectedMasterPartRow?.stock_status || '').toLowerCase().includes('tersedia')
+              && !String(masterPartTrackingData?.stock?.status || selectedMasterPartRow?.effective_status || selectedMasterPartRow?.stock_status || '').toLowerCase().includes('pending')
+              && !String(masterPartTrackingData?.stock?.status || selectedMasterPartRow?.effective_status || selectedMasterPartRow?.stock_status || '').toLowerCase().includes('menunggu')
+              && !(masterPartTrackingData?.re_register_requests && masterPartTrackingData.re_register_requests.some(r => String(r.status || '').toUpperCase() === 'PENDING'))"
             @click="openReregisterModal(masterPartTrackingData?.stock || selectedMasterPartRow); showMasterPartTrackingModal = false;"
             type="button"
             class="bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-md shadow-amber-600/20 transition flex items-center gap-1.5 active:scale-95 cursor-pointer">
@@ -3061,7 +3069,7 @@
 
     <!-- ================= MODAL SELESAIKAN SESI (3 OPSI) ================= -->
     <div v-if="showSessionModal"
-      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      class="modal-backdrop-full flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div
         class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-4 my-auto">
         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -3168,7 +3176,7 @@
 
     <!-- ================= MODAL JEDA / DOWNTIME PERAKITAN ================= -->
     <div v-if="showPauseModal"
-      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      class="modal-backdrop-full flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div
         class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4 my-auto">
         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -3205,19 +3213,6 @@
             </div>
           </div>
 
-          <!-- Estimasi Rencana Durasi Jeda -->
-          <div>
-            <label class="block text-[11px] font-bold text-slate-600 mb-1.5">Estimasi Durasi Jeda (Opsional):</label>
-            <div class="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
-              <button v-for="est in ['5 Mnt', '10 Mnt', '15 Mnt', '30 Mnt', '45 Mnt', '60 Mnt']" :key="est"
-                type="button" @click="pauseForm.estimatedDuration = (pauseForm.estimatedDuration === est ? '' : est)"
-                :class="pauseForm.estimatedDuration === est ? 'bg-amber-500 text-white font-bold ring-2 ring-amber-300 shadow-sm' : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200 font-medium'"
-                class="px-2 py-1.5 rounded-xl text-[11px] transition text-center cursor-pointer">
-                {{ est }}
-              </button>
-            </div>
-          </div>
-
           <div>
             <label class="block text-[11px] font-bold text-slate-600 mb-1">Keterangan Tambahan / Catatan
               Kendala:</label>
@@ -3242,7 +3237,7 @@
 
     <!-- ================= MODAL DETAIL VERIFIKASI DOKUMEN LAPORAN ================= -->
     <div v-if="showLaporanDetailModal"
-      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      class="modal-backdrop-full flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div
         class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-4xl w-full p-4 sm:p-6 shadow-2xl space-y-4 my-auto max-h-[92vh] flex flex-col">
         <div class="flex items-center justify-between border-b border-slate-100 pb-3 flex-shrink-0">
@@ -3336,7 +3331,7 @@
 
     <!-- ================= MODAL DAFTAR ULANG PART MASTER DB (HOLD, REWORK, SCRAP) ================= -->
     <div v-if="showReregisterModal"
-      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      class="modal-backdrop-full flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div
         class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4 my-auto">
         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -3439,23 +3434,23 @@
             <label class="block text-xs font-bold uppercase text-slate-700 mb-2">
               Pilih Target Status Pemulihan <span class="text-red-600">*</span>
             </label>
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div class="grid grid-cols-2 gap-2">
+              <!-- Opsi Tersedia: Target utama pemulihan part (dari Hold atau Scrap) -->
               <button type="button" @click="reregisterForm.target_status = 'Tersedia'"
                 :class="reregisterForm.target_status === 'Tersedia' ? 'bg-emerald-600 text-white font-bold ring-2 ring-emerald-400 shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'"
                 class="py-2.5 px-2 rounded-xl text-xs transition font-semibold flex items-center justify-center gap-1.5 min-h-[40px] cursor-pointer">
                 <i class="fa-solid fa-boxes-stacked"></i> Tersedia
               </button>
-              <button type="button" @click="reregisterForm.target_status = 'Hold'"
+              <!-- Opsi Hold: Sembunyikan jika status saat ini Hold (hanya muncul jika saat ini Scrap) -->
+              <button v-if="!(reregisterForm.current_status || '').toUpperCase().includes('HOLD')"
+                type="button" @click="reregisterForm.target_status = 'Hold'"
                 :class="reregisterForm.target_status === 'Hold' ? 'bg-amber-600 text-white font-bold ring-2 ring-amber-400 shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'"
                 class="py-2.5 px-2 rounded-xl text-xs transition font-semibold flex items-center justify-center gap-1.5 min-h-[40px] cursor-pointer">
                 <i class="fa-solid fa-hand"></i> Hold
               </button>
-              <button type="button" @click="reregisterForm.target_status = 'Rework'"
-                :class="reregisterForm.target_status === 'Rework' ? 'bg-purple-600 text-white font-bold ring-2 ring-purple-400 shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'"
-                class="py-2.5 px-2 rounded-xl text-xs transition font-semibold flex items-center justify-center gap-1.5 min-h-[40px] cursor-pointer">
-                <i class="fa-solid fa-rotate-left"></i> Rework
-              </button>
-              <button type="button" @click="reregisterForm.target_status = 'Scrap'"
+              <!-- Opsi Scrap: Sembunyikan jika status saat ini Scrap (hanya muncul jika saat ini Hold) -->
+              <button v-if="!(reregisterForm.current_status || '').toUpperCase().includes('SCRAP')"
+                type="button" @click="reregisterForm.target_status = 'Scrap'"
                 :class="reregisterForm.target_status === 'Scrap' ? 'bg-red-600 text-white font-bold ring-2 ring-red-400 shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'"
                 class="py-2.5 px-2 rounded-xl text-xs transition font-semibold flex items-center justify-center gap-1.5 min-h-[40px] cursor-pointer">
                 <i class="fa-solid fa-trash-can"></i> Scrap
@@ -3465,9 +3460,9 @@
 
           <!-- Alasan / Catatan Daftar Ulang -->
           <div class="space-y-1.5 p-3 rounded-xl border transition-all animate-fadeIn"
-            :class="reregisterForm.target_status === 'Tersedia' ? 'bg-emerald-50/80 border-emerald-300' : (reregisterForm.target_status === 'Hold' ? 'bg-amber-50/80 border-amber-300' : (reregisterForm.target_status === 'Rework' ? 'bg-purple-50/80 border-purple-300' : 'bg-red-50/80 border-red-300'))">
+            :class="reregisterForm.target_status === 'Tersedia' ? 'bg-emerald-50/80 border-emerald-300' : (reregisterForm.target_status === 'Hold' ? 'bg-amber-50/80 border-amber-300' : 'bg-red-50/80 border-red-300')">
             <label class="block text-xs font-bold uppercase tracking-wider flex items-center justify-between"
-              :class="reregisterForm.target_status === 'Tersedia' ? 'text-emerald-900' : (reregisterForm.target_status === 'Hold' ? 'text-amber-900' : (reregisterForm.target_status === 'Rework' ? 'text-purple-900' : 'text-red-900'))">
+              :class="reregisterForm.target_status === 'Tersedia' ? 'text-emerald-900' : (reregisterForm.target_status === 'Hold' ? 'text-amber-900' : 'text-red-900')">
               <span>
                 <i class="fa-solid fa-pen-to-square mr-1"></i>
                 Alasan / Catatan Pemulihan: <span class="text-red-600">*</span>
@@ -3479,7 +3474,7 @@
             <textarea v-model="reregisterForm.reason" rows="2"
               placeholder="Tuliskan alasan kondisi part siap dipulihkan..."
               class="w-full bg-white border rounded-xl p-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 transition shadow-inner font-sans font-medium"
-              :class="reregisterForm.target_status === 'Tersedia' ? 'border-emerald-300 focus:ring-emerald-500' : (reregisterForm.target_status === 'Hold' ? 'border-amber-300 focus:ring-amber-500' : (reregisterForm.target_status === 'Rework' ? 'border-purple-300 focus:ring-purple-500' : 'border-red-300 focus:ring-red-500'))"></textarea>
+              :class="reregisterForm.target_status === 'Tersedia' ? 'border-emerald-300 focus:ring-emerald-500' : (reregisterForm.target_status === 'Hold' ? 'border-amber-300 focus:ring-amber-500' : 'border-red-300 focus:ring-red-500')"></textarea>
           </div>
         </div>
 
@@ -3499,7 +3494,7 @@
 
     <!-- ================= MODAL VALIDASI KHUSUS DAFTAR ULANG 1 SET UTUH ================= -->
     <div v-if="showReregisterSetModal"
-      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fadeIn">
+      class="modal-backdrop-full flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fadeIn">
       <div
         class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4 my-auto">
 
@@ -3566,17 +3561,12 @@
             <div class="flex items-center justify-between text-xs">
               <span class="text-slate-600 font-bold">Test Assembly:</span>
               <span
-                v-if="(targetReregisterSet.hold_source !== 'QC' && !['HOLD_QC', 'REWORK_QC', 'GOOD', 'GOOD_QC'].includes(targetReregisterSet.qc_status)) && (targetReregisterSet.assembly_status === 'Rework' || targetReregisterSet.status === 'Rework' || targetReregisterSet.verified_status === 'REWORK_GUDANG' || targetReregisterSet.lifecycle_path === 'REWORK')"
-                class="px-2 py-0.5 rounded-md font-black text-[10px] uppercase bg-purple-100 text-purple-900 border border-purple-300 flex items-center gap-1">
-                <i class="fa-solid fa-rotate-left text-[9px]"></i> REWORK
-              </span>
-              <span
-                v-else-if="(targetReregisterSet.hold_source !== 'QC' && !['HOLD_QC', 'REWORK_QC', 'GOOD', 'GOOD_QC'].includes(targetReregisterSet.qc_status)) && (targetReregisterSet.assy_status === 'Hold' || targetReregisterSet.status === 'Hold' || targetReregisterSet.verified_status === 'HOLD_GUDANG' || targetReregisterSet.hold_source === 'TESTER_ASSEMBLY')"
+                v-if="targetReregisterSet.hold_source !== 'QC' && (targetReregisterSet.assy_status === 'Hold' || targetReregisterSet.status === 'Hold' || targetReregisterSet.verified_status === 'HOLD_GUDANG' || targetReregisterSet.hold_source === 'TESTER_ASSEMBLY')"
                 class="px-2 py-0.5 rounded-md font-black text-[10px] uppercase bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
                 <i class="fa-solid fa-hand text-[9px]"></i> HOLD
               </span>
               <span
-                v-else-if="targetReregisterSet.assy_test_status === 'Good' || targetReregisterSet.assy_doc_number || targetReregisterSet.stage === 'QC' || ['HOLD_QC', 'REWORK_QC', 'GOOD', 'GOOD_QC'].includes(targetReregisterSet.qc_status)"
+                v-else-if="targetReregisterSet.assy_test_status === 'Good' || targetReregisterSet.assy_doc_number || targetReregisterSet.stage === 'QC'"
                 class="px-2 py-0.5 rounded-md font-black text-[10px] uppercase bg-emerald-100 text-emerald-900 border border-emerald-300 flex items-center gap-1">
                 <i class="fa-solid fa-check text-[9px]"></i> GOOD
               </span>
@@ -3589,12 +3579,7 @@
             <div class="flex items-center justify-between text-xs">
               <span class="text-slate-600 font-bold">QC:</span>
               <span
-                v-if="targetReregisterSet.qc_status === 'REWORK_QC' || targetReregisterSet.qc_status === 'REWORK' || targetReregisterSet.verified_status === 'REWORK_QC_GUDANG' || targetReregisterSet.lifecycle_path === 'REWORK_QC'"
-                class="px-2 py-0.5 rounded-md font-black text-[10px] uppercase bg-purple-100 text-purple-900 border border-purple-300 flex items-center gap-1">
-                <i class="fa-solid fa-rotate-left text-[9px]"></i> REWORK
-              </span>
-              <span
-                v-else-if="targetReregisterSet.qc_status === 'HOLD_QC' || targetReregisterSet.qc_status === 'HOLD' || targetReregisterSet.hold_source === 'QC'"
+                v-if="targetReregisterSet.qc_status === 'HOLD_QC' || targetReregisterSet.qc_status === 'HOLD' || targetReregisterSet.hold_source === 'QC'"
                 class="px-2 py-0.5 rounded-md font-black text-[10px] uppercase bg-rose-100 text-rose-900 border border-rose-300 flex items-center gap-1">
                 <i class="fa-solid fa-triangle-exclamation text-[9px]"></i> HOLD
               </span>
@@ -3612,7 +3597,7 @@
         </div>
 
         <!-- Tampilan Alasan Sebelumnya untuk status HOLD -->
-        <div v-if="targetReregisterSet && !isTargetSetRework(targetReregisterSet)"
+        <div v-if="targetReregisterSet"
           class="bg-amber-50/70 border border-amber-200/80 rounded-xl p-3 text-left space-y-1">
           <span class="text-[10px] font-bold text-amber-900 block">Alasan kendala sebelumnya:</span>
           <p class="text-xs text-amber-950 font-medium">
@@ -3622,23 +3607,14 @@
           </p>
         </div>
 
-        <!-- Input Alasan: Wajib jika Rework, Opsional jika Hold -->
+        <!-- Input Alasan: Opsional -->
         <div class="space-y-1.5 text-left">
           <label class="block text-xs font-bold text-slate-700 flex items-center justify-between">
-            <span v-if="targetReregisterSet && isTargetSetRework(targetReregisterSet)">
-              Alasan rework baru: <span class="text-rose-600 font-black">*</span>
-            </span>
-            <span v-else>
-              Catatan / alasan tambahan (opsional):
-            </span>
-            <span v-if="targetReregisterSet && isTargetSetRework(targetReregisterSet)"
-              class="text-[10px] text-rose-500 font-bold bg-rose-50 border border-rose-200 px-2 py-0.5 rounded">Wajib
-              diisi</span>
-            <span v-else
-              class="text-[10px] text-slate-500 font-semibold bg-slate-100 border border-slate-200 px-2 py-0.5 rounded">Opsional</span>
+            <span>Catatan / alasan tambahan (opsional):</span>
+            <span class="text-[10px] text-slate-500 font-semibold bg-slate-100 border border-slate-200 px-2 py-0.5 rounded">Opsional</span>
           </label>
           <textarea v-model="reregisterNewReworkReason" rows="2"
-            :placeholder="(targetReregisterSet && isTargetSetRework(targetReregisterSet)) ? 'Tuliskan kendala / alasan rework baru...' : 'Tuliskan catatan tambahan jika ada (opsional, default gunakan alasan sebelumnya)...'"
+            placeholder="Tuliskan catatan tambahan jika ada (opsional, default gunakan alasan sebelumnya)..."
             class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:border-amber-600 font-medium"></textarea>
         </div>
 
@@ -3660,7 +3636,7 @@
 
     <!-- ================= MODAL VERIFIKASI AKTUAL FISIK GUDANG PASCA-QC (ACC / DECLINE) ================= -->
     <div v-if="showQCWarehouseActualVerifyModal"
-      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fadeIn">
+      class="modal-backdrop-full flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fadeIn">
       <div
         class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-4 my-auto">
 
@@ -3778,7 +3754,7 @@
 
     <!-- ================= MODAL DETAIL PENGEMBALIAN BARANG ================= -->
     <div v-if="showReturnDetailModal"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto no-print">
+      class="modal-backdrop-full flex items-center justify-center p-3 sm:p-4 overflow-y-auto no-print">
       <div
         class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-4xl w-full p-4 sm:p-6 shadow-2xl space-y-4 my-auto max-h-[92vh] flex flex-col">
 
@@ -3836,21 +3812,6 @@
           </div>
         </div>
 
-        <!-- Banner Info: Sisa Set yang Dikembalikan vs Sudah Dirakit -->
-        <div v-if="activeReturnTray && activeReturnTray.finished_count > 0"
-          class="bg-blue-50 border border-blue-200 text-blue-900 rounded-xl p-3 text-xs flex items-start gap-2.5">
-          <i class="fa-solid fa-circle-info text-blue-600 text-sm mt-0.5"></i>
-          <div>
-            <span class="font-bold">Informasi Perakitan:</span>
-            <p class="text-slate-600 mt-0.5 leading-relaxed">
-              Sebanyak <strong>{{ activeReturnTray.finished_count }} set</strong> telah selesai dirakit dan tetap
-              tersimpan aman di riwayat perakitan & QC.
-              Daftar di bawah hanya memuat <strong>{{ activeReturnSets.length }} set</strong> yang belum dirakit untuk
-              dikembalikan dan diverifikasi ke stok gudang.
-            </p>
-          </div>
-        </div>
-
         <!-- Layout Table Pop Up Sesuai Permintaan User: PN | P9 Part 15 | P9 Part 1 | P9 Part 12 | Status | Aksi -->
         <div class="flex-grow overflow-y-auto border border-slate-200 rounded-xl">
           <table class="w-full text-left text-xs">
@@ -3872,58 +3833,56 @@
                 <td class="py-2.5 px-3 font-sans font-bold text-slate-800">{{ s.pn || 'P9 Part 15' }}</td>
                 <td class="py-2.5 px-3 font-bold text-red-600 bg-red-50/30">
                   <span>{{ s.p15_sn }}</span>
-                  <span v-if="s.p15_status === 'Declined'"
+                  <span v-if="s.p15_status === 'Declined' || (s.is_declined && s.p15_status !== 'Tersedia')"
                     class="ml-1 text-[9px] bg-rose-100 text-rose-800 px-1 py-0.2 rounded font-sans font-bold">Declined</span>
                 </td>
                 <td class="py-2.5 px-3 font-semibold text-slate-800">
                   <span>{{ s.p1_sn }}</span>
-                  <span v-if="s.p1_status === 'Declined'"
+                  <span v-if="s.p1_status === 'Declined' || (s.is_declined && s.p1_status !== 'Tersedia')"
                     class="ml-1 text-[9px] bg-rose-100 text-rose-800 px-1 py-0.2 rounded font-sans font-bold">Declined</span>
                 </td>
                 <td class="py-2.5 px-3 font-semibold text-slate-800">
                   <span>{{ s.p12_sn }}</span>
-                  <span v-if="s.p12_status === 'Declined'"
+                  <span v-if="s.p12_status === 'Declined' || (s.is_declined && s.p12_status !== 'Tersedia')"
                     class="ml-1 text-[9px] bg-rose-100 text-rose-800 px-1 py-0.2 rounded font-sans font-bold">Declined</span>
                 </td>
 
-                <!-- Status Part -->
+                <!-- Status Part (ACC / Declined / Menunggu Verifikasi) -->
                 <td class="py-2.5 px-3 text-center font-sans">
-                  <span v-if="s.is_verified || (activeReturnTray && activeReturnTray.return_verified)"
-                    class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                    Tersedia
-                  </span>
-                  <span v-else-if="s.is_declined || s.status === 'Declined'"
-                    class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200"
+                  <span v-if="s.is_declined || s.status === 'Declined'"
+                    class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200 inline-flex items-center gap-1"
                     :title="s.declined_reason ? 'Alasan: ' + s.declined_reason : 'Menunggu Verifikasi Admin'">
-                    <i class="fa-solid fa-clock-rotate-left mr-0.5"></i> Declined (Verif Admin)
+                    <i class="fa-solid fa-xmark text-rose-600"></i> Declined
+                  </span>
+                  <span v-else-if="s.is_verified || (activeReturnTray && activeReturnTray.return_verified) || s.status === 'ACC' || s.status === 'Tersedia'"
+                    class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 inline-flex items-center justify-center">
+                    ACC
                   </span>
                   <span v-else
-                    class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                    Dikembalikan
+                    class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                    Menunggu Verifikasi
                   </span>
                 </td>
 
                 <!-- Aksi Verifikasi per Set -->
                 <td class="py-2.5 px-3 text-center font-sans">
-                  <span v-if="s.is_verified || (activeReturnTray && activeReturnTray.return_verified)"
-                    class="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 border border-emerald-200 font-bold px-2.5 py-1 rounded-lg text-[11px] select-none mx-auto">
-                    <i class="fa-solid fa-circle-check text-emerald-600"></i>
-                    <span>Selesai</span>
-                  </span>
-                  <span v-else-if="s.is_declined || s.status === 'Declined'"
+                  <span v-if="s.is_declined || s.status === 'Declined'"
                     class="inline-flex items-center gap-1 text-rose-700 bg-rose-50 border border-rose-200 font-bold px-2.5 py-1 rounded-lg text-[11px] select-none mx-auto"
                     :title="s.declined_reason ? 'Alasan: ' + s.declined_reason : 'Menunggu Verifikasi Admin'">
                     <i class="fa-solid fa-circle-xmark text-rose-600"></i>
                     <span>Declined</span>
                   </span>
+                  <span v-else-if="s.is_verified || (activeReturnTray && activeReturnTray.return_verified) || s.status === 'ACC' || s.status === 'Tersedia'"
+                    class="inline-flex items-center text-emerald-700 bg-emerald-50 border border-emerald-200 font-bold px-2.5 py-1 rounded-lg text-[11px] select-none mx-auto">
+                    <span>ACC</span>
+                  </span>
                   <div v-else class="flex items-center justify-center gap-1.5">
                     <button type="button" @click="verifyReturnSet(s)"
                       :disabled="verifyingSetIndex === s.set_number || isVerifyingReturn"
-                      class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2.5 py-1 rounded-lg text-[11px] transition active:scale-95 shadow-xs flex items-center gap-1 cursor-pointer min-h-[28px]"
-                      title="Verifikasi fisik seluruh part di set ini menjadi Tersedia">
-                      <i v-if="verifyingSetIndex === s.set_number" class="fa-solid fa-spinner fa-spin text-[10px]"></i>
-                      <i v-else class="fa-solid fa-check text-[10px]"></i>
-                      <span>Verif</span>
+                      class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2.5 py-1 rounded-lg text-[11px] transition active:scale-95 shadow-xs flex items-center justify-center cursor-pointer min-h-[28px]"
+                      title="Verifikasi ACC set ini">
+                      <i v-if="verifyingSetIndex === s.set_number" class="fa-solid fa-spinner fa-spin text-[10px] mr-1"></i>
+                      <span>ACC</span>
                     </button>
                     <button type="button" @click="openDeclineReturnModal(s)"
                       :disabled="verifyingSetIndex === s.set_number || isVerifyingReturn"
@@ -3934,11 +3893,33 @@
                     </button>
                   </div>
                 </td>
+                      <i class="fa-solid fa-xmark text-[10px]"></i>
+                      <span>Decline</span>
+                    </button>
+                  </div>
+                </td>
               </tr>
 
-              <tr v-if="!activeReturnSets || activeReturnSets.length === 0">
-                <td colspan="7" class="py-8 text-center text-slate-400 font-sans text-xs">
-                  Memuat daftar part pengembalian...
+              <!-- Loading State -->
+              <tr v-if="isLoadingReturnDetail">
+                <td colspan="7" class="py-10 text-center text-slate-500 font-sans text-xs">
+                  <div class="flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-circle-notch fa-spin text-red-600 text-sm"></i>
+                    <span class="font-bold">Memuat daftar part pengembalian...</span>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Empty State: Ketika sudah selesai loading dan tidak ada sisa part (seluruh set sudah selesai dirakit) -->
+              <tr v-else-if="!activeReturnSets || activeReturnSets.length === 0">
+                <td colspan="7" class="py-8 text-center text-slate-500 font-sans text-xs">
+                  <div class="flex flex-col items-center justify-center space-y-1.5 py-1">
+                    <div class="w-9 h-9 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm border border-emerald-200 shadow-xs">
+                      <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                    <p class="font-bold text-slate-800 text-xs">Tidak ada part yang perlu dikembalikan</p>
+                    <p class="text-[11px] text-slate-400">Seluruh set telah selesai dirakit dan tersimpan aman di riwayat perakitan &amp; QC.</p>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -3990,7 +3971,7 @@
 
     <!-- ================= MODAL KONFIRMASI DECLINE PENGEMBALIAN BARANG ================= -->
     <div v-if="showDeclineReturnModal"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto no-print">
+      class="modal-backdrop-full modal-backdrop-nested flex items-center justify-center p-3 sm:p-4 overflow-y-auto no-print">
       <div
         class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4 my-auto">
         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -4092,7 +4073,7 @@
 
     <!-- ================= MODAL POP-UP ALASAN WAJIB HOLD QC ================= -->
     <div v-if="showQCHoldReasonModal"
-      class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto no-print">
+      class="modal-backdrop-full flex items-center justify-center p-3 sm:p-4 overflow-y-auto no-print">
       <div
         class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4 my-auto animate-fadeIn">
         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -4162,7 +4143,7 @@
 
     <!-- ================= MODAL VERIFIKASI PENERIMAAN FISIK GUDANG DARI QC ================= -->
     <div v-if="showWarehouseQCModal"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto no-print">
+      class="modal-backdrop-full flex items-center justify-center p-3 sm:p-4 overflow-y-auto no-print">
       <div
         class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4 my-auto">
         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -4236,7 +4217,7 @@
     </div>
 
     <!-- TOAST NOTIFICATION (NO-PRINT: Always on top of all modals) -->
-    <div v-if="toast.show"
+    <div v-if="toast.show" style="display: none;" :style="{ display: toast.show ? 'block' : 'none' }"
       class="no-print fixed bottom-5 right-5 z-[999999] max-w-sm w-full transition-all pointer-events-auto">
       <div
         :class="toast.type === 'error' ? 'bg-red-600 text-white shadow-2xl shadow-red-600/50' : (toast.type === 'warn' ? 'bg-amber-600 text-white shadow-2xl shadow-amber-600/50' : 'bg-slate-900 text-white shadow-2xl shadow-black/50')"
@@ -4257,8 +4238,8 @@
     <!-- ========================================================================= -->
     <!-- GLOBAL IN-APP CONFIRMATION & PROMPT CARD MODAL                            -->
     <!-- ========================================================================= -->
-    <div v-if="confirmModalState.isOpen"
-      class="no-print fixed inset-0 z-[999998] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs transition-opacity animate-fadeIn">
+    <div v-if="confirmModalState.isOpen" style="display: none;" :style="{ display: confirmModalState.isOpen ? 'flex' : 'none' }"
+      class="no-print fixed inset-0 z-[999998] items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs transition-opacity animate-fadeIn">
       <div
         class="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full p-5 sm:p-6 space-y-4 animate-scale-up">
         <div class="flex items-start gap-3.5">
@@ -4300,7 +4281,7 @@
 
     <!-- ================= MODAL TAMBAH CUSTOMER BARU (INLINE DARI FORM DO) ================= -->
     <div v-if="showNewCustomerModal"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto no-print">
+      class="modal-backdrop-full flex items-center justify-center p-3 sm:p-4 overflow-y-auto no-print">
       <div
         class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-lg w-full p-4 sm:p-6 shadow-2xl space-y-4 my-auto">
         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -4337,12 +4318,18 @@
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div class="space-y-1">
               <label class="text-xs font-bold text-slate-700">No. Telepon</label>
-              <input type="text" v-model="newCustomerForm.phone" placeholder="Contoh: (021) 3840889"
+              <input type="text" v-model="newCustomerForm.phone"
+                @input="onPhoneFaxInput(newCustomerForm, 'phone', $event)"
+                @keypress="blockLetterKeys($event)"
+                placeholder="Contoh: (021) 3840889"
                 class="w-full bg-slate-50 border border-slate-300 focus:border-red-600 focus:bg-white rounded-xl px-3.5 py-2 text-xs font-medium text-slate-800 shadow-2xs transition min-h-[42px]">
             </div>
             <div class="space-y-1">
               <label class="text-xs font-bold text-slate-700">No. Fax</label>
-              <input type="text" v-model="newCustomerForm.fax" placeholder="Contoh: (021) 3840889"
+              <input type="text" v-model="newCustomerForm.fax"
+                @input="onPhoneFaxInput(newCustomerForm, 'fax', $event)"
+                @keypress="blockLetterKeys($event)"
+                placeholder="Contoh: (021) 3840889"
                 class="w-full bg-slate-50 border border-slate-300 focus:border-red-600 focus:bg-white rounded-xl px-3.5 py-2 text-xs font-medium text-slate-800 shadow-2xs transition min-h-[42px]">
             </div>
           </div>
@@ -4365,7 +4352,7 @@
 
     <!-- ================= MODAL TEMPEL / PASTE MASSAL SERIAL NUMBER ================= -->
     <div v-if="showBatchPasteModal"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto no-print">
+      class="modal-backdrop-full flex items-center justify-center p-3 sm:p-4 overflow-y-auto no-print">
       <div
         class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-lg w-full p-4 sm:p-6 shadow-2xl space-y-4 my-auto">
         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -4390,17 +4377,54 @@
         </div>
 
         <div class="space-y-2">
-          <label class="text-xs font-bold text-slate-700">Daftar Serial Number (Pisahkan dengan baris baru atau
-            koma):</label>
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-bold text-slate-700">Daftar Serial Number (Pisahkan dengan baris baru atau koma):</label>
+            <button v-if="batchPasteRawText" type="button" @click="batchPasteRawText = ''"
+              class="text-[11px] font-bold text-slate-400 hover:text-rose-600 transition cursor-pointer">
+              Bersihkan
+            </button>
+          </div>
           <textarea v-model="batchPasteRawText" rows="7" placeholder="Tempelkan daftar SN dari Excel / catatan di sini...
 Contoh:
 C1101624
 G1101625
 K1101621
-..." class="w-full bg-slate-50 border border-slate-300 focus:border-indigo-600 focus:bg-white rounded-xl p-3 text-xs font-mono font-bold text-slate-900 shadow-2xs transition min-h-[140px]"></textarea>
+..." class="w-full bg-slate-50 border border-slate-300 focus:border-indigo-600 focus:bg-white rounded-xl p-3 text-xs font-mono font-bold text-slate-900 shadow-2xs transition min-h-[140px] focus:outline-none"></textarea>
           <p class="text-[11px] text-slate-500 italic">
-            * Sebanyak 10 Serial Number pertama akan otomatis dialokasikan ke slot Dus ini.
+            * Sebanyak {{ batchPasteTarget.isUnit ? 'seluruh' : (batchPasteTarget.mode === 'crate' ? '20' : '10') }} Serial Number pertama akan otomatis dialokasikan ke slot {{ batchPasteTarget.isUnit ? 'satuan' : (batchPasteTarget.mode === 'crate' ? 'Peti ini' : 'Dus ini') }}.
           </p>
+        </div>
+
+        <!-- Live Validation / Analisis Data Batch Paste -->
+        <div v-if="parsedBatchPasteSNs && parsedBatchPasteSNs.length > 0" class="space-y-2">
+          <div class="flex items-center justify-between text-xs bg-slate-100 rounded-xl px-3 py-2 border border-slate-200">
+            <span class="font-bold text-slate-700 flex items-center gap-1.5">
+              <i class="fa-solid fa-chart-pie text-indigo-600"></i>
+              <span>Total: <strong>{{ batchPasteStats.total }} SN</strong></span>
+            </span>
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                <i class="fa-solid fa-check mr-0.5"></i> {{ batchPasteStats.validCount }} Tersedia
+              </span>
+              <span v-if="batchPasteStats.unverifiedCount > 0"
+                class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                <i class="fa-solid fa-circle-xmark mr-0.5"></i> {{ batchPasteStats.unverifiedCount }} Tidak Tersedia
+              </span>
+              <span v-if="batchPasteStats.duplicatesCount > 0"
+                class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                <i class="fa-solid fa-copy mr-0.5"></i> {{ batchPasteStats.duplicatesCount }} Duplikat
+              </span>
+            </div>
+          </div>
+
+          <!-- Alert jika ada SN belum lolos / tidak tersedia -->
+          <div v-if="batchPasteStats.unverifiedCount > 0"
+            class="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-[11px] leading-relaxed flex items-start gap-2">
+            <i class="fa-solid fa-circle-xmark text-rose-600 mt-0.5 shrink-0"></i>
+            <div>
+              <strong>SN Tidak Tersedia:</strong> Ditemukan <strong>{{ batchPasteStats.unverifiedCount }} Serial Number</strong> yang tidak terdaftar di stok selesai atau belum lolos penerimaan fisik gudang. Data tidak dapat diterapkan sampai seluruh nomor seri valid.
+            </div>
+          </div>
         </div>
 
         <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
@@ -4409,9 +4433,11 @@ K1101621
             Batal
           </button>
           <button type="button" @click="applyBatchPaste"
-            class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-md shadow-indigo-600/25 flex items-center gap-1.5 transition cursor-pointer min-h-[42px]">
+            :disabled="!parsedBatchPasteSNs || parsedBatchPasteSNs.length === 0 || (batchPasteStats && batchPasteStats.unverifiedCount > 0)"
+            :class="!parsedBatchPasteSNs || parsedBatchPasteSNs.length === 0 || (batchPasteStats && batchPasteStats.unverifiedCount > 0) ? 'opacity-40 cursor-not-allowed bg-slate-300 text-slate-500' : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-600/25 cursor-pointer'"
+            class="px-5 py-2.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition min-h-[42px]">
             <i class="fa-solid fa-check"></i>
-            <span>Terapkan ke Dus</span>
+            <span>Terapkan ke {{ batchPasteTarget.isUnit ? 'Satuan' : (batchPasteTarget.mode === 'crate' ? 'Peti' : 'Dus') }}</span>
           </button>
         </div>
       </div>
@@ -4419,7 +4445,7 @@ K1101621
 
     <!-- ================= MODAL BULKING DATA SERIAL NUMBER (PACKING LIST STANDALONE) ================= -->
     <div v-if="showLabelBulkModal"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto no-print">
+      class="modal-backdrop-full flex items-center justify-center p-3 sm:p-4 overflow-y-auto no-print">
       <div
         class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-xl w-full p-4 sm:p-6 shadow-2xl space-y-4 my-auto">
         <!-- Header -->
@@ -4450,12 +4476,17 @@ K1101621
               <i class="fa-solid fa-crosshairs text-emerald-600"></i>
               <span>Target Alokasi:</span>
             </label>
-            <select v-model="labelBulkScope"
-              class="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 font-bold focus:outline-none focus:border-emerald-600">
-              <option value="all">Mulai dari Awal ({{ labelForm.package_type === 'crate' ? 'Peti 1' : 'Dus 1' }})</option>
-              <option value="from_active">Mulai dari {{ labelForm.package_type === 'crate' ? 'Peti' : 'Dus' }} Aktif (Ke-{{ activeLabelCrateIndex + 1 }})</option>
-              <option value="active_only">Hanya {{ labelForm.package_type === 'crate' ? 'Peti' : 'Dus' }} Ini Saja (Ke-{{ activeLabelCrateIndex + 1 }})</option>
-            </select>
+            <div class="relative">
+              <select v-model="labelBulkScope"
+                class="w-full appearance-none bg-white border border-slate-300 hover:border-slate-400 rounded-xl pl-3 pr-8 py-2 text-xs text-slate-800 font-bold focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 shadow-2xs transition cursor-pointer">
+                <option value="all">Mulai dari Awal ({{ labelForm.package_type === 'crate' ? 'Peti 1' : 'Dus 1' }})</option>
+                <option value="from_active">Mulai dari {{ labelForm.package_type === 'crate' ? 'Peti' : 'Dus' }} Aktif (Ke-{{ activeLabelCrateIndex + 1 }})</option>
+                <option value="active_only">Hanya {{ labelForm.package_type === 'crate' ? 'Peti' : 'Dus' }} Ini Saja (Ke-{{ activeLabelCrateIndex + 1 }})</option>
+              </select>
+              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-slate-400">
+                <i class="fa-solid fa-chevron-down text-[11px]"></i>
+              </div>
+            </div>
           </div>
 
           <!-- Pilihan Mode Pengisian -->
@@ -4464,11 +4495,16 @@ K1101621
               <i class="fa-solid fa-sliders text-emerald-600"></i>
               <span>Metode Pengisian:</span>
             </label>
-            <select v-model="labelBulkMode"
-              class="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 font-bold focus:outline-none focus:border-emerald-600">
-              <option value="overwrite">Timpa berurutan dari slot pertama</option>
-              <option value="empty_only">Hanya isi slot yang masih kosong</option>
-            </select>
+            <div class="relative">
+              <select v-model="labelBulkMode"
+                class="w-full appearance-none bg-white border border-slate-300 hover:border-slate-400 rounded-xl pl-3 pr-8 py-2 text-xs text-slate-800 font-bold focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 shadow-2xs transition cursor-pointer">
+                <option value="overwrite">Timpa berurutan dari slot pertama</option>
+                <option value="empty_only">Hanya isi slot yang masih kosong</option>
+              </select>
+              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-slate-400">
+                <i class="fa-solid fa-chevron-down text-[11px]"></i>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -4503,24 +4539,26 @@ K1101621
             </span>
             <div class="flex items-center gap-2">
               <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                <i class="fa-solid fa-check mr-0.5"></i> {{ labelBulkStats.validCount }} Lolos Gudang
+                <i class="fa-solid fa-check mr-0.5"></i> {{ labelBulkStats.validCount }} Tersedia
               </span>
               <span v-if="labelBulkStats.unverifiedCount > 0"
-                class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                <i class="fa-solid fa-triangle-exclamation mr-0.5"></i> {{ labelBulkStats.unverifiedCount }} Belum Verifikasi
+                class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                <i class="fa-solid fa-circle-xmark mr-0.5"></i> {{ labelBulkStats.unverifiedCount }} Tidak Tersedia
               </span>
               <span v-if="labelBulkStats.duplicatesCount > 0"
-                class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 border border-red-200">
+                class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
                 <i class="fa-solid fa-copy mr-0.5"></i> {{ labelBulkStats.duplicatesCount }} Duplikat
               </span>
             </div>
           </div>
 
-          <!-- Alert jika ada SN belum lolos gudang -->
+          <!-- Alert jika ada SN belum lolos / tidak tersedia -->
           <div v-if="labelBulkStats.unverifiedCount > 0"
-            class="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-[11px] leading-relaxed">
-            <i class="fa-solid fa-circle-exclamation text-amber-600 mr-1"></i>
-            <strong>Perhatian:</strong> Ditemukan <strong>{{ labelBulkStats.unverifiedCount }} SN</strong> yang belum diverifikasi penerimaan fisik gudang. Pastikan nomor seri sudah benar untuk mencegah human error.
+            class="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-[11px] leading-relaxed flex items-start gap-2">
+            <i class="fa-solid fa-circle-xmark text-rose-600 mt-0.5 shrink-0"></i>
+            <div>
+              <strong>SN Tidak Tersedia:</strong> Ditemukan <strong>{{ labelBulkStats.unverifiedCount }} Serial Number</strong> yang tidak terdaftar di stok selesai atau belum lolos penerimaan fisik gudang. Data tidak dapat diterapkan sampai seluruh nomor seri valid.
+            </div>
           </div>
         </div>
 
@@ -4531,8 +4569,8 @@ K1101621
             Batal
           </button>
           <button type="button" @click="applyLabelBulkData"
-            :disabled="parsedLabelBulkSNs.length === 0"
-            :class="parsedLabelBulkSNs.length === 0 ? 'opacity-40 cursor-not-allowed bg-slate-300 text-slate-500' : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/25 cursor-pointer'"
+            :disabled="parsedLabelBulkSNs.length === 0 || labelBulkStats.unverifiedCount > 0"
+            :class="parsedLabelBulkSNs.length === 0 || labelBulkStats.unverifiedCount > 0 ? 'opacity-40 cursor-not-allowed bg-slate-300 text-slate-500' : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/25 cursor-pointer'"
             class="px-5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 transition min-h-[40px]">
             <i class="fa-solid fa-check"></i>
             <span>Terapkan Data Bulking ({{ parsedLabelBulkSNs.length }} SN)</span>
@@ -4543,7 +4581,7 @@ K1101621
 
     <!-- ================= MODAL PILIH ID PETI DARI PACKING LIST ================= -->
     <div v-if="showSelectCrateModal"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto no-print">
+      class="modal-backdrop-full flex items-center justify-center p-3 sm:p-4 overflow-y-auto no-print">
       <div
         class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-2xl w-full p-4 sm:p-6 shadow-2xl space-y-4 my-auto">
         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -4581,8 +4619,11 @@ K1101621
           <div v-if="filteredAvailablePLCratesList.length === 0"
             class="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 text-slate-500 text-xs">
             <i class="fa-solid fa-box-open text-2xl text-slate-400 mb-2 block"></i>
-            {{ getAvailablePLCratesList().length === 0 ? 'Belum ada Packing List kemasan Peti yang dibuat di sistem.' :
-            'Tidak ada Peti yang cocok dengan pencarian.' }}
+            <template v-if="getAvailablePLCratesList().length === 0">
+              <span class="font-bold block text-slate-700 mb-1">Belum ada Packing List Peti yang tersedia untuk mode {{ sjMode === 'backdate' ? 'Backdate' : 'Realtime' }}</span>
+              <span class="text-[11px] text-slate-400">Hanya Packing List yang bertipe sama ({{ sjMode === 'backdate' ? 'Backdate' : 'Realtime' }}) dan belum pernah dikonsumsi yang dapat digunakan.</span>
+            </template>
+            <span v-else>Tidak ada Peti yang cocok dengan pencarian.</span>
           </div>
 
           <div v-for="c in filteredAvailablePLCratesList" :key="c.pl_id + '_' + c.crate_id"
@@ -4592,15 +4633,14 @@ K1101621
               class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
               <div class="flex items-center gap-2 flex-wrap">
                 <span
-                  class="font-black font-mono text-sm text-slate-900 bg-emerald-50 text-emerald-900 border border-emerald-300 px-2.5 py-1 rounded-lg">
+                  class="font-black font-mono text-sm text-emerald-900 bg-emerald-50 border border-emerald-300 px-2.5 py-1 rounded-lg">
                   {{ c.crate_id }}
                 </span>
-                <span class="text-xs text-slate-600 font-bold">
-                  PL: {{ c.pl_number }}
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded uppercase font-mono"
+                  :class="c.pl_mode === 'backdate' ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-emerald-100 text-emerald-800 border border-emerald-300'">
+                  {{ c.pl_mode || 'realtime' }}
                 </span>
-                <span class="text-[10px] bg-slate-100 text-slate-600 font-mono px-2 py-0.5 rounded">
-                  Batch #{{ c.batch_number }}
-                </span>
+                <span class="text-[10px] text-slate-500 font-mono">PL: {{ c.pl_number }}</span>
               </div>
               <div class="flex items-center gap-2">
                 <span v-if="isPLCrateUsed(c.crate_id, selectTarget.crateIdx)"
@@ -4647,7 +4687,7 @@ K1101621
 
     <!-- ================= MODAL PILIH ID DUS DARI PACKING LIST ================= -->
     <div v-if="showSelectBoxModal"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto no-print">
+      class="modal-backdrop-full flex items-center justify-center p-3 sm:p-4 overflow-y-auto no-print">
       <div
         class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-2xl w-full p-4 sm:p-6 shadow-2xl space-y-4 my-auto">
         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -4694,7 +4734,11 @@ K1101621
           <div v-if="filteredAvailablePLBoxesList.length === 0"
             class="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 text-slate-500 text-xs">
             <i class="fa-solid fa-boxes-packing text-2xl text-slate-400 mb-2 block"></i>
-            {{ getAvailablePLBoxesList().length === 0 ? 'Belum ada Packing List kemasan Dus atau Peti yang dibuat di sistem.' : 'Tidak ada Dus yang cocok dengan pencarian.' }}
+            <template v-if="getAvailablePLBoxesList().length === 0">
+              <span class="font-bold block text-slate-700 mb-1">Belum ada Packing List Dus yang tersedia untuk mode {{ sjMode === 'backdate' ? 'Backdate' : 'Realtime' }}</span>
+              <span class="text-[11px] text-slate-400">Hanya Packing List yang bertipe sama ({{ sjMode === 'backdate' ? 'Backdate' : 'Realtime' }}) dan belum pernah dikonsumsi yang dapat digunakan.</span>
+            </template>
+            <span v-else>Tidak ada Dus yang cocok dengan pencarian.</span>
           </div>
 
           <div v-for="b in filteredAvailablePLBoxesList" :key="b.pl_id + '_' + b.box_id"
@@ -4703,28 +4747,14 @@ K1101621
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2">
               <div class="flex items-center gap-2 flex-wrap">
                 <span
-                  class="font-black font-mono text-xs text-slate-900 bg-indigo-50 text-indigo-900 border border-indigo-300 px-2.5 py-1 rounded-lg">
+                  class="font-black font-mono text-xs text-indigo-900 bg-indigo-50 border border-indigo-300 px-2.5 py-1 rounded-lg">
                   {{ b.box_id }}
                 </span>
-                <span class="text-xs text-slate-600 font-bold">
-                  PL: {{ b.pl_number }}
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded uppercase font-mono"
+                  :class="b.pl_mode === 'backdate' ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-indigo-100 text-indigo-800 border border-indigo-300'">
+                  {{ b.pl_mode || 'realtime' }}
                 </span>
-                <span v-if="b.parent_crate_id"
-                  class="text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-200 font-mono px-1.5 py-0.5 rounded">
-                  Peti {{ b.parent_crate_id }}
-                </span>
-                <span v-else
-                  class="text-[10px] bg-amber-50 text-amber-800 border border-amber-200 font-bold px-1.5 py-0.5 rounded">
-                  Kemasan Dus (Tanpa Peti)
-                </span>
-                <span v-if="!selectTarget.isBoxDO && doForm.crates[selectTarget.crateIdx]"
-                  class="text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-200 font-mono px-1.5 py-0.5 rounded">
-                  &rarr; Konversi ke: {{ doForm.crates[selectTarget.crateIdx]?.crate_id }}-{{
-                  String(selectTarget.boxNumber).padStart(2, '0') }}
-                </span>
-                <span class="text-[10px] bg-slate-100 text-slate-600 font-mono px-1.5 py-0.5 rounded">
-                  Batch #{{ b.batch_number }}
-                </span>
+                <span class="text-[10px] text-slate-500 font-mono">PL: {{ b.pl_number }}</span>
               </div>
               <div class="flex items-center gap-2">
                 <span v-if="isPLBoxUsed(b.box_id, selectTarget.crateIdx, selectTarget.boxNumber, selectTarget.isBoxDO)"
@@ -4769,8 +4799,8 @@ K1101621
     </div>
 
     <!-- ================= FULLSCREEN MODAL PROSES SINKRONISASI CLOUDINARY ================= -->
-    <div v-if="isBatchSyncingCloud"
-      class="fixed inset-0 z-[999999] flex items-center justify-center bg-slate-950/75 backdrop-blur-md p-4 select-none no-print">
+    <div v-if="isBatchSyncingCloud" style="display: none;" :style="{ display: isBatchSyncingCloud ? 'flex' : 'none' }"
+      class="fixed inset-0 z-[999999] items-center justify-center bg-slate-950/75 backdrop-blur-md p-4 select-none no-print">
       <div
         class="bg-white border border-slate-200 rounded-3xl max-w-sm w-full p-6 sm:p-7 shadow-2xl space-y-5 text-center my-auto animate-in fade-in zoom-in-95 duration-200">
         <div class="relative flex items-center justify-center">
@@ -4799,7 +4829,7 @@ K1101621
 
     <!-- ================= MODAL SUKSES PENERBITAN DELIVERY ORDER (OPSI CETAK DOKUMEN & LABEL) ================= -->
     <div v-if="showDOPostPublishModal && lastPublishedDO"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto no-print">
+      class="modal-backdrop-full flex items-center justify-center p-3 sm:p-4 overflow-y-auto no-print">
       <div
         class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-lg w-full p-4 sm:p-6 shadow-2xl space-y-4 my-auto animate-fadeIn">
         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -4868,7 +4898,7 @@ K1101621
             </button>
 
             <button type="button"
-              @click="openDODetailAndPrint(lastPublishedDO.id || lastPublishedDO.do_id, lastPublishedDO.package_type === 'unit' ? 'label_sn' : 'label_parent')"
+              @click="openDODetailAndPrint(lastPublishedDO.id || lastPublishedDO.do_id, lastPublishedDO.package_type === 'unit' ? 'label_sn' : (lastPublishedDO.package_type === 'box' ? 'label_dus' : 'label_peti'))"
               class="flex items-center gap-2.5 p-3 rounded-xl border border-amber-200 bg-amber-50/70 hover:bg-amber-100/80 text-amber-800 text-xs font-bold transition text-left cursor-pointer group">
               <div
                 class="w-8 h-8 rounded-lg bg-amber-600 text-white flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition">
@@ -4893,7 +4923,7 @@ K1101621
               </div>
               <div>
                 <div class="font-black text-slate-900">Label Tiap Dus</div>
-                <div class="text-[10px] text-slate-500 font-normal">Stiker per Dus @10 SN</div>
+                <div class="text-[10px] text-slate-500 font-normal">Stiker per Dus (10 SN)</div>
               </div>
             </button>
 
@@ -4920,6 +4950,1274 @@ K1101621
         </div>
       </div>
     </div>
+
+
+
+
+          <!-- ================= MODAL RINCIAN DOKUMEN (BREAKDOWN PER UNIT) ================= -->
+          <div v-if="selectedReportDoc"
+            class="modal-backdrop-full flex items-center justify-center p-3 sm:p-4 animate-fadeIn">
+            <div
+              class="bg-white border border-slate-200 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-scaleUp">
+              <!-- Header Modal -->
+              <div class="px-5 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div
+                    class="w-10 h-10 rounded-xl bg-red-100 border border-red-200 text-red-600 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-file-invoice"></i>
+                  </div>
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <span
+                        class="text-[10px] font-bold px-2 py-0.5 bg-red-50 text-red-700 border border-red-200 rounded uppercase">RINCIAN
+                        DOKUMEN</span>
+                      <span class="text-xs text-slate-400">|</span>
+                      <span class="text-xs font-semibold text-slate-500">{{ getReportCategoryTitle(reportSubTab)
+                        }}</span>
+                    </div>
+                    <h3 class="text-base font-black text-slate-900 font-mono mt-0.5">{{ selectedReportDoc.doc_code }}
+                    </h3>
+                  </div>
+                </div>
+                <button type="button" @click="closeReportDocDetail"
+                  class="w-8 h-8 rounded-lg bg-slate-200/70 hover:bg-slate-300 text-slate-600 flex items-center justify-center transition cursor-pointer">
+                  <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+              </div>
+
+              <!-- Metadata Summary Card -->
+              <div class="p-4 bg-slate-50/50 border-b border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <div>
+                  <span class="text-[10.5px] font-bold text-slate-400 block">Dokumen Acuan:</span>
+                  <span class="font-mono font-bold text-blue-700">{{ selectedReportDoc.origin_doc || '-' }}</span>
+                </div>
+                <div>
+                  <span class="text-[10.5px] font-bold text-slate-400 block">Operator / Petugas:</span>
+                  <span class="font-bold text-slate-800">{{ selectedReportDoc.operator || '-' }}</span>
+                </div>
+                <div>
+                  <span class="text-[10.5px] font-bold text-slate-400 block">Waktu Transaksi:</span>
+                  <span class="font-mono text-slate-700">{{ formatDateTime(selectedReportDoc.timestamp) }}</span>
+                </div>
+                <div>
+                  <span class="text-[10.5px] font-bold text-slate-400 block">Total Unit / Set:</span>
+                  <span class="font-mono font-black text-slate-900">{{ modalReportDocItems.length }} Set</span>
+                </div>
+              </div>
+
+              <!-- List Unit Items in Document -->
+              <div class="p-4 overflow-y-auto flex-1">
+                <table class="w-full text-left text-xs border border-slate-200 rounded-xl overflow-hidden">
+                  <thead class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200 text-[11px]">
+                    <!-- 1. SUBTAB WO / MO: No | Set # | SN P15 | PN -> P1 | P12 | Status Unit -->
+                    <template v-if="reportSubTab === 'wo'">
+                      <tr>
+                        <th rowspan="2" class="p-2.5 text-center w-14 border-r border-b border-slate-200 align-middle">
+                          No</th>
+                        <th rowspan="2" class="p-2.5 text-center w-20 border-r border-b border-slate-200 align-middle">
+                          Set #</th>
+                        <th rowspan="2" class="p-2.5 text-center border-r border-b border-slate-200 align-middle">SN P15
+                        </th>
+                        <th colspan="2"
+                          class="p-2 text-center bg-slate-200/70 border-b border-slate-200 tracking-wider">PN</th>
+                        <th rowspan="2" class="p-2.5 text-center w-52 border-b border-slate-200 align-middle">
+                          Status Unit / Set</th>
+                      </tr>
+                      <tr>
+                        <th class="p-2 text-center border-r border-b border-slate-200 bg-slate-100/90 w-1/5">P1</th>
+                        <th class="p-2 text-center border-r border-b border-slate-200 bg-slate-100/90 w-1/5">P12</th>
+                      </tr>
+                    </template>
+
+                    <!-- 2. SUBTAB PERAKITAN: Status Perakitan & Perubahan / Rework -->
+                    <template v-else-if="reportSubTab === 'assembly'">
+                      <tr>
+                        <th rowspan="2" class="p-2.5 text-center w-10 border-r border-b border-slate-200 align-middle">
+                          No</th>
+                        <th rowspan="2" class="p-2.5 text-center w-16 border-r border-b border-slate-200 align-middle">
+                          Set #</th>
+                        <th rowspan="2" class="p-2.5 text-center border-r border-b border-slate-200 align-middle">SN P15
+                        </th>
+                        <th colspan="2"
+                          class="p-2 text-center bg-slate-200/70 border-b border-slate-200 tracking-wider">PN</th>
+                        <th rowspan="2" class="p-2.5 text-center w-28 border-b border-slate-200 align-middle">Status
+                          Perakitan</th>
+                        <th rowspan="2" class="p-2.5 border-b border-slate-200 align-middle">Keterangan &amp; Perubahan
+                        </th>
+                        <th rowspan="2" class="p-2.5 text-center w-14 border-b border-slate-200 align-middle">Aksi</th>
+                      </tr>
+                      <tr>
+                        <th class="p-2 text-center border-r border-b border-slate-200 bg-slate-100/90 w-1/6">P1</th>
+                        <th class="p-2 text-center border-r border-b border-slate-200 bg-slate-100/90 w-1/6">P12</th>
+                      </tr>
+                    </template>
+
+                    <!-- 3. SUBTAB TEST FUNCTIONAL 1 (TF1): Perakitan Good + Hasil TF1 -->
+                    <template v-else-if="reportSubTab === 'assy_test'">
+                      <tr>
+                        <th rowspan="2" class="p-2.5 text-center w-10 border-r border-b border-slate-200 align-middle">
+                          No</th>
+                        <th rowspan="2" class="p-2.5 text-center w-16 border-r border-b border-slate-200 align-middle">
+                          Set #</th>
+                        <th rowspan="2" class="p-2.5 text-center border-r border-b border-slate-200 align-middle">SN P15
+                        </th>
+                        <th colspan="2"
+                          class="p-2 text-center bg-slate-200/70 border-b border-slate-200 tracking-wider">PN</th>
+                        <th rowspan="2" class="p-2.5 text-center w-24 border-b border-slate-200 align-middle">Perakitan
+                        </th>
+                        <th rowspan="2" class="p-2.5 text-center w-36 border-b border-slate-200 align-middle">Hasil TF1
+                        </th>
+                        <th rowspan="2" class="p-2.5 border-b border-slate-200 align-middle">Keterangan TF1</th>
+                        <th rowspan="2" class="p-2.5 text-center w-14 border-b border-slate-200 align-middle">Aksi</th>
+                      </tr>
+                      <tr>
+                        <th class="p-2 text-center border-r border-b border-slate-200 bg-slate-100/90 w-1/6">P1</th>
+                        <th class="p-2 text-center border-r border-b border-slate-200 bg-slate-100/90 w-1/6">P12</th>
+                      </tr>
+                    </template>
+
+                    <!-- 4. SUBTAB TEST FUNCTIONAL 2 (QC): Perakitan Good + TF1 Good Semua + Hasil QC -->
+                    <template v-else-if="reportSubTab === 'qc_test'">
+                      <tr>
+                        <th rowspan="2" class="p-2.5 text-center w-10 border-r border-b border-slate-200 align-middle">
+                          No</th>
+                        <th rowspan="2" class="p-2.5 text-center w-16 border-r border-b border-slate-200 align-middle">
+                          Set #</th>
+                        <th rowspan="2" class="p-2.5 text-center border-r border-b border-slate-200 align-middle">SN P15
+                        </th>
+                        <th colspan="2"
+                          class="p-2 text-center bg-slate-200/70 border-b border-slate-200 tracking-wider">PN</th>
+                        <th rowspan="2" class="p-2.5 text-center w-20 border-b border-slate-200 align-middle">Perakitan
+                        </th>
+                        <th rowspan="2" class="p-2.5 text-center w-24 border-b border-slate-200 align-middle">TF1</th>
+                        <th rowspan="2" class="p-2.5 text-center w-36 border-b border-slate-200 align-middle">Hasil QC
+                          (TF2)</th>
+                        <th rowspan="2" class="p-2.5 border-b border-slate-200 align-middle">Keterangan QC</th>
+                        <th rowspan="2" class="p-2.5 text-center w-14 border-b border-slate-200 align-middle">Aksi</th>
+                      </tr>
+                      <tr>
+                        <th class="p-2 text-center border-r border-b border-slate-200 bg-slate-100/90 w-1/6">P1</th>
+                        <th class="p-2 text-center border-r border-b border-slate-200 bg-slate-100/90 w-1/6">P12</th>
+                      </tr>
+                    </template>
+
+                    <!-- 5. SUBTAB RECEIPTS (WH/GR): Semua Good (Perakitan, TF1, TF2) + Status Receipts -->
+                    <template v-else-if="reportSubTab === 'warehouse_receipt'">
+                      <tr>
+                        <th rowspan="2" class="p-2.5 text-center w-10 border-r border-b border-slate-200 align-middle">
+                          No</th>
+                        <th rowspan="2" class="p-2.5 text-center w-16 border-r border-b border-slate-200 align-middle">
+                          Set #</th>
+                        <th rowspan="2" class="p-2.5 text-center border-r border-b border-slate-200 align-middle">SN P15
+                        </th>
+                        <th colspan="2"
+                          class="p-2 text-center bg-slate-200/70 border-b border-slate-200 tracking-wider">PN</th>
+                        <th rowspan="2" class="p-2.5 text-center w-20 border-b border-slate-200 align-middle">Perakitan
+                        </th>
+                        <th rowspan="2" class="p-2.5 text-center w-20 border-b border-slate-200 align-middle">TF1</th>
+                        <th rowspan="2" class="p-2.5 text-center w-20 border-b border-slate-200 align-middle">TF2 (QC)
+                        </th>
+                        <th rowspan="2" class="p-2.5 text-center w-28 border-b border-slate-200 align-middle">Receipts
+                          (WH/GR)</th>
+                        <th rowspan="2" class="p-2.5 border-b border-slate-200 align-middle">Keterangan</th>
+                        <th rowspan="2" class="p-2.5 text-center w-14 border-b border-slate-200 align-middle">Aksi</th>
+                      </tr>
+                      <tr>
+                        <th class="p-2 text-center border-r border-b border-slate-200 bg-slate-100/90 w-1/6">P1</th>
+                        <th class="p-2 text-center border-r border-b border-slate-200 bg-slate-100/90 w-1/6">P12</th>
+                      </tr>
+                    </template>
+
+                    <!-- FALLBACK DEFAULT -->
+                    <template v-else>
+                      <tr>
+                        <th rowspan="2" class="p-2.5 text-center w-10 border-r border-b border-slate-200 align-middle">
+                          No</th>
+                        <th rowspan="2" class="p-2.5 text-center w-16 border-r border-b border-slate-200 align-middle">
+                          Set #</th>
+                        <th rowspan="2" class="p-2.5 text-center border-r border-b border-slate-200 align-middle">SN P15
+                        </th>
+                        <th colspan="2"
+                          class="p-2 text-center bg-slate-200/70 border-b border-slate-200 tracking-wider">PN</th>
+                        <th rowspan="2" class="p-2.5 text-center border-b border-slate-200 align-middle">Status</th>
+                        <th rowspan="2" class="p-2.5 border-b border-slate-200 align-middle">Keterangan</th>
+                        <th rowspan="2" class="p-2.5 text-center w-14 border-b border-slate-200 align-middle">Aksi</th>
+                      </tr>
+                      <tr>
+                        <th class="p-2 text-center border-r border-b border-slate-200 bg-slate-100/90 w-1/6">P1</th>
+                        <th class="p-2 text-center border-r border-b border-slate-200 bg-slate-100/90 w-1/6">P12</th>
+                      </tr>
+                    </template>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100 font-mono text-[11px]">
+                    <tr v-for="(it, i) in modalReportDocItems" :key="it.assembly_id || it.id || i"
+                      @click="reportSubTab !== 'wo' && openItemDetailFromDoc(it, i)"
+                      :class="reportSubTab === 'wo' ? 'select-none bg-white hover:bg-slate-50/70 transition' : 'hover:bg-red-50/50 transition cursor-pointer select-none group'"
+                      :title="reportSubTab === 'wo' ? '' : 'Klik baris atau tombol panah untuk melihat rincian hasil'">
+                      <!-- No -->
+                      <td class="p-2.5 text-center text-slate-400 font-sans"
+                        :class="reportSubTab === 'wo' ? 'border-r border-slate-100' : ''">{{ i + 1 }}</td>
+                      <!-- Set # -->
+                      <td class="p-2.5 text-center font-bold text-slate-800"
+                        :class="reportSubTab === 'wo' ? 'border-r border-slate-100' : ''">Set #{{ it.set_number || (i +
+                        1) }}</td>
+
+                      <!-- 1. JIKA WO / MO: Kolom dipanjangkan secara terpisah SN P15 | P1 | P12 | Status Unit -->
+                      <template v-if="reportSubTab === 'wo'">
+                        <td class="p-2.5 text-center font-mono border-r border-slate-100">
+                          <span
+                            class="font-bold text-red-900 text-xs px-3 py-1 bg-red-50 border border-red-200 rounded-lg inline-block shadow-2xs">
+                            {{ it.part15_sn || it.p9_sn || it.sn || '-' }}
+                          </span>
+                        </td>
+                        <td class="p-2.5 text-center font-mono border-r border-slate-100">
+                          <span
+                            class="font-bold text-slate-800 text-xs px-3 py-1 bg-slate-50 border border-slate-200 rounded-lg inline-block">
+                            {{ it.part1_sn || '-' }}
+                          </span>
+                        </td>
+                        <td class="p-2.5 text-center font-mono border-r border-slate-100">
+                          <span
+                            class="font-bold text-slate-800 text-xs px-3 py-1 bg-slate-50 border border-slate-200 rounded-lg inline-block">
+                            {{ it.part12_sn || '-' }}
+                          </span>
+                        </td>
+                        <td class="p-2.5 text-center font-sans">
+                          <!-- Status item di modal WO -->
+                          <template v-if="it.is_declined || it.status === 'Decline' || it.status === 'Declined'">
+                            <span
+                              class="px-2.5 py-1 rounded-lg text-xs font-bold border bg-rose-50 text-rose-700 border-rose-200 inline-flex items-center gap-1.5 shadow-2xs"
+                              :title="it.declined_reason ? 'Alasan: ' + it.declined_reason : 'Declined'">
+                              <i class="fa-solid fa-circle-xmark text-rose-500"></i>
+                              <span>Dikembalikan (Declined)</span>
+                            </span>
+                          </template>
+                          <template v-else-if="it.status === 'Dikembalikan ke Gudang' || it.status === 'Tersedia' || (!it.finished_at && (selectedReportDoc.status === 'SELESAI' || selectedReportDoc.session_status === 'COMPLETED_SHIFT' || selectedReportDoc.tray_status === 'returned'))">
+                            <span
+                              class="px-2.5 py-1 rounded-lg text-xs font-bold border bg-amber-50 text-amber-700 border-amber-200 inline-flex items-center gap-1.5 shadow-2xs">
+                              <i class="fa-solid fa-arrow-rotate-left text-amber-600"></i>
+                              <span>Dikembalikan ke Gudang</span>
+                            </span>
+                          </template>
+                          <template v-else-if="it.finished_at || it.status === 'Good' || it.status === 'SELESAI'">
+                            <span
+                              class="px-2.5 py-1 rounded-lg text-xs font-bold border bg-emerald-50 text-emerald-700 border-emerald-200 inline-flex items-center gap-1.5 shadow-2xs">
+                              <i class="fa-solid fa-circle-check text-emerald-600"></i>
+                              <span>Selesai Dirakit</span>
+                            </span>
+                          </template>
+                          <template v-else>
+                            <span
+                              class="px-2.5 py-1 rounded-lg text-xs font-bold border bg-blue-50 text-blue-700 border-blue-200 inline-flex items-center gap-1.5 shadow-2xs">
+                              <i class="fa-solid fa-truck-ramp-box text-blue-600"></i>
+                              <span>Tersupply</span>
+                            </span>
+                          </template>
+                        </td>
+                      </template>
+
+                      <!-- SUBTAB LAIN: Kolom terpisah SN P15 | P1 | P12 -->
+                      <template v-else>
+                        <td class="p-2.5 text-center font-mono border-r border-slate-100">
+                          <span
+                            class="font-bold text-red-900 text-xs px-3 py-1 bg-red-50 border border-red-200 rounded-lg inline-block shadow-2xs">
+                            {{ it.part15_sn || it.p9_sn || it.sn || '-' }}
+                          </span>
+                        </td>
+                        <td class="p-2.5 text-center font-mono border-r border-slate-100">
+                          <span
+                            class="font-bold text-slate-800 text-xs px-3 py-1 bg-slate-50 border border-slate-200 rounded-lg inline-block">
+                            {{ it.part1_sn || '-' }}
+                          </span>
+                        </td>
+                        <td class="p-2.5 text-center font-mono border-r border-slate-100">
+                          <span
+                            class="font-bold text-slate-800 text-xs px-3 py-1 bg-slate-50 border border-slate-200 rounded-lg inline-block">
+                            {{ it.part12_sn || '-' }}
+                          </span>
+                        </td>
+                      </template>
+
+                      <!-- 1. JIKA WO: HANYA TAMPIL SET DAN SN, TIDAK ADA KOLOM ATAU AKSI LAIN -->
+
+                      <!-- 2. JIKA PERAKITAN -->
+                      <template v-if="reportSubTab === 'assembly'">
+                        <td class="p-2.5 text-center font-sans">
+                          <span :class="getStatusTextClass(getHistoryAssemblyStatus(it))"
+                            class="text-xs uppercase tracking-wide">
+                            {{ formatDocumentStatusText(getHistoryAssemblyStatus(it)) }}
+                          </span>
+                        </td>
+                        <td class="p-2.5 font-sans text-slate-600 text-xs">
+                          <div v-if="it.assembly_reason || it.reason" class="text-slate-700 italic">
+                            {{ it.assembly_reason || it.reason }}
+                          </div>
+                          <div v-else-if="it.rework_reason" class="text-purple-700 font-medium">
+                            <i class="fa-solid fa-rotate-left text-[10px] mr-1"></i>{{ it.rework_reason }}
+                          </div>
+                          <div v-else class="text-slate-400 italic">-</div>
+                        </td>
+                        <td class="p-2.5 text-center font-sans">
+                          <button type="button" @click.stop="openItemDetailFromDoc(it, i)"
+                            class="w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-red-600 text-slate-500 group-hover:text-white border border-slate-200 group-hover:border-red-600 flex items-center justify-center transition shadow-2xs mx-auto cursor-pointer"
+                            title="Buka Rincian Hasil">
+                            <i
+                              class="fa-solid fa-arrow-right text-xs group-hover:translate-x-0.5 transition-transform"></i>
+                          </button>
+                        </td>
+                      </template>
+
+                      <!-- 3. JIKA TEST FUNCTIONAL 1 (TF1) -->
+                      <template v-else-if="reportSubTab === 'assy_test'">
+                        <td class="p-2.5 text-center font-sans">
+                          <span :class="getStatusTextClass(getHistoryAssemblyStatus(it))"
+                            class="text-xs uppercase tracking-wide">
+                            {{ formatDocumentStatusText(getHistoryAssemblyStatus(it)) }}
+                          </span>
+                        </td>
+                        <td class="p-2.5 text-center font-sans">
+                          <span :class="getStatusTextClass(it.assy_test_status || it.status)"
+                            class="text-xs uppercase tracking-wide">
+                            {{ formatDocumentStatusText(it.assy_test_status || it.status) }}
+                          </span>
+                        </td>
+                        <td class="p-2.5 font-sans italic text-slate-500 text-xs">
+                          {{ it.failure_reasons ? formatFailureReason(it.failure_reasons) : (it.assy_failure_reasons ||
+                          it.notes || '-') }}
+                        </td>
+                        <td class="p-2.5 text-center font-sans">
+                          <button type="button" @click.stop="openItemDetailFromDoc(it, i)"
+                            class="w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-red-600 text-slate-500 group-hover:text-white border border-slate-200 group-hover:border-red-600 flex items-center justify-center transition shadow-2xs mx-auto cursor-pointer"
+                            title="Buka Rincian Hasil">
+                            <i
+                              class="fa-solid fa-arrow-right text-xs group-hover:translate-x-0.5 transition-transform"></i>
+                          </button>
+                        </td>
+                      </template>
+
+                      <!-- 4. JIKA TEST FUNCTIONAL 2 (QC) -->
+                      <template v-else-if="reportSubTab === 'qc_test'">
+                        <td class="p-2.5 text-center font-sans">
+                          <span :class="getStatusTextClass(getHistoryAssemblyStatus(it))"
+                            class="text-xs uppercase tracking-wide">
+                            {{ formatDocumentStatusText(getHistoryAssemblyStatus(it)) }}
+                          </span>
+                        </td>
+                        <td class="p-2.5 text-center font-sans">
+                          <span :class="getStatusTextClass(it.tf1_status || it.assy_test_status || 'Good')"
+                            class="text-xs uppercase tracking-wide">
+                            {{ formatDocumentStatusText(it.tf1_status || it.assy_test_status || 'Good') }}
+                          </span>
+                        </td>
+                        <td class="p-2.5 text-center font-sans">
+                          <span :class="getStatusTextClass(it.qc_test_status || it.qc_status || it.status)"
+                            class="text-xs uppercase tracking-wide">
+                            {{ formatDocumentStatusText(it.qc_test_status || it.qc_status || it.status) }}
+                          </span>
+                        </td>
+                        <td class="p-2.5 font-sans italic text-slate-500 text-xs">
+                          {{ it.qc_failure_reasons || it.failure_reasons || it.qc_notes || it.notes || '-' }}
+                        </td>
+                        <td class="p-2.5 text-center font-sans">
+                          <button type="button" @click.stop="openItemDetailFromDoc(it, i)"
+                            class="w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-red-600 text-slate-500 group-hover:text-white border border-slate-200 group-hover:border-red-600 flex items-center justify-center transition shadow-2xs mx-auto cursor-pointer"
+                            title="Buka Rincian Hasil">
+                            <i
+                              class="fa-solid fa-arrow-right text-xs group-hover:translate-x-0.5 transition-transform"></i>
+                          </button>
+                        </td>
+                      </template>
+
+                      <!-- 5. JIKA RECEIPTS (WH/GR) -->
+                      <template v-else-if="reportSubTab === 'warehouse_receipt'">
+                        <td class="p-2.5 text-center font-sans">
+                          <span :class="getStatusTextClass(getHistoryAssemblyStatus(it))"
+                            class="text-xs uppercase tracking-wide">
+                            {{ formatDocumentStatusText(getHistoryAssemblyStatus(it)) }}
+                          </span>
+                        </td>
+                        <td class="p-2.5 text-center font-sans">
+                          <span :class="getStatusTextClass(it.tf1_status || it.assy_test_status || 'Good')"
+                            class="text-xs uppercase tracking-wide">
+                            {{ formatDocumentStatusText(it.tf1_status || it.assy_test_status || 'Good') }}
+                          </span>
+                        </td>
+                        <td class="p-2.5 text-center font-sans">
+                          <span :class="getStatusTextClass(it.qc_test_status || it.qc_status || 'Good')"
+                            class="text-xs uppercase tracking-wide">
+                            {{ formatDocumentStatusText(it.qc_test_status || it.qc_status || 'Good') }}
+                          </span>
+                        </td>
+                        <td class="p-2.5 text-center font-sans">
+                          <span
+                            :class="getStatusTextClass(it.warehouse_receipt_status === 'ACCEPTED' ? 'accepted' : (it.warehouse_receipt_status === 'DECLINED' ? 'declined' : (it.warehouse_receipt_status || it.verified_status)))"
+                            class="text-xs uppercase tracking-wide">
+                            {{ formatDocumentStatusText(it.warehouse_receipt_status || it.verified_status) }}
+                          </span>
+                        </td>
+                        <td class="p-2.5 font-sans italic text-slate-500 text-xs">
+                          {{ it.warehouse_decline_reason || it.declined_reason || it.notes || '-' }}
+                        </td>
+                        <td class="p-2.5 text-center font-sans">
+                          <button type="button" @click.stop="openItemDetailFromDoc(it, i)"
+                            class="w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-red-600 text-slate-500 group-hover:text-white border border-slate-200 group-hover:border-red-600 flex items-center justify-center transition shadow-2xs mx-auto cursor-pointer"
+                            title="Buka Rincian Hasil">
+                            <i
+                              class="fa-solid fa-arrow-right text-xs group-hover:translate-x-0.5 transition-transform"></i>
+                          </button>
+                        </td>
+                      </template>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Footer Modal -->
+              <div class="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+                <div>
+                  <span class="text-xs text-slate-500 font-medium">Menampilkan {{ modalReportDocItems.length }} set
+                    perakitan pada dokumen ini.</span>
+                </div>
+                <button type="button" @click="closeReportDocDetail"
+                  class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs rounded-xl transition cursor-pointer">
+                  Tutup
+                </button>
+              </div>
+            </div>
+          </div>
+
+
+      <!-- ================= MODAL DETAIL HASIL PERAKITAN (MURNI RAKITAN TANPA TEST FUNCTIONAL) ================= -->
+      <div v-if="showAssemblyDetailModal || showHoldDetailModal"
+        @click.self="showAssemblyDetailModal = false; showHoldDetailModal = false"
+        class="modal-backdrop-full !m-0 !top-0 !left-0 !right-0 !bottom-0 flex items-center justify-center p-3 sm:p-4 overflow-y-auto no-print">
+        <div
+          class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-4 my-auto animate-fadeIn">
+          <!-- Modal Header -->
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div class="flex items-center space-x-2.5">
+              <div
+                :class="(getAssemblyStageStatus(selectedAssemblyItem || selectedHoldItem) === 'RU') ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : ((getAssemblyStageStatus(selectedAssemblyItem || selectedHoldItem) === 'Hold') ? 'bg-amber-50 text-amber-700 border-amber-200' : ((getAssemblyStageStatus(selectedAssemblyItem || selectedHoldItem) === 'Rework') ? 'bg-purple-50 text-purple-700 border-purple-200' : ((getAssemblyStageStatus(selectedAssemblyItem || selectedHoldItem) === 'Scrap') ? 'bg-slate-100 text-slate-700 border-slate-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200')))"
+                class="w-10 h-10 rounded-xl border flex items-center justify-center text-lg font-bold shadow-xs">
+                <i v-if="getAssemblyStageStatus(selectedAssemblyItem || selectedHoldItem) === 'RU'"
+                  class="fa-solid fa-arrows-rotate"></i>
+                <i v-else-if="getAssemblyStageStatus(selectedAssemblyItem || selectedHoldItem) === 'Hold'"
+                  class="fa-solid fa-hand"></i>
+                
+                <i v-else-if="getAssemblyStageStatus(selectedAssemblyItem || selectedHoldItem) === 'Scrap'"
+                  class="fa-solid fa-ban"></i>
+                <i v-else class="fa-solid fa-check"></i>
+              </div>
+              <div>
+                <h3 class="font-black text-base text-slate-900">Detail Hasil Perakitan</h3>
+                <p class="text-[11px] text-slate-500 font-medium font-mono">
+                  {{ selectedAssemblyItem?.tray_code || selectedAssemblyTray?.tray_code }} &bull; Set #{{
+                  selectedAssemblyItem?.set_number }}
+                </p>
+              </div>
+            </div>
+            <button type="button" @click="showAssemblyDetailModal = false; showHoldDetailModal = false"
+              class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg transition cursor-pointer">
+              <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+          </div>
+
+          <!-- Unit Information Card -->
+          <div class="space-y-3 text-xs">
+            <!-- Metadata Grid -->
+            <div class="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
+              <div>
+                <span class="text-[10px] font-sans font-bold text-slate-500 uppercase block">No. Dokumen
+                  Perakitan:</span>
+                <strong class="font-mono text-slate-900 text-xs">{{ (selectedAssemblyItem?.status === 'Dirakit Ulang' ||
+                  selectedAssemblyItem?.qc_status === 'RU' || (typeof isReassemblySet === 'function' &&
+                  isReassemblySet(selectedAssemblyItem))) ? getFormattedDocCode(selectedAssemblyItem?.tray_code,
+                  'assy_rework') : (selectedAssemblyItem?.assy_doc_number ||
+                  getFormattedDocCode(selectedAssemblyItem?.tray_code, 'assy') || '-') }}</strong>
+              </div>
+              <div>
+                <span class="text-[10px] font-sans font-bold text-slate-500 uppercase block">No. Dokumen WO:</span>
+                <strong class="font-mono text-slate-900 text-xs">{{ selectedAssemblyItem?.tray_code ||
+                  selectedAssemblyTray?.tray_code || '-' }}</strong>
+              </div>
+              <div>
+                <span class="text-[10px] font-sans font-bold text-slate-500 uppercase block">Operator Perakitan:</span>
+                <strong class="text-slate-800 text-xs">{{ selectedAssemblyItem?.pic_assembly ||
+                  selectedAssemblyTray?.pic_assembly || '-' }}</strong>
+              </div>
+              <div>
+                <span class="text-[10px] font-sans font-bold text-slate-500 uppercase block">Status Perakitan:</span>
+                <span v-if="getAssemblyStageStatus(selectedAssemblyItem || selectedHoldItem) === 'Good'"
+                  class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-emerald-100 text-emerald-900 border border-emerald-300 inline-flex items-center gap-1">
+                  <i class="fa-solid fa-circle-check text-[9px]"></i> GOOD
+                </span>
+                <span v-else-if="isItemPendingAdmin(selectedAssemblyItem || selectedHoldItem)"
+                  class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-amber-100 text-amber-900 border border-amber-300 inline-flex items-center gap-1">
+                  <i class="fa-solid fa-clock-rotate-left text-[9px]"></i> PENDING (VERIF ADMIN)
+                </span>
+                <span v-else-if="getAssemblyStageStatus(selectedAssemblyItem || selectedHoldItem) === 'RU'"
+                  class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-indigo-100 text-indigo-900 border border-indigo-300 inline-flex items-center gap-1">
+                  <i class="fa-solid fa-arrows-rotate text-[9px]"></i> RU
+                </span>
+                <span v-else-if="getAssemblyStageStatus(selectedAssemblyItem || selectedHoldItem) === 'Hold'"
+                  class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-amber-100 text-amber-900 border border-amber-300 inline-block">
+                  <i class="fa-solid fa-hand text-[9px] mr-0.5"></i> HOLD
+                </span>
+                
+                <span v-else-if="getAssemblyStageStatus(selectedAssemblyItem || selectedHoldItem) === 'Scrap'"
+                  class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-slate-200 text-slate-800 border border-slate-300 inline-block">
+                  <i class="fa-solid fa-ban text-[9px] mr-0.5"></i> SCRAP
+                </span>
+                <span v-else
+                  class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-emerald-100 text-emerald-900 border border-emerald-300 inline-block">
+                  <i class="fa-solid fa-circle-check text-[9px] mr-0.5"></i> GOOD
+                </span>
+              </div>
+            </div>
+
+            <!-- Timestamps & Duration -->
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 grid grid-cols-3 gap-2 text-[11px]">
+              <div>
+                <span class="text-[9.5px] font-bold text-slate-400 uppercase block">Waktu Mulai:</span>
+                <span class="font-mono text-slate-700 text-[10.5px]">{{ formatDateTime(selectedAssemblyItem?.started_at)
+                  || '-' }}</span>
+              </div>
+              <div>
+                <span class="text-[9.5px] font-bold text-slate-400 uppercase block">Waktu Selesai:</span>
+                <span class="font-mono text-slate-700 text-[10.5px]">{{
+                  formatDateTime(selectedAssemblyItem?.finished_at) || '-' }}</span>
+              </div>
+              <div>
+                <span class="text-[9.5px] font-bold text-slate-400 uppercase block">Durasi Perakitan:</span>
+                <strong class="font-mono text-indigo-700 text-[10.5px]">{{
+                  calculateAssemblyDuration(selectedAssemblyItem?.started_at, selectedAssemblyItem?.finished_at)
+                  }}</strong>
+              </div>
+            </div>
+
+            <!-- Serial Numbers -->
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2 font-mono">
+              <div class="flex justify-between items-center border-b border-slate-200/60 pb-1.5">
+                <span class="text-[10px] font-sans font-bold text-slate-500 uppercase">SN P9 (Part 15):</span>
+                <strong class="text-slate-900 text-sm">{{ selectedAssemblyItem?.part15_sn || selectedHoldItem?.part15_sn
+                  || '-' }}</strong>
+              </div>
+              <div class="flex justify-between items-center border-b border-slate-200/60 pb-1.5">
+                <span class="text-[10px] font-sans font-bold text-slate-500 uppercase">PN Part 1:</span>
+                <strong class="text-slate-800">{{ selectedAssemblyItem?.part1_sn || selectedHoldItem?.part1_sn || '-'
+                  }}</strong>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-[10px] font-sans font-bold text-slate-500 uppercase">PN Part 12:</span>
+                <strong class="text-slate-800">{{ selectedAssemblyItem?.part12_sn || selectedHoldItem?.part12_sn || '-'
+                  }}</strong>
+              </div>
+            </div>
+
+            <!-- Problem / Failure Details Box if any -->
+            <div
+              v-if="getAssemblyStageStatus(selectedAssemblyItem || selectedHoldItem) !== 'Good' && (selectedAssemblyItem?.assembly_reason || selectedAssemblyItem?.reason)"
+              class="bg-amber-50 border border-amber-200 p-3 rounded-xl space-y-1">
+              <div class="text-[10px] font-black uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
+                <i class="fa-solid fa-triangle-exclamation text-amber-600"></i>
+                <span>Catatan Kendala / Part Cacat:</span>
+              </div>
+              <div class="text-xs text-amber-950 font-medium leading-relaxed">
+                {{ selectedAssemblyItem?.assembly_reason || selectedAssemblyItem?.reason || 'Tidak ada catatan kendala'
+                }}
+              </div>
+            </div>
+
+            <!-- Riwayat Pergantian Part / Perubahan Status -->
+            <div
+              v-if="selectedAssemblyItem?.rework_reason || selectedHoldItem?.rework_reason || (selectedAssemblyItem?.reason && selectedAssemblyItem?.reason.includes('Ganti Part'))"
+              class="bg-blue-50 border border-blue-200 p-3 rounded-xl space-y-2 text-xs">
+              <div class="text-[10px] font-black uppercase tracking-wider text-blue-900 flex items-center gap-1.5">
+                <i class="fa-solid fa-wrench text-blue-600"></i>
+                <span>Riwayat Pergantian Part:</span>
+              </div>
+              <div
+                v-if="getParsedReplacementHistory(selectedAssemblyItem?.rework_reason || selectedHoldItem?.rework_reason || selectedAssemblyItem?.reason).length > 0"
+                class="flex flex-wrap gap-2">
+                <div
+                  v-for="r in getParsedReplacementHistory(selectedAssemblyItem?.rework_reason || selectedHoldItem?.rework_reason || selectedAssemblyItem?.reason)"
+                  :key="r.partType"
+                  class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-blue-200 rounded-lg text-xs shadow-2xs">
+                  <span class="font-bold text-blue-800 text-[10.5px] uppercase">Part {{ r.partType }}:</span>
+                  <span class="font-mono line-through text-rose-500 font-bold">{{ r.oldSN }}</span>
+                  <i class="fa-solid fa-arrow-right text-[10px] text-slate-400 mx-0.5"></i>
+                  <span class="font-mono text-emerald-600 font-black">{{ r.newSN }}</span>
+                </div>
+              </div>
+              <div v-else class="font-mono text-blue-950 font-medium leading-relaxed">
+                {{ selectedAssemblyItem?.rework_reason || selectedHoldItem?.rework_reason ||
+                selectedAssemblyItem?.reason }}
+              </div>
+            </div>
+
+            <!-- Rework / Hold Reason Section (Hanya jika status bukan Good) -->
+            <div
+              v-if="getAssemblyStageStatus(selectedAssemblyItem || selectedHoldItem) !== 'Good' && (selectedAssemblyItem?.rework_reason || selectedHoldItem?.rework_reason || selectedAssemblyItem?.reason || selectedAssemblyItem?.assembly_reason || selectedAssemblyItem?.latest_replacement_reason)"
+              class="bg-blue-50/70 border border-blue-200 rounded-2xl p-4 space-y-2 text-xs">
+              <div class="flex items-center space-x-2 text-blue-900 font-bold">
+                <i class="fa-solid fa-file-lines text-blue-600"></i>
+                <span>Catatan / Alasan Unit Perakitan:</span>
+              </div>
+              <div>
+                <div v-if="selectedAssemblyItem?.latest_replacement_reason"
+                  class="font-mono text-blue-950 font-medium leading-relaxed">
+                  <span class="font-bold text-blue-800">Alasan Ganti Part:</span> {{
+                  selectedAssemblyItem?.latest_replacement_reason }}
+                  <div v-if="selectedAssemblyItem?.rework_reason" class="mt-1 text-[11px] text-slate-600">
+                    <span class="font-bold text-slate-700">Catatan Tambahan:</span> {{
+                    selectedAssemblyItem?.rework_reason }}
+                  </div>
+                </div>
+                <div v-else class="font-mono text-blue-950 font-medium leading-relaxed">
+                  {{ selectedAssemblyItem?.rework_reason || selectedHoldItem?.rework_reason ||
+                  selectedAssemblyItem?.reason }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Buttons Bar -->
+          <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
+            <!-- 1. Tombol KEMBALI -->
+            <button type="button" @click="showAssemblyDetailModal = false; showHoldDetailModal = false"
+              class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+              <i class="fa-solid fa-arrow-left text-[11px]"></i>
+              <span>Kembali</span>
+            </button>
+
+            <!-- Tombol Aksi: DAFTAR ULANG & GANTI PART -->
+            <!-- 1. Jika Sedang Menunggu Verifikasi Admin: Sembunyikan Tombol & Tampilkan Status Pending (hanya untuk yang bermasalah di perakitan) -->
+            <div
+              v-if="isItemPendingAdmin(selectedAssemblyItem || selectedHoldItem)"
+              class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs font-bold shadow-xs">
+              <i class="fa-solid fa-clock-rotate-left text-amber-600 text-sm"></i>
+              <div>
+                <span class="block text-amber-950 font-black">{{ getItemPendingLabel(selectedAssemblyItem ||
+                  selectedHoldItem) }}</span>
+                <span class="block text-[10px] text-amber-700 font-medium">Pengajuan sedang diproses Admin. Tombol aksi
+                  akan muncul kembali setelah dikonfirmasi.</span>
+              </div>
+            </div>
+
+            <!-- 2. Jika SUDAH MASUK PERAKITAN ULANG (RU): GABISA DIAPA-APAIN, HANYA LIHAT DETAIL PERUBAHAN PART -->
+            <div v-else-if="isReassemblySet(selectedAssemblyItem || selectedHoldItem)"
+              class="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs shadow-xs">
+              <i class="fa-solid fa-arrows-rotate text-indigo-600 text-base shrink-0"></i>
+              <div>
+                <span class="block text-indigo-950 font-black uppercase text-[11px]">Dirakit Ulang (RU)</span>
+                <span class="block text-[10.5px] text-indigo-700 font-medium leading-relaxed">Unit telah masuk antrean
+                  perakitan ulang dan tidak dapat diubah lagi.</span>
+              </div>
+            </div>
+
+            <div
+              v-else-if="(selectedAssemblyItem || selectedHoldItem)?.assembly_status !== 'Good' && ((selectedAssemblyItem || selectedHoldItem)?.verified_status === 'APPROVED_REREG' || (selectedAssemblyItem || selectedHoldItem)?.is_reregistered)"
+              class="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs shadow-xs">
+              <i class="fa-solid fa-circle-check text-indigo-600 text-base shrink-0"></i>
+              <div>
+                <span class="block text-indigo-950 font-black uppercase text-[11px]">Selesai Didaftarkan Ulang &bull;
+                  Disetujui Admin</span>
+                <span class="block text-[10.5px] text-indigo-700 font-medium leading-relaxed">Unit ini telah selesai
+                  disetujui Admin untuk dirakit ulang ke dokumen baru (<strong class="font-mono text-indigo-900">{{
+                    (selectedAssemblyItem || selectedHoldItem)?.rereg_wo_suffix ? ((selectedAssemblyItem ||
+                    selectedHoldItem)?.tray_code + '-' + (selectedAssemblyItem || selectedHoldItem)?.rereg_wo_suffix) :
+                    getNextPUTrayCode((selectedAssemblyItem || selectedHoldItem)?.tray_code) }}</strong>). Unit ini
+                  tidak dapat didaftarkan ulang lagi.</span>
+              </div>
+            </div>
+
+            <!-- 3. Jika Belum Didaftarkan Ulang & Status Perakitan Bukan Good: Tampilkan Tombol -->
+            <div
+              v-else-if="String(selectedAssemblyItem?.assembly_status || selectedHoldItem?.assembly_status || 'Good').trim().toUpperCase() !== 'GOOD' && !isReassemblySet(selectedAssemblyItem || selectedHoldItem)"
+              class="flex items-center gap-2 flex-wrap">
+
+              <!-- KONDISI A: DARI HASIL TEST FUNCTIONAL (Uji Fungsional 1 atau QC) -> LANJUT PROSES & GANTI PART -->
+              <template
+                v-if="currentTab === 'functional_hold' || (showHoldDetailModal && currentTab !== 'production_hold')">
+                <button type="button"
+                  @click="proceedHoldItem(selectedHoldItem || selectedAssemblyItem)"
+                  class="h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition flex items-center gap-1.5 cursor-pointer active:scale-95 whitespace-nowrap">
+                  <i class="fa-solid fa-circle-arrow-right text-[11px]"></i>
+                  <span>{{ getHoldProceedButtonLabel(selectedHoldItem || selectedAssemblyItem) }}</span>
+                </button>
+                <button type="button" @click="openReplacePartSubModal"
+                  class="h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-600/20 transition flex items-center gap-1.5 cursor-pointer active:scale-95 whitespace-nowrap">
+                  <i class="fa-solid fa-wrench text-[11px]"></i>
+                  <span>Ganti Part</span>
+                </button>
+              </template>
+
+              <!-- KONDISI B: DARI HASIL PERAKITAN (ASSEMBLY MURNI) -> LANJUT PROSES & GANTI PART -->
+              <template v-else>
+                <!-- Keterangan Jika Semua Part Bermasalah Sudah Diganti: Informasi Tambahan Siap Daftar Ulang -->
+                <div v-if="isAllProblematicPartsReplaced(selectedAssemblyItem || selectedHoldItem)"
+                  class="px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs font-bold flex items-center gap-1.5 shadow-2xs">
+                  <i class="fa-solid fa-circle-check text-emerald-600 text-sm"></i>
+                  <span>Part bermasalah telah diganti &bull; Siap untuk Rakit Ulang</span>
+                </div>
+
+                <!-- Tombol LANJUT TF 1 / PROSES BERIKUTNYA -->
+                <button type="button"
+                  @click="proceedHoldItem(selectedAssemblyItem || selectedHoldItem)"
+                  class="h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition flex items-center gap-1.5 cursor-pointer active:scale-95 whitespace-nowrap">
+                  <i class="fa-solid fa-circle-arrow-right text-[11px]"></i>
+                  <span>{{ getHoldProceedButtonLabel(selectedAssemblyItem || selectedHoldItem) }}</span>
+                </button>
+
+                <!-- Tombol GANTI PART -->
+                <button type="button" @click="openReplacePartSubModal"
+                  class="h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-600/20 transition flex items-center gap-1.5 cursor-pointer active:scale-95 whitespace-nowrap">
+                  <i class="fa-solid fa-wrench text-[11px]"></i>
+                  <span>Ganti Part</span>
+                </button>
+              </template>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= SUB-MODAL 1: DAFTAR ULANG 1 SET RAKITAN (Perakitan Ulang) ================= -->
+      <div v-if="showReregisterSubModal"
+        @click.self="safeCloseModal(() => showReregisterSubModal = false, !!(reregOperator || reregisterReason))"
+        class="modal-backdrop-full modal-backdrop-nested !m-0 !top-0 !left-0 !right-0 !bottom-0 flex items-center justify-center p-3 sm:p-4 overflow-y-auto no-print">
+        <div
+          class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4 my-auto animate-fadeIn">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div class="flex items-center space-x-2.5">
+              <div
+                class="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center text-sm font-bold">
+                <i class="fa-solid fa-hammer"></i>
+              </div>
+              <div>
+                <h3 class="font-black text-sm text-slate-900">Daftar Ulang — Perakitan Ulang</h3>
+                <p class="text-[11px] text-slate-500 font-medium">Set ini akan dikembalikan ke antrean perakitan
+                  operator</p>
+              </div>
+            </div>
+            <button type="button"
+              @click="safeCloseModal(() => showReregisterSubModal = false, !!(reregOperator || reregisterReason))"
+              class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg transition cursor-pointer">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+
+          <div class="space-y-3 text-xs">
+            <!-- Info Alur Baru -->
+            <div
+              class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[11px] text-amber-900 flex items-start gap-2.5">
+              <i class="fa-solid fa-triangle-exclamation text-amber-600 text-sm mt-0.5 shrink-0"></i>
+              <div class="space-y-1">
+                <span class="font-bold block text-amber-950">Alur Perakitan Ulang:</span>
+                <ul class="leading-relaxed text-amber-800 space-y-0.5 list-disc pl-3">
+                  <li>Status set akan menjadi <strong>Supplied</strong> dan perlu dirakit ulang oleh operator</li>
+                  <li>Dokumen WO asli <strong>tidak berubah</strong> — dokumen baru akan dibuat dengan suffix
+                    inkremental <strong>-PU1, -PU2, dst</strong></li>
+                  <li>Pengajuan ini membutuhkan persetujuan <strong>Admin</strong> terlebih dahulu</li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- Set Info Summary -->
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-1.5">
+              <div class="flex justify-between items-center">
+                <span class="text-slate-500 font-semibold">Set #</span>
+                <span class="font-black text-slate-900">{{ (selectedHoldItem || selectedAssemblyItem)?.set_number
+                  }}</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-slate-500 font-semibold">WO / Tray</span>
+                <span class="font-black text-slate-900">{{ (selectedHoldItem || selectedAssemblyItem)?.tray_code
+                  }}</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-slate-500 font-semibold">Operator Sebelumnya</span>
+                <span class="font-black text-slate-900">{{ (selectedHoldItem || selectedAssemblyItem)?.pic_assembly ||
+                  '-' }}</span>
+              </div>
+            </div>
+
+            <!-- Pilih Operator Perakitan Ulang -->
+            <div>
+              <label class="block text-[10.5px] font-bold uppercase text-slate-700 mb-1.5">
+                <i class="fa-solid fa-user-gear mr-1 text-amber-600"></i>
+                Operator yang Akan Merakit Ulang:
+              </label>
+              <div class="relative">
+                <select v-model="reregOperator"
+                  class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-900 focus:outline-none focus:border-amber-600 appearance-none cursor-pointer">
+                  <option value="">— Pilih Operator —</option>
+                  <option v-for="op in operatorUsersList" :key="op.username || op.id"
+                    :value="op.full_name || op.username">
+                    {{ op.full_name || op.username }}
+                  </option>
+                </select>
+                <i
+                  class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] pointer-events-none"></i>
+              </div>
+              <p class="text-[10px] text-slate-400 mt-1">
+                <i class="fa-solid fa-info-circle mr-1"></i>
+                Kosongkan untuk menggunakan operator yang sama ({{ (selectedHoldItem ||
+                selectedAssemblyItem)?.pic_assembly || 'sebelumnya' }})
+              </p>
+            </div>
+
+            <div>
+              <label class="block text-[10.5px] font-bold uppercase text-slate-700 mb-1">
+                Catatan / Alasan Perakitan Ulang:
+              </label>
+              <textarea v-model="reregisterReason" rows="2"
+                placeholder="Tuliskan alasan kenapa set ini perlu dirakit ulang..."
+                class="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs font-semibold text-slate-900 focus:outline-none focus:border-amber-600"></textarea>
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+            <button type="button" @click="showReregisterSubModal = false"
+              class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition">
+              Batal
+            </button>
+            <button type="button" @click="submitReregisterSetAction" :disabled="isSubmittingReregisterSetAction"
+              class="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-md shadow-amber-600/20 transition flex items-center gap-1.5 active:scale-95 disabled:opacity-50">
+              <i :class="isSubmittingReregisterSetAction ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-hammer'"></i>
+              <span>Ajukan Perakitan Ulang ke Admin</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= SUB-MODAL 2: GANTI PART BERMASALAH ================= -->
+      <div v-if="showReplacePartModal" @click.self="safeCloseModal(closeReplacePartModal, totalPartsToReplace > 0)"
+        class="modal-backdrop-full modal-backdrop-nested flex items-start justify-center p-3 sm:p-4 overflow-y-auto no-print pt-6 sm:pt-12 pb-16">
+        <div
+          class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-4 my-auto sm:my-0 animate-fadeIn">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div class="flex items-center space-x-2.5">
+              <div
+                class="w-9 h-9 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 flex items-center justify-center text-sm font-bold">
+                <i class="fa-solid fa-wrench"></i>
+              </div>
+              <div>
+                <h3 class="font-black text-sm text-slate-900">Ganti Part Bermasalah</h3>
+                <p class="text-[11px] text-slate-500 font-medium">Ganti komponen rusak dengan part baru dari Master Stok
+                </p>
+              </div>
+            </div>
+            <button type="button" @click="safeCloseModal(closeReplacePartModal, totalPartsToReplace > 0)"
+              class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg transition cursor-pointer">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+
+          <div class="space-y-3.5 text-xs">
+            <!-- 1. Komponen yang Terpasang Saat Ini & Status -->
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <label class="block text-[10.5px] font-bold uppercase text-slate-700 flex items-center gap-1.5">
+                  <span>1. Komponen yang terpasang saat ini:</span>
+                </label>
+              </div>
+
+              <!-- Grid status 3 part -->
+              <div class="grid grid-cols-3 gap-2">
+                <!-- Part 15 -->
+                <div class="p-2.5 rounded-xl border text-center transition relative"
+                  :class="(!isFunctionalHoldItem(selectedHoldItem) && isProblemPart('15')) ? 'bg-red-50/70 border-red-300 ring-1 ring-red-300' : 'bg-slate-50 border-slate-200'">
+                  <span v-if="!isFunctionalHoldItem(selectedHoldItem) && isProblemPart('15')"
+                    class="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded text-[8px] bg-red-500 text-white font-black leading-none">Bermasalah</span>
+                  <span v-else
+                    class="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded text-[8px] bg-emerald-500 text-white font-black leading-none">Normal</span>
+                  <span class="block text-[10px] opacity-80 uppercase font-bold text-slate-600">Part 15 (P9)</span>
+                  <span class="font-mono text-xs truncate block font-bold text-slate-900">{{ selectedHoldItem?.part15_sn
+                    || '-' }}</span>
+                </div>
+
+                <!-- Part 1 -->
+                <div class="p-2.5 rounded-xl border text-center transition relative"
+                  :class="(!isFunctionalHoldItem(selectedHoldItem) && isProblemPart('1')) ? 'bg-red-50/70 border-red-300 ring-1 ring-red-300' : 'bg-slate-50 border-slate-200'">
+                  <span v-if="!isFunctionalHoldItem(selectedHoldItem) && isProblemPart('1')"
+                    class="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded text-[8px] bg-red-500 text-white font-black leading-none">Bermasalah</span>
+                  <span v-else
+                    class="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded text-[8px] bg-emerald-500 text-white font-black leading-none">Normal</span>
+                  <span class="block text-[10px] opacity-80 uppercase font-bold text-slate-600">Part 1</span>
+                  <span class="font-mono text-xs truncate block font-bold text-slate-900">{{ selectedHoldItem?.part1_sn
+                    || '-' }}</span>
+                </div>
+
+                <!-- Part 12 -->
+                <div class="p-2.5 rounded-xl border text-center transition relative"
+                  :class="(!isFunctionalHoldItem(selectedHoldItem) && isProblemPart('12')) ? 'bg-red-50/70 border-red-300 ring-1 ring-red-300' : 'bg-slate-50 border-slate-200'">
+                  <span v-if="!isFunctionalHoldItem(selectedHoldItem) && isProblemPart('12')"
+                    class="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded text-[8px] bg-red-500 text-white font-black leading-none">Bermasalah</span>
+                  <span v-else
+                    class="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded text-[8px] bg-emerald-500 text-white font-black leading-none">Normal</span>
+                  <span class="block text-[10px] opacity-80 uppercase font-bold text-slate-600">Part 12</span>
+                  <span class="font-mono text-xs truncate block font-bold text-slate-900">{{ selectedHoldItem?.part12_sn
+                    || '-' }}</span>
+                </div>
+              </div>
+
+              <!-- Info Alasan Rework / Hold / Scrap -->
+              <div
+                class="mt-2.5 p-3 rounded-xl border bg-amber-50/80 border-amber-200 text-amber-900 space-y-1.5 shadow-xs">
+                <div class="flex items-center justify-between gap-2">
+                  <div
+                    class="flex items-center gap-1.5 font-bold text-[10.5px] uppercase tracking-wider text-amber-900">
+                    <i class="fa-solid fa-circle-exclamation text-amber-600"></i>
+                    <span>Alasan {{ selectedHoldItem?.assembly_status || selectedHoldItem?.status || 'Bermasalah'
+                      }}:</span>
+                  </div>
+                  <span :class="[
+                    (selectedHoldItem?.assembly_status === 'Rework' || selectedHoldItem?.status === 'Rework') ? 'bg-purple-100 text-purple-800 border-purple-200' :
+                    (selectedHoldItem?.assembly_status === 'Hold' || selectedHoldItem?.status === 'Hold') ? 'bg-amber-100 text-amber-800 border-amber-200' :
+                    'bg-red-100 text-red-800 border-red-200'
+                  ]" class="text-[9.5px] font-bold px-2 py-0.5 rounded-md border font-mono uppercase">
+                    Status: {{ selectedHoldItem?.assembly_status || selectedHoldItem?.status || 'Hold' }}
+                  </span>
+                </div>
+                <div
+                  class="text-xs font-semibold text-slate-800 bg-white/90 border border-amber-200/70 rounded-lg px-3 py-2 leading-relaxed break-words shadow-xs">
+                  {{ getItemProblemReason(selectedHoldItem) }}
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. Status untuk Part Lama di Master Stok -->
+            <div>
+              <label class="block text-[10.5px] font-bold uppercase text-slate-700 mb-2">
+                2. Status Part Lama yang Dilepas ke Master Stok:
+              </label>
+              <div class="grid grid-cols-2 gap-2">
+                <button type="button" @click="replaceOldStatus = 'Hold'"
+                  :class="replaceOldStatus === 'Hold' ? 'bg-amber-600 text-white ring-2 ring-amber-400 font-black shadow-md' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 font-bold'"
+                  class="py-2.5 px-3 rounded-xl text-xs transition flex items-center justify-center gap-2 min-h-[40px] cursor-pointer active:scale-95 select-none">
+                  <i class="fa-solid fa-hand text-sm"></i>
+                  <span>Status: Hold</span>
+                </button>
+                <button type="button" @click="replaceOldStatus = 'Scrap'"
+                  :class="replaceOldStatus === 'Scrap' ? 'bg-red-600 text-white ring-2 ring-red-400 font-black shadow-md' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 font-bold'"
+                  class="py-2.5 px-3 rounded-xl text-xs transition flex items-center justify-center gap-2 min-h-[40px] cursor-pointer active:scale-95 select-none">
+                  <i class="fa-solid fa-trash-can text-sm"></i>
+                  <span>Status: Scrap</span>
+                </button>
+              </div>
+              <p class="text-[10px] text-slate-500 mt-1.5 italic">
+                * Part lama yang diganti akan masuk ke Master Database dan antrean verifikasi untuk didaftarkan ulang
+                secara satuan.
+              </p>
+            </div>
+
+            <!-- 3. PILIH PART BARU PENGGANTI (HANYA PART BERMASALAH) -->
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <label class="block text-[10.5px] font-bold uppercase text-slate-700">
+                  3. Pilih Part Baru Pengganti dari Stok Gudang (Bebas pilih 1 s/d 3 part):
+                </label>
+                <span class="text-[10px] font-bold"
+                  :class="totalPartsToReplace > 0 ? 'text-blue-700' : 'text-slate-500'">
+                  {{ totalPartsToReplace }} part dipilih untuk diganti
+                </span>
+              </div>
+
+              <!-- ================= DROPDOWN PART 15 ================= -->
+              <div class="p-3 rounded-xl border space-y-1.5"
+                :class="(!isFunctionalHoldItem(selectedHoldItem) && isProblemPart('15')) ? 'border-red-200 bg-red-50/20 ring-1 ring-red-200' : 'border-slate-200 bg-slate-50/30'">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="font-bold text-slate-800 text-xs">Part 15 (P9)</span>
+                    <span v-if="!isFunctionalHoldItem(selectedHoldItem) && isProblemPart('15')"
+                      class="px-1.5 py-0.5 rounded text-[8px] bg-red-500 text-white font-black leading-none">Bermasalah</span>
+                    <span class="text-[10.5px] text-slate-500 font-mono">Lama: <strong>{{ selectedHoldItem?.part15_sn ||
+                        '-' }}</strong></span>
+                  </div>
+                  <span class="text-[10px] font-mono text-slate-400 font-bold">
+                    <span v-if="isLoadingPartsByType['15']"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Memuat...</span>
+                    <span v-else>{{ availableReplacePartsByType['15']?.length || 0 }} tersedia</span>
+                  </span>
+                </div>
+
+                <div class="relative">
+                  <button type="button" @click="toggleReplaceDropdown('15')"
+                    class="w-full bg-white border border-slate-300 hover:bg-slate-50 focus:bg-white rounded-xl px-3 py-2 text-xs font-mono font-bold text-left transition flex items-center justify-between min-h-[40px] cursor-pointer"
+                    :class="replaceDropdownOpen['15'] ? 'border-blue-600 ring-2 ring-blue-500/20' : (replaceSelections['15'] ? 'border-blue-500 bg-blue-50/30' : '')">
+                    <div class="flex items-center gap-2 truncate">
+                      <i class="fa-solid fa-barcode text-slate-400 text-xs"></i>
+                      <span v-if="replaceSelections['15']" class="text-blue-700 font-black">
+                        {{ replaceSelections['15'] }} <span
+                          class="text-[10.5px] font-sans font-bold text-emerald-600">(Pengganti Part 15)</span>
+                      </span>
+                      <span v-else class="text-slate-400 font-sans font-medium">
+                        Pilih part pengganti
+                      </span>
+                    </div>
+                    <div class="flex items-center gap-1.5 text-slate-400">
+                      <span v-if="replaceSelections['15']" @click.stop="clearReplaceSNForPart('15')"
+                        class="hover:text-red-500 p-0.5 rounded transition cursor-pointer" title="Hapus pilihan">
+                        <i class="fa-solid fa-xmark text-xs"></i>
+                      </span>
+                      <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-200"
+                        :class="{ 'rotate-180': replaceDropdownOpen['15'] }"></i>
+                    </div>
+                  </button>
+
+                  <!-- Backdrop to close -->
+                  <div v-if="replaceDropdownOpen['15']" @click="replaceDropdownOpen['15'] = false"
+                    class="fixed inset-0 z-40"></div>
+
+                  <!-- Dropdown Popover -->
+                  <div v-if="replaceDropdownOpen['15']"
+                    class="absolute left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 p-2 space-y-2 max-h-56 flex flex-col animate-fadeIn">
+                    <div class="relative">
+                      <input type="text" v-model="replaceSearchQueries['15']" placeholder="Cari SN Part 15..."
+                        class="w-full bg-slate-50 border border-slate-200 rounded-lg pl-8 pr-3 py-1.5 text-xs font-mono text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-600 focus:bg-white"
+                        @click.stop>
+                      <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-[10px] text-slate-400"></i>
+                    </div>
+                    <div class="overflow-y-auto max-h-40 divide-y divide-slate-100 pr-1 space-y-0.5">
+                      <div @click="clearReplaceSNForPart('15'); replaceDropdownOpen['15'] = false"
+                        class="px-3 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer transition flex items-center justify-between">
+                        <span>Tetap {{ selectedHoldItem?.part15_sn || '-' }}</span>
+                        <span class="text-[10.5px] text-slate-400 font-sans font-normal">(Tidak diganti)</span>
+                      </div>
+                      <div v-if="isLoadingPartsByType['15']"
+                        class="py-3 text-center text-xs text-slate-400">
+                        <i class="fa-solid fa-spinner fa-spin mr-1"></i> Memuat stok...
+                      </div>
+                      <div v-else-if="getFilteredPartsForType('15').length === 0"
+                        class="py-3 text-center text-xs text-slate-400">
+                        Tidak ada stok Part 15 tersedia
+                      </div>
+                      <div v-for="p in getFilteredPartsForType('15')" :key="p.sn"
+                        @click="selectReplaceSNForPart('15', p.sn)"
+                        :class="replaceSelections['15'] === p.sn ? 'bg-blue-50 text-blue-700 font-black' : 'text-slate-700 hover:bg-slate-50 font-semibold'"
+                        class="px-3 py-1.5 rounded-lg text-xs font-mono flex items-center justify-between cursor-pointer transition">
+                        <span class="flex items-center gap-2">
+                          <i v-if="replaceSelections['15'] === p.sn"
+                            class="fa-solid fa-check text-blue-600 text-xs"></i>
+                          <span>{{ p.sn }}</span>
+                        </span>
+                        <span
+                          class="text-[9.5px] font-sans px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">
+                          {{ p.status }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ================= DROPDOWN PART 1 ================= -->
+              <div class="p-3 rounded-xl border space-y-1.5"
+                :class="(!isFunctionalHoldItem(selectedHoldItem) && isProblemPart('1')) ? 'border-red-200 bg-red-50/20 ring-1 ring-red-200' : 'border-slate-200 bg-slate-50/30'">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="font-bold text-slate-800 text-xs">Part 1</span>
+                    <span v-if="!isFunctionalHoldItem(selectedHoldItem) && isProblemPart('1')"
+                      class="px-1.5 py-0.5 rounded text-[8px] bg-red-500 text-white font-black leading-none">Bermasalah</span>
+                    <span class="text-[10.5px] text-slate-500 font-mono">Lama: <strong>{{ selectedHoldItem?.part1_sn ||
+                        '-' }}</strong></span>
+                  </div>
+                  <span class="text-[10px] font-mono text-slate-400 font-bold">
+                    <span v-if="isLoadingPartsByType['1']"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Memuat...</span>
+                    <span v-else>{{ availableReplacePartsByType['1']?.length || 0 }} tersedia</span>
+                  </span>
+                </div>
+
+                <div class="relative">
+                  <button type="button" @click="toggleReplaceDropdown('1')"
+                    class="w-full bg-white border border-slate-300 hover:bg-slate-50 focus:bg-white rounded-xl px-3 py-2 text-xs font-mono font-bold text-left transition flex items-center justify-between min-h-[40px] cursor-pointer"
+                    :class="replaceDropdownOpen['1'] ? 'border-blue-600 ring-2 ring-blue-500/20' : (replaceSelections['1'] ? 'border-blue-500 bg-blue-50/30' : '')">
+                    <div class="flex items-center gap-2 truncate">
+                      <i class="fa-solid fa-barcode text-slate-400 text-xs"></i>
+                      <span v-if="replaceSelections['1']" class="text-blue-700 font-black">
+                        {{ replaceSelections['1'] }} <span
+                          class="text-[10.5px] font-sans font-bold text-emerald-600">(Pengganti Part 1)</span>
+                      </span>
+                      <span v-else class="text-slate-400 font-sans font-medium">
+                        Pilih part pengganti
+                      </span>
+                    </div>
+                    <div class="flex items-center gap-1.5 text-slate-400">
+                      <span v-if="replaceSelections['1']" @click.stop="clearReplaceSNForPart('1')"
+                        class="hover:text-red-500 p-0.5 rounded transition cursor-pointer" title="Hapus pilihan">
+                        <i class="fa-solid fa-xmark text-xs"></i>
+                      </span>
+                      <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-200"
+                        :class="{ 'rotate-180': replaceDropdownOpen['1'] }"></i>
+                    </div>
+                  </button>
+
+                  <!-- Backdrop to close -->
+                  <div v-if="replaceDropdownOpen['1']" @click="replaceDropdownOpen['1'] = false"
+                    class="fixed inset-0 z-40"></div>
+
+                  <!-- Dropdown Popover -->
+                  <div v-if="replaceDropdownOpen['1']"
+                    class="absolute left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 p-2 space-y-2 max-h-56 flex flex-col animate-fadeIn">
+                    <div class="relative">
+                      <input type="text" v-model="replaceSearchQueries['1']" placeholder="Cari SN Part 1..."
+                        class="w-full bg-slate-50 border border-slate-200 rounded-lg pl-8 pr-3 py-1.5 text-xs font-mono text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-600 focus:bg-white"
+                        @click.stop>
+                      <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-[10px] text-slate-400"></i>
+                    </div>
+                    <div class="overflow-y-auto max-h-40 divide-y divide-slate-100 pr-1 space-y-0.5">
+                      <div @click="clearReplaceSNForPart('1'); replaceDropdownOpen['1'] = false"
+                        class="px-3 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer transition flex items-center justify-between">
+                        <span>Tetap {{ selectedHoldItem?.part1_sn || '-' }}</span>
+                        <span class="text-[10.5px] text-slate-400 font-sans font-normal">(Tidak diganti)</span>
+                      </div>
+                      <div v-if="isLoadingPartsByType['1']"
+                        class="py-3 text-center text-xs text-slate-400">
+                        <i class="fa-solid fa-spinner fa-spin mr-1"></i> Memuat stok...
+                      </div>
+                      <div v-else-if="getFilteredPartsForType('1').length === 0"
+                        class="py-3 text-center text-xs text-slate-400">
+                        Tidak ada stok Part 1 tersedia
+                      </div>
+                      <div v-for="p in getFilteredPartsForType('1')" :key="p.sn"
+                        @click="selectReplaceSNForPart('1', p.sn)"
+                        :class="replaceSelections['1'] === p.sn ? 'bg-blue-50 text-blue-700 font-black' : 'text-slate-700 hover:bg-slate-50 font-semibold'"
+                        class="px-3 py-1.5 rounded-lg text-xs font-mono flex items-center justify-between cursor-pointer transition">
+                        <span class="flex items-center gap-2">
+                          <i v-if="replaceSelections['1'] === p.sn" class="fa-solid fa-check text-blue-600 text-xs"></i>
+                          <span>{{ p.sn }}</span>
+                        </span>
+                        <span
+                          class="text-[9.5px] font-sans px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">
+                          {{ p.status }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ================= DROPDOWN PART 12 ================= -->
+              <div class="p-3 rounded-xl border space-y-1.5"
+                :class="(!isFunctionalHoldItem(selectedHoldItem) && isProblemPart('12')) ? 'border-red-200 bg-red-50/20 ring-1 ring-red-200' : 'border-slate-200 bg-slate-50/30'">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="font-bold text-slate-800 text-xs">Part 12</span>
+                    <span v-if="!isFunctionalHoldItem(selectedHoldItem) && isProblemPart('12')"
+                      class="px-1.5 py-0.5 rounded text-[8px] bg-red-500 text-white font-black leading-none">Bermasalah</span>
+                    <span class="text-[10.5px] text-slate-500 font-mono">Lama: <strong>{{ selectedHoldItem?.part12_sn ||
+                        '-' }}</strong></span>
+                  </div>
+                  <span class="text-[10px] font-mono text-slate-400 font-bold">
+                    <span v-if="isLoadingPartsByType['12']"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Memuat...</span>
+                    <span v-else>{{ availableReplacePartsByType['12']?.length || 0 }} tersedia</span>
+                  </span>
+                </div>
+
+                <div class="relative">
+                  <button type="button" @click="toggleReplaceDropdown('12')"
+                    class="w-full bg-white border border-slate-300 hover:bg-slate-50 focus:bg-white rounded-xl px-3 py-2 text-xs font-mono font-bold text-left transition flex items-center justify-between min-h-[40px] cursor-pointer"
+                    :class="replaceDropdownOpen['12'] ? 'border-blue-600 ring-2 ring-blue-500/20' : (replaceSelections['12'] ? 'border-blue-500 bg-blue-50/30' : '')">
+                    <div class="flex items-center gap-2 truncate">
+                      <i class="fa-solid fa-barcode text-slate-400 text-xs"></i>
+                      <span v-if="replaceSelections['12']" class="text-blue-700 font-black">
+                        {{ replaceSelections['12'] }} <span
+                          class="text-[10.5px] font-sans font-bold text-emerald-600">(Pengganti Part 12)</span>
+                      </span>
+                      <span v-else class="text-slate-400 font-sans font-medium">
+                        Pilih part pengganti
+                      </span>
+                    </div>
+                    <div class="flex items-center gap-1.5 text-slate-400">
+                      <span v-if="replaceSelections['12']" @click.stop="clearReplaceSNForPart('12')"
+                        class="hover:text-red-500 p-0.5 rounded transition cursor-pointer" title="Hapus pilihan">
+                        <i class="fa-solid fa-xmark text-xs"></i>
+                      </span>
+                      <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-200"
+                        :class="{ 'rotate-180': replaceDropdownOpen['12'] }"></i>
+                    </div>
+                  </button>
+
+                  <!-- Backdrop to close -->
+                  <div v-if="replaceDropdownOpen['12']" @click="replaceDropdownOpen['12'] = false"
+                    class="fixed inset-0 z-40"></div>
+
+                  <!-- Dropdown Popover -->
+                  <div v-if="replaceDropdownOpen['12']"
+                    class="absolute left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 p-2 space-y-2 max-h-56 flex flex-col animate-fadeIn">
+                    <div class="relative">
+                      <input type="text" v-model="replaceSearchQueries['12']" placeholder="Cari SN Part 12..."
+                        class="w-full bg-slate-50 border border-slate-200 rounded-lg pl-8 pr-3 py-1.5 text-xs font-mono text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-600 focus:bg-white"
+                        @click.stop>
+                      <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-[10px] text-slate-400"></i>
+                    </div>
+                    <div class="overflow-y-auto max-h-40 divide-y divide-slate-100 pr-1 space-y-0.5">
+                      <div @click="clearReplaceSNForPart('12'); replaceDropdownOpen['12'] = false"
+                        class="px-3 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer transition flex items-center justify-between">
+                        <span>Tetap {{ selectedHoldItem?.part12_sn || '-' }}</span>
+                        <span class="text-[10.5px] text-slate-400 font-sans font-normal">(Tidak diganti)</span>
+                      </div>
+                      <div v-if="isLoadingPartsByType['12']"
+                        class="py-3 text-center text-xs text-slate-400">
+                        <i class="fa-solid fa-spinner fa-spin mr-1"></i> Memuat stok...
+                      </div>
+                      <div v-else-if="getFilteredPartsForType('12').length === 0"
+                        class="py-3 text-center text-xs text-slate-400">
+                        Tidak ada stok Part 12 tersedia
+                      </div>
+                      <div v-for="p in getFilteredPartsForType('12')" :key="p.sn"
+                        @click="selectReplaceSNForPart('12', p.sn)"
+                        :class="replaceSelections['12'] === p.sn ? 'bg-blue-50 text-blue-700 font-black' : 'text-slate-700 hover:bg-slate-50 font-semibold'"
+                        class="px-3 py-1.5 rounded-lg text-xs font-mono flex items-center justify-between cursor-pointer transition">
+                        <span class="flex items-center gap-2">
+                          <i v-if="replaceSelections['12'] === p.sn"
+                            class="fa-solid fa-check text-blue-600 text-xs"></i>
+                          <span>{{ p.sn }}</span>
+                        </span>
+                        <span
+                          class="text-[9.5px] font-sans px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">
+                          {{ p.status }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Info Komponen Normal Tidak Perlu Diganti -->
+              <div v-if="hasNonProblematicParts"
+                class="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 flex items-center gap-2">
+                <i class="fa-solid fa-circle-check text-emerald-600 text-xs"></i>
+                <span class="text-[11px] font-medium">Komponen berstatus <strong>Normal</strong> tidak perlu diganti dan
+                  otomatis dipertahankan.</span>
+              </div>
+            </div>
+
+            <!-- 4. Alasan Penggantian -->
+            <div>
+              <label class="block text-[10.5px] font-bold uppercase text-slate-700 mb-1">
+                4. Alasan Penggantian Part:
+              </label>
+              <input type="text" v-model="replaceReason"
+                placeholder="Contoh: Part retak / gagal uji tahap fungsional..."
+                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600 min-h-[38px]">
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+            <button type="button" @click="safeCloseModal(closeReplacePartModal, totalPartsToReplace > 0)"
+              class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition">
+              Batal
+            </button>
+            <button type="button" @click="submitReplacePartAction"
+              :disabled="isSubmittingReplacePartAction || totalPartsToReplace === 0"
+              class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-600/20 transition flex items-center gap-1.5 active:scale-95 disabled:opacity-50">
+              <i :class="isSubmittingReplacePartAction ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-check'"></i>
+              <span v-if="totalPartsToReplace > 0">Pasang {{ totalPartsToReplace }} Part Baru &amp; Simpan</span>
+              <span v-else>Pilih Part Pengganti</span>
+            </button>
+          </div>
+        </div>
+      </div>
 
 
 @endverbatim
