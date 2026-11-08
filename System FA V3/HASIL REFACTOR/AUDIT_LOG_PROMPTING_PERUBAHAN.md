@@ -42,7 +42,7 @@ flowchart TD
 ## 3. Log Kronologis Lengkap Seluruh 176 Prompting & Perubahan Sistem
 
 
-### Log Kronologis Perubahan Sistem (Prompt #050)
+### Log Kronologis Perubahan Sistem (Prompt #051)
 
 | No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
 |:---:|:---:|---|---|---|
@@ -96,3 +96,4 @@ flowchart TD
 | **#048** | `2026-11-09 04:58:03` | **UI/UX Components** | nih drop downnya jelek mana gada | Mendesain ulang dropdown custom dengan style clean modern. |
 | **#049** | `2026-11-09 05:08:17` | **Print Layout** | tanggal label nya tidak simetris tidak sejajar dengan object yang sebelahnya | Menyelaraskan posisi tanggal label agar simetris dengan elemen di sebelahnya. |
 | **#050** | `2026-11-09 05:47:57` | **Delivery Order (Surat Jalan)** | langsung munculin surat jalannya | Menampilkan pratinjau dokumen Surat Jalan langsung setelah aksi dibuat. |
+| **#051** | `2026-11-09 05:59:15` | **Quality Control (Anti-Rework)** | ini kenapa masih ada rework? saya sudah bilang hapus saja status rework dan hapus semua button yang rework POKONYA HAPUS YANG BERHUBUNGAN DENGAN STATUS REWORK | Menghapus seluruh status dan tombol 'Rework' dari seluruh modul sistem (strict linear flow). |
