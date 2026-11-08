@@ -67,6 +67,79 @@
     const showResetDbModal = ref(false);
     const isResettingDb = ref(false);
 
+    // Permission helpers & Unsaved Navigation dependencies
+    const defaultPermissions = ctx.defaultPermissions || function (role = 'User') {
+      const r = String(role || '').toLowerCase().trim();
+      const isAdmin = (r === 'admin' || r === 'super admin');
+      return {
+        warehouse: isAdmin ? 2 : 0,
+        work_order: isAdmin ? 2 : 0,
+        production_hold: isAdmin ? 2 : 1,
+        returns: isAdmin ? 2 : 0,
+        warehouse_receipt: isAdmin ? 2 : 0,
+        traveler: isAdmin ? 2 : 1,
+        master: isAdmin ? 2 : 1,
+        report: isAdmin ? 2 : 1,
+        history: isAdmin ? 2 : 1,
+        delivery_order: isAdmin ? 2 : 0,
+        assembly: isAdmin ? 2 : 0,
+        reassembly: isAdmin ? 2 : 0,
+        assy_testing: isAdmin ? 2 : 0,
+        qc: isAdmin ? 2 : 0,
+        functional_test: isAdmin ? 2 : 0,
+        users: isAdmin ? 2 : 0,
+        verify_set: isAdmin ? 2 : 0,
+        verify_items: isAdmin ? 2 : 0,
+        audit: isAdmin ? 2 : 0,
+        downtime: isAdmin ? 2 : 0,
+        testing_points: isAdmin ? 2 : 0,
+        add_part: isAdmin ? 2 : 0
+      };
+    };
+
+    const parsePermValue = ctx.parsePermValue || function (v) {
+      if (v === undefined || v === null) return undefined;
+      if (typeof v === 'number') return v;
+      const s = String(v).toLowerCase().trim();
+      if (s === 'full' || s === '2' || s === 'true') return 2;
+      if (s === 'read' || s === 'read-only' || s === '1') return 1;
+      if (s === 'none' || s === '0' || s === 'false') return 0;
+      return Number(v) || 0;
+    };
+
+    const openPermissionCards = ctx.openPermissionCards || ref({
+      gudang: true,
+      perakitan: false,
+      qc: false,
+      admin: false
+    });
+
+    const loadOperatorsList = ctx.loadOperatorsList || (async () => {});
+
+    const formatExcelDateTime = ctx.formatExcelDateTime || function (dt) {
+      if (!dt) return '-';
+      const d = new Date(dt);
+      if (isNaN(d.getTime())) return String(dt);
+      const day = d.getDate();
+      const month = d.getMonth() + 1;
+      const year = d.getFullYear();
+      const hours = String(d.getHours()).padStart(2, '0');
+      const mins = String(d.getMinutes()).padStart(2, '0');
+      const secs = String(d.getSeconds()).padStart(2, '0');
+      return `${day}/${month}/${year}, ${hours}.${mins}.${secs}`;
+    };
+
+    const defaultAssyTestItems = ctx.defaultAssyTestItems || window.defaultAssyTestItems || [];
+
+    const selectedAssemblyItem = ctx.selectedAssemblyItem || (ctx.getSelectedAssemblyItem ? { get value() { return ctx.getSelectedAssemblyItem(); } } : ref(null));
+    const selectedHoldItem = ctx.selectedHoldItem || (ctx.getSelectedHoldItem ? { get value() { return ctx.getSelectedHoldItem(); } } : ref(null));
+
+    const showAdminUnsavedModal = ctx.showAdminUnsavedModal || ref(false);
+    const adminUnsavedContext = ctx.adminUnsavedContext || ref('');
+    const pendingAdminNavigation = ctx.pendingAdminNavigation || ref(null);
+    const isSavingAdminUnsaved = ctx.isSavingAdminUnsaved || ref(false);
+    let bypassAdminUnsavedCheck = ctx.bypassAdminUnsavedCheck || false;
+
         // Master Stock State
         const masterParts = ref([]);
         const stockSummary = ref({});
@@ -309,7 +382,7 @@
         const deleteUser = async (u) => {
           const ok = await showConfirmCard({
             title: 'Hapus Pengguna',
-            message: `Apakah Anda yakin ingin menghapus pengguna '${u.full_name || u.username}' (@${u.username})?`,
+            message: `Apakah Anda yakin ingin menghapus pengguna '${u.full_name || u.username}' (${u.username})?`,
             icon: 'fa-solid fa-trash',
             iconBg: 'bg-red-100 text-red-600',
             confirmText: 'Ya, Hapus',
@@ -336,7 +409,7 @@
         const resetUserSession = async (u) => {
           const ok = await showConfirmCard({
             title: 'Reset Sesi Pengguna',
-            message: `Buka kunci / reset sesi aktif untuk pengguna '@${u.username}' (${u.full_name || u.username})? Akun ini akan dapat login kembali di perangkat mana saja.`,
+            message: `Buka kunci / reset sesi aktif untuk pengguna '${u.username}' (${u.full_name || u.username})? Akun ini akan dapat login kembali di perangkat mana saja.`,
             icon: 'fa-solid fa-key',
             iconBg: 'bg-amber-100 text-amber-600',
             confirmText: 'Reset Sesi',
@@ -349,7 +422,7 @@
               body: JSON.stringify({ username: u.username, user_id: u.id })
             });
             if (json && json.ok) {
-              triggerToast('Sesi Berhasil Di-reset', json.message || `Sesi pengguna @${u.username} berhasil dibuka kuncinya.`, 'success');
+              triggerToast('Sesi Berhasil Di-reset', json.message || `Sesi pengguna ${u.username} berhasil dibuka kuncinya.`, 'success');
               await loadUsersList();
             } else {
               triggerToast('Gagal Reset Sesi', json ? json.error : 'Gagal mereset sesi pengguna.', 'error');
@@ -417,7 +490,7 @@
         // Gudang Actual Verification & Decline moved to public/js/modules/warehouse.js (Fase 2G)
 
         const getStockStatusBySN = (partType, sn) => {
-          if (!sn || sn === '-' || sn === '') return 'Tersedia';
+          if (!sn || sn === '-' || sn === '') return '';
           const cleanSn = String(sn).trim();
           const cleanNoDot = cleanSn.replace(/\./g, '');
 
@@ -434,9 +507,9 @@
           // Check master parts
           const stock = (masterParts.value || []).find(p => String(p.part_type) === String(partType) && (p.sn === cleanSn || (p.sn && p.sn.replace(/\./g, '') === cleanNoDot)));
           if (stock) {
-            return stock.status || 'Tersedia';
+            return stock.status || '';
           }
-          return 'Tersedia';
+          return '';
         };
 
         // ================= LAPORAN VERIFICATION DETAIL =================
@@ -516,13 +589,7 @@
         const reregisterNewReworkReason = ref('');
         const isSubmittingReregisterSet = ref(false);
 
-        const isTargetSetRework = (item) => {
-          if (!item) return false;
-          return item.qc_status === 'REWORK_QC' || item.qc_status === 'REWORK' ||
-            item.assembly_status === 'Rework' || item.status === 'Rework' ||
-            item.verified_status === 'REWORK_GUDANG' || item.verified_status === 'REWORK_QC_GUDANG' ||
-            item.lifecycle_path === 'REWORK' || item.lifecycle_path === 'REWORK_QC';
-        };
+        const isTargetSetRework = () => false;
 
         const openReregisterSetConfirmModal = (item) => {
           targetReregisterSet.value = item;
@@ -533,12 +600,6 @@
         const confirmReregisterSet = async () => {
           if (!targetReregisterSet.value || isSubmittingReregisterSet.value) return;
           const item = targetReregisterSet.value;
-          const isRework = isTargetSetRework(item);
-
-          if (isRework && (!reregisterNewReworkReason.value || !reregisterNewReworkReason.value.trim())) {
-            triggerToast('Wajib Diisi', 'Alasan rework baru wajib diisi sebelum mengajukan daftar ulang.', 'warning');
-            return;
-          }
 
           const fallbackReason = (item.qc_failure_reasons || item.assy_failure_reasons || item.assembly_reason || item.reason || item.display_reason || 'Didaftarkan ulang oleh Gudang').trim();
           const finalReason = reregisterNewReworkReason.value.trim() || fallbackReason;
@@ -551,7 +612,6 @@
                 assembly_id: item.assembly_id || item.id,
                 part_type: item.part_type || '15',
                 sn: item.part15_sn || item.sn,
-                rework_reason: isRework ? (reregisterNewReworkReason.value.trim() || finalReason) : '',
                 reason: finalReason
               })
             });
@@ -663,6 +723,15 @@
 
         const openReregisterModal = async (item) => {
           const rawStatus = item.effective_status || item.stock_status || item.status || 'Hold';
+          const normalizedStatus = (rawStatus || '').toUpperCase();
+          if (normalizedStatus.includes('TERSEDIA')) {
+            triggerToast('Part Sudah Tersedia', 'Part ini sudah berstatus Tersedia dan siap digunakan, tidak bisa didaftarkan ulang.', 'info');
+            return;
+          }
+          if (normalizedStatus.includes('PENDING') || normalizedStatus.includes('MENUNGGU')) {
+            triggerToast('Sedang Menunggu Verifikasi', 'Part ini sedang dalam antrean verifikasi Admin, tidak bisa didaftarkan ulang kembali.', 'warn');
+            return;
+          }
           const defaultReason = (item.assembly_reason || item.last_reason || '').trim();
           reregisterForm.value = {
             part_type: item.part_type,
@@ -706,6 +775,14 @@
             if (json.ok) {
               triggerToast('Terkirim ke Admin', json.message || 'Permohonan pendaftaran ulang telah dikirim ke Administrator!', 'info');
               showReregisterModal.value = false;
+              if (selectedMasterPartRow.value && selectedMasterPartRow.value.sn === reregisterForm.value.sn) {
+                selectedMasterPartRow.value.effective_status = 'Pending Verif Admin';
+                selectedMasterPartRow.value.stock_status = 'Pending Verif Admin';
+                selectedMasterPartRow.value.status = 'Pending Verif Admin';
+              }
+              if (masterPartTrackingData.value && masterPartTrackingData.value.stock && masterPartTrackingData.value.stock.sn === reregisterForm.value.sn) {
+                masterPartTrackingData.value.stock.status = 'Pending Verif Admin';
+              }
               await loadMasterData();
               if (showStatusDrillModal.value) {
                 await openStatusDrilldown(drillData.value.part_type, drillData.value.status);
@@ -776,15 +853,62 @@
 
         const isSetFullyVerified = (set) => {
           if (!set) return false;
-          // Sets genuinely pending admin verification are NOT verified
-          if (set.verified_status === 'PENDING_ADMIN' || set.verified_status === 'PENDING_ADMIN_ASSY_REREG' || set.verified_status === 'PENDING_ADMIN_QC') return false;
-          if (set.verified_status === 'ACC' || set.verified_status === 'APPROVED' || set.verified_status === 'APPROVED_QC' || set.verified_status === 'APPROVED_REREG' || set.verified_status === 'WAITING_REASSEMBLY' || set.verified_status === 'APPROVED_REASSEMBLY' || set.verified_status === 'COMPLETED_PU') return true;
+
+          const vStatus = (set.verified_status || '').toUpperCase();
+          const isDec = Boolean(
+            set.is_declined ||
+            vStatus === 'DECLINED' ||
+            (set.warehouse_receipt_status || '').toUpperCase() === 'DECLINED' ||
+            set.process_stage === 'declined' ||
+            (set.status || '').toUpperCase() === 'DECLINED' ||
+            set.status === 'Decline' ||
+            set.status === 'Declined'
+          );
+
+          // 1. Jika activeAdminSet di memori sedang dibuka untuk set ini
+          const curId = set.assembly_id || set.id;
+          const actId = activeAdminSet.value ? (activeAdminSet.value.assembly_id || activeAdminSet.value.id) : null;
+          if (actId && curId === actId && activeAdminSet.value && activeAdminSet.value.parts) {
+            const actAllDone = activeAdminSet.value.parts.every(p => !p.sn || p.sn === '-' || p.status === 'Tersedia');
+            if (actAllDone) return true;
+          }
+
+          // 2. KHUSUS SET DECLINED:
+          if (isDec) {
+            // Sudah dipulihkan/diverifikasi secara eksplisit oleh Admin
+            if (['RESOLVED_RESTORED', 'APPROVED_RESTORED', 'ACC'].includes(vStatus)) {
+              return true;
+            }
+
+            // Cek apakah seluruh part fisik di database/master stock berstatus Tersedia
+            const s15 = set.p15_status || getStockStatusBySN('15', set.part15_sn);
+            const s1 = set.p1_status || getStockStatusBySN('1', set.part1_sn);
+            const s12 = set.p12_status || getStockStatusBySN('12', set.part12_sn);
+
+            // Validasi ketat: ketiga part harus terbukti berstatus 'Tersedia'
+            const p15Done = (!set.part15_sn || set.part15_sn === '-') || (s15 === 'Tersedia');
+            const p1Done = (!set.part1_sn || set.part1_sn === '-') || (s1 === 'Tersedia');
+            const p12Done = (!set.part12_sn || set.part12_sn === '-') || (s12 === 'Tersedia');
+
+            if (p15Done && p1Done && p12Done && (s15 === 'Tersedia' || s1 === 'Tersedia' || s12 === 'Tersedia')) {
+              return true;
+            }
+
+            // Masih berstatus Declined dan belum diverifikasi -> WAJIB FALSE (Verifikasi Declined)
+            return false;
+          }
+
+          // 3. SET NON-DECLINED YANG SUDAH SELESAI
+          if (['RESOLVED_RESTORED', 'APPROVED_RESTORED', 'ACC', 'APPROVED', 'APPROVED_QC', 'APPROVED_REREG', 'WAITING_REASSEMBLY', 'APPROVED_REASSEMBLY', 'COMPLETED_PU'].includes(vStatus)) {
+            return true;
+          }
           if (set.status === 'Dirakit Ulang' || set.status === 'Selesai') return true;
-          if (set.is_declined && (set.verified_status === 'ACC' || set.verified_status === 'APPROVED')) return true;
-          const p15Ok = !set.part15_sn || set.part15_sn === '-' || set.p15_status === 'Tersedia' || getStockStatusBySN('15', set.part15_sn) === 'Tersedia';
-          const p1Ok = !set.part1_sn || set.part1_sn === '-' || set.p1_status === 'Tersedia' || getStockStatusBySN('1', set.part1_sn) === 'Tersedia';
-          const p12Ok = !set.part12_sn || set.part12_sn === '-' || set.p12_status === 'Tersedia' || getStockStatusBySN('12', set.part12_sn) === 'Tersedia';
-          if (p15Ok && p1Ok && p12Ok && set.is_declined) return true;
+
+          // 4. Sets pending admin verification are NOT verified
+          if (['PENDING_ADMIN', 'PENDING_ADMIN_ASSY_REREG', 'PENDING_ADMIN_QC', 'PENDING_ADMIN_TF1', 'PENDING_ADMIN_PROCEED_TF1', 'PENDING_ADMIN_PROCEED_QC'].includes(vStatus)) {
+            return false;
+          }
+
           return false;
         };
 
@@ -876,6 +1000,19 @@
           adminSetEndDate.value = '';
         };
 
+        const getDeclinedSource = (set) => {
+          if (!set) return '';
+          if (set.declined_source) return set.declined_source;
+          const whStatus = (set.warehouse_receipt_status || '').toUpperCase();
+          const isGR = whStatus === 'DECLINED' ||
+                       Boolean(set.warehouse_receipt_at) ||
+                       Boolean(set.warehouse_receipt_by) ||
+                       (set.declined_reason || '').toLowerCase().includes('penerimaan') ||
+                       (set.declined_reason || '').toLowerCase().includes('good receipt') ||
+                       (set.declined_reason || '').toLowerCase().includes('receipt');
+          return isGR ? 'GR' : 'PG';
+        };
+
         const allAdminSets = computed(() => {
           const map = new Map();
           // 1. Assemblies from assembly / TF1 - include declined (tagged), exclude replacements
@@ -885,12 +1022,16 @@
               const isDec = Boolean(s.is_declined) ||
                 (s.verified_status || '').toUpperCase() === 'DECLINED' ||
                 (s.warehouse_receipt_status || '').toUpperCase() === 'DECLINED' ||
+                (s.status || '').toUpperCase() === 'DECLINE' ||
+                (s.status || '').toUpperCase() === 'DECLINED' ||
                 Boolean(s.declined_reason);
+
+              const decSource = isDec ? (s.declined_source || getDeclinedSource(s)) : '';
 
               const isRep = Boolean(s.replacement_id) || Boolean(s.replacement_details) || (s.verified_status || '').toUpperCase() === 'PENDING_REPLACEMENT';
               if (isRep) return; // Dedicated feature: verif pergantian part!
 
-              let pStage = isDec ? 'declined' : (s.process_stage || (
+              let pStage = isDec ? 'declined' : ((s.process_stage && s.process_stage !== 'declined') ? s.process_stage : (
                 (['Hold', 'Rework'].includes(s.assy_test_status) || s.qc_status === 'HOLD_ASSY' || s.qc_status === 'REWORK_ASSY' || s.assy_failure_reasons) ? 'test_functional_1' :
                   (s.stage === 'QC' || ['HOLD_QC', 'REWORK_QC'].includes(s.qc_status) || s.qc_tested_at || s.qc_failure_reasons) ? 'qc' :
                     'perakitan'
@@ -902,16 +1043,15 @@
                 if (isDec) {
                   dStatus = 'Declined';
                 } else if (pStage === 'qc') {
-                  dStatus = (aStat === 'Rework' || s.qc_status === 'REWORK_QC') ? 'Rework QC' : 'Hold QC';
+                  dStatus = 'Hold QC';
                 } else if (pStage === 'test_functional_1') {
-                  dStatus = (aStat === 'Rework' || s.status === 'Rework') ? 'Rework Test' : 'Hold Test';
+                  dStatus = 'Hold Test';
                 } else {
                   if (s.status === 'Scrap' || aStat === 'Scrap') dStatus = 'Scrap Perakitan';
-                  else if (s.status === 'Rework' || aStat === 'Rework') dStatus = 'Rework Perakitan';
                   else dStatus = 'Hold Perakitan';
                 }
               }
-              map.set(id, { ...s, is_declined: isDec, is_replacement: false, process_stage: pStage, display_status: dStatus });
+              map.set(id, { ...s, is_declined: isDec, is_replacement: false, process_stage: pStage, display_status: dStatus, declined_source: decSource });
             }
           });
 
@@ -922,7 +1062,11 @@
               const isDec = Boolean(s.is_declined) ||
                 (s.verified_status || '').toUpperCase() === 'DECLINED' ||
                 (s.warehouse_receipt_status || '').toUpperCase() === 'DECLINED' ||
+                (s.status || '').toUpperCase() === 'DECLINE' ||
+                (s.status || '').toUpperCase() === 'DECLINED' ||
                 Boolean(s.declined_reason);
+
+              const decSource = isDec ? (s.declined_source || getDeclinedSource(s)) : '';
 
               // Guard: Item Hold QC yang belum melewati aksi daftar ulang atau tindakan dari gudang/admin jangan masuk verifikasi
               const vStatus = (s.verified_status || '').toUpperCase();
@@ -931,9 +1075,9 @@
               }
 
               const aStat = s.assembly_status || s.status || 'Hold';
-              const dStatus = isDec ? 'Declined' : (s.display_status || ((aStat === 'Rework' || s.qc_status === 'REWORK_QC') ? 'Rework QC' : 'Hold QC'));
+              const dStatus = isDec ? 'Declined' : (s.display_status || 'Hold QC');
               const pStage = isDec ? 'declined' : 'qc';
-              map.set(id, { ...s, is_declined: isDec, process_stage: pStage, display_status: dStatus });
+              map.set(id, { ...s, is_declined: isDec, process_stage: pStage, display_status: dStatus, declined_source: decSource });
             }
           });
 
@@ -942,13 +1086,15 @@
 
         const adminSetProcessCounts = computed(() => {
           const sets = allAdminSets.value;
-          const nonDeclined = sets.filter(s => !s.is_declined);
+          // Hitung antrean yang BELUM selesai diverifikasi (antrean aktif yang tersisa)
+          const pendingSets = sets.filter(s => !isSetFullyVerified(s));
+          const nonDeclinedPending = pendingSets.filter(s => !s.is_declined);
           return {
-            ALL: nonDeclined.length,
-            perakitan: nonDeclined.filter(s => s.process_stage === 'perakitan').length,
-            test_functional_1: nonDeclined.filter(s => s.process_stage === 'test_functional_1').length,
-            qc: nonDeclined.filter(s => s.process_stage === 'qc').length,
-            declined: sets.filter(s => s.is_declined).length
+            ALL: nonDeclinedPending.length,
+            perakitan: nonDeclinedPending.filter(s => s.process_stage === 'perakitan').length,
+            test_functional_1: nonDeclinedPending.filter(s => s.process_stage === 'test_functional_1').length,
+            qc: nonDeclinedPending.filter(s => s.process_stage === 'qc').length,
+            declined: sets.filter(s => (s.is_declined || s.process_stage === 'declined' || (s.verified_status || '').toUpperCase() === 'DECLINED' || (s.warehouse_receipt_status || '').toUpperCase() === 'DECLINED') && !isSetFullyVerified(s)).length
           };
         });
 
@@ -963,9 +1109,121 @@
         const adminPendingReplacements = ref([]);
         const adminRepSearchQuery = ref('');
         const adminRepPartTypeFilter = ref('');
-        const adminRepStatusFilter = ref('');
+        const adminRepStatusFilter = ref(''); // Default: '' (Semua Status, agar riwayat tetap tampil dan tidak hilang)
+        const adminRepStageFilter = ref('ALL'); // 'ALL', 'perakitan', 'test_functional_1', 'qc'
         const adminRepStartDate = ref('');
         const adminRepEndDate = ref('');
+
+        const getReplacementStage = (req) => {
+          if (!req) return 'perakitan';
+          if (req.source_stage) return req.source_stage;
+          const qcSt = String(req.qc_status || '').toUpperCase();
+          const assyTestSt = String(req.assy_test_status || '');
+          const reason = String(req.replacement_reason || req.reason || '');
+          if (['HOLD_QC', 'REWORK_QC', 'HOLD'].includes(qcSt) || req.qc_failure_reasons || /qc/i.test(reason)) {
+            return 'qc';
+          }
+          if (['Hold TF 1', 'Hold', 'Not Good', 'FAIL', 'RU', 'Rework'].includes(assyTestSt) || req.assy_failure_reasons || /tf\s*1|uji\s*fungsional/i.test(reason)) {
+            return 'test_functional_1';
+          }
+          return 'perakitan';
+        };
+
+        const getReplacementStageLabel = (req) => {
+          const stage = getReplacementStage(req);
+          if (stage === 'qc') return 'Test Functional 2 (QC)';
+          if (stage === 'test_functional_1') return 'Test Functional 1 (TF 1)';
+          return 'Perakitan';
+        };
+
+        const replStageCounts = computed(() => {
+          let list = adminPendingReplacements.value || [];
+
+          // Sesuaikan jumlah notifikasi/badge tahap proses dengan status verifikasi yang sedang dipilih
+          if (adminRepStatusFilter.value) {
+            const sf = adminRepStatusFilter.value.trim().toUpperCase();
+            list = list.filter(r => {
+              const st = String(r.replacement_status || r.status || '').trim().toUpperCase();
+              if (sf === 'PENDING') return st === 'PENDING' || st === '';
+              if (sf === 'APPROVED') return st === 'APPROVED' || st === 'ACC';
+              if (sf === 'REJECTED') return st === 'REJECTED';
+              return true;
+            });
+          }
+
+          // Sesuaikan juga dengan tipe part jika sedang difilter
+          if (adminRepPartTypeFilter.value) {
+            const pt = String(adminRepPartTypeFilter.value);
+            list = list.filter(r => {
+              const reps = parseReplacements(r);
+              if (reps && reps.length > 0) {
+                return reps.some(item => String(item.part_type) === pt);
+              }
+              return false;
+            });
+          }
+
+          // Sesuaikan juga dengan rentang tanggal jika sedang diisi
+          if (adminRepStartDate.value) {
+            list = list.filter(r => {
+              const dt = (r.replacement_created_at || '').substring(0, 10);
+              return dt >= adminRepStartDate.value;
+            });
+          }
+          if (adminRepEndDate.value) {
+            list = list.filter(r => {
+              const dt = (r.replacement_created_at || '').substring(0, 10);
+              return dt <= adminRepEndDate.value;
+            });
+          }
+
+          // Sesuaikan juga dengan kata kunci pencarian jika sedang diisi
+          if (adminRepSearchQuery.value && adminRepSearchQuery.value.trim()) {
+            const q = adminRepSearchQuery.value.trim().toLowerCase();
+            list = list.filter(r => {
+              const tc = (r.tray_code || '').toLowerCase();
+              const mo = (r.source_document_mo || '').toLowerCase();
+              const reqUser = (r.replacement_requestor || '').toLowerCase();
+              const reason = (r.replacement_reason || '').toLowerCase();
+              const setNum = String(r.set_number || '');
+              const reps = parseReplacements(r);
+              const repsMatch = reps.some(item =>
+                (item.old_sn || '').toLowerCase().includes(q) ||
+                (item.new_sn || '').toLowerCase().includes(q) ||
+                (item.part_name || '').toLowerCase().includes(q)
+              );
+              return tc.includes(q) || mo.includes(q) || reqUser.includes(q) || reason.includes(q) || setNum.includes(q) || repsMatch;
+            });
+          }
+
+          return {
+            ALL: list.length,
+            perakitan: list.filter(r => getReplacementStage(r) === 'perakitan').length,
+            test_functional_1: list.filter(r => getReplacementStage(r) === 'test_functional_1').length,
+            qc: list.filter(r => getReplacementStage(r) === 'qc').length
+          };
+        });
+
+        const replCountPending = computed(() => {
+          return (adminPendingReplacements.value || []).filter(r => {
+            const st = String(r.replacement_status || r.status || '').trim().toUpperCase();
+            return st === 'PENDING' || st === '';
+          }).length;
+        });
+
+        const replCountApproved = computed(() => {
+          return (adminPendingReplacements.value || []).filter(r => {
+            const st = String(r.replacement_status || r.status || '').trim().toUpperCase();
+            return st === 'APPROVED' || st === 'ACC';
+          }).length;
+        });
+
+        const replCountRejected = computed(() => {
+          return (adminPendingReplacements.value || []).filter(r => {
+            const st = String(r.replacement_status || r.status || '').trim().toUpperCase();
+            return st === 'REJECTED';
+          }).length;
+        });
 
         const selectedAdminReplacementDetail = ref(null);
         const showAdminReplacementDetailModal = ref(false);
@@ -978,8 +1236,10 @@
           adminRepSearchQuery.value = '';
           adminRepPartTypeFilter.value = '';
           adminRepStatusFilter.value = '';
+          adminRepStageFilter.value = 'ALL';
           adminRepStartDate.value = '';
           adminRepEndDate.value = '';
+          if (pgState && pgState.adminRepl) pgState.adminRepl.page = 1;
         };
 
         const isReplacementVerified = (r) => {
@@ -998,6 +1258,11 @@
         const filteredAdminReplacements = computed(() => {
           let list = adminPendingReplacements.value || [];
 
+          // Filter by Source Stage (Perakitan / TF 1 / QC)
+          if (adminRepStageFilter.value && adminRepStageFilter.value !== 'ALL') {
+            list = list.filter(r => getReplacementStage(r) === adminRepStageFilter.value);
+          }
+
           // Filter by Part Type
           if (adminRepPartTypeFilter.value) {
             const pt = String(adminRepPartTypeFilter.value);
@@ -1010,10 +1275,16 @@
             });
           }
 
-          // Filter by Old Part Target Status
+          // Filter by Replacement Verification Status (Menunggu Verif / Diterima / Ditolak)
           if (adminRepStatusFilter.value) {
-            const sf = adminRepStatusFilter.value.toLowerCase();
-            list = list.filter(r => (r.replacement_old_status || '').toLowerCase().includes(sf));
+            const sf = adminRepStatusFilter.value.trim().toUpperCase();
+            list = list.filter(r => {
+              const st = String(r.replacement_status || r.status || '').trim().toUpperCase();
+              if (sf === 'PENDING') return st === 'PENDING' || st === '';
+              if (sf === 'APPROVED') return st === 'APPROVED' || st === 'ACC';
+              if (sf === 'REJECTED') return st === 'REJECTED';
+              return true;
+            });
           }
 
           // Filter by Search Query
@@ -1080,10 +1351,16 @@
           // Filter by Status Type
           if (adminSetStatusFilter.value) {
             const sf = adminSetStatusFilter.value.toLowerCase();
-            list = list.filter(s => {
-              const ds = (s.display_status || '').toLowerCase();
-              return ds.includes(sf);
-            });
+            if (sf === 'pending' || sf === 'menunggu') {
+              list = list.filter(s => !isSetFullyVerified(s));
+            } else if (sf === 'completed' || sf === 'selesai' || sf === 'terkunci') {
+              list = list.filter(s => isSetFullyVerified(s));
+            } else {
+              list = list.filter(s => {
+                const ds = (s.display_status || '').toLowerCase();
+                return ds.includes(sf);
+              });
+            }
           }
 
           // Filter by Search Query
@@ -1518,11 +1795,11 @@
             openAdminSetDetailModal(set);
             return;
           }
-          const p15Status = set.p15_status || getStockStatusBySN('15', set.part15_sn);
-          const p1Status = set.p1_status || getStockStatusBySN('1', set.part1_sn);
-          const p12Status = set.p12_status || getStockStatusBySN('12', set.part12_sn);
-          const isDec = set.is_declined || (set.verified_status || '').toUpperCase() === 'DECLINED' || (set.warehouse_receipt_status || '').toUpperCase() === 'DECLINED';
+          const isDec = Boolean(set.is_declined || (set.verified_status || '').toUpperCase() === 'DECLINED' || (set.warehouse_receipt_status || '').toUpperCase() === 'DECLINED');
           const isHoldTest = !isDec && (set.assembly_status === 'Hold' || set.qc_status === 'HOLD_ASSY' || set.qc_status === 'HOLD' || (set.status === 'Hold'));
+          const p15Status = set.p15_status || getStockStatusBySN('15', set.part15_sn) || (isDec ? 'Declined' : 'Hold');
+          const p1Status = set.p1_status || getStockStatusBySN('1', set.part1_sn) || (isDec ? 'Declined' : 'Hold');
+          const p12Status = set.p12_status || getStockStatusBySN('12', set.part12_sn) || (isDec ? 'Declined' : 'Hold');
 
           activeAdminSet.value = {
             assembly_id: set.assembly_id || set.id,
@@ -1530,6 +1807,7 @@
             tray_code: set.tray_code,
             set_number: set.set_number,
             is_declined: isDec,
+            declined_source: getDeclinedSource(set),
             verified_status: set.verified_status,
             warehouse_receipt_status: set.warehouse_receipt_status,
             assembly_status: set.assembly_status || set.status,
@@ -1550,18 +1828,50 @@
           if (!partItem.sn || partItem.sn === '-') return;
           partItem.is_submitting = true;
           try {
+            const setAssyId = activeAdminSet.value ? (activeAdminSet.value.assembly_id || activeAdminSet.value.id) : null;
             const json = await fetchAPI('/admin/approve-part-direct', {
               method: 'POST',
               body: JSON.stringify({
                 part_type: partItem.type,
                 sn: partItem.sn,
                 target_status: 'Tersedia',
+                assembly_id: setAssyId,
                 notes: `Verifikasi fisik Admin dari Set #${activeAdminSet.value ? activeAdminSet.value.set_number : ''}`
               })
             });
 
             if (json.ok) {
               partItem.status = 'Tersedia';
+
+              // Update status part pada set di tabel
+              const found = (adminPendingSets.value || []).find(s => (s.assembly_id || s.id) === setAssyId);
+              if (found) {
+                if (partItem.type === '15') found.p15_status = 'Tersedia';
+                else if (partItem.type === '1') found.p1_status = 'Tersedia';
+                else if (partItem.type === '12') found.p12_status = 'Tersedia';
+              }
+              const foundQC = (adminPendingQCSets.value || []).find(s => (s.assembly_id || s.id) === setAssyId);
+              if (foundQC) {
+                if (partItem.type === '15') foundQC.p15_status = 'Tersedia';
+                else if (partItem.type === '1') foundQC.p1_status = 'Tersedia';
+                else if (partItem.type === '12') foundQC.p12_status = 'Tersedia';
+              }
+
+              // Periksa apakah sekarang seluruh part pada activeAdminSet sudah Tersedia
+              const allDone = activeAdminSet.value && activeAdminSet.value.parts && activeAdminSet.value.parts.every(p => !p.sn || p.sn === '-' || p.status === 'Tersedia');
+              if (allDone && activeAdminSet.value) {
+                activeAdminSet.value.verified_status = 'RESOLVED_RESTORED';
+                activeAdminSet.value.is_declined = false;
+                if (found) {
+                  found.verified_status = 'RESOLVED_RESTORED';
+                  found.is_declined = false;
+                }
+                if (foundQC) {
+                  foundQC.verified_status = 'RESOLVED_RESTORED';
+                  foundQC.is_declined = false;
+                }
+              }
+
               triggerToast('Verifikasi Berhasil', json.message || `Part ${partItem.type} (${partItem.sn}) berhasil dipulihkan menjadi Tersedia!`, 'success');
               await loadMasterData();
               await loadPendingVerifications();
@@ -1581,6 +1891,7 @@
           if (!unverified.length) return;
           isSubmittingAllAdminVerify.value = true;
           try {
+            const setAssyId = activeAdminSet.value ? (activeAdminSet.value.assembly_id || activeAdminSet.value.id) : null;
             for (const p of unverified) {
               p.is_submitting = true;
               const json = await fetchAPI('/admin/approve-part-direct', {
@@ -1589,6 +1900,7 @@
                   part_type: p.type,
                   sn: p.sn,
                   target_status: 'Tersedia',
+                  assembly_id: setAssyId,
                   notes: `Verifikasi fisik Admin dari Set #${activeAdminSet.value.set_number}`
                 })
               });
@@ -1597,6 +1909,28 @@
                 p.status = 'Tersedia';
               }
             }
+
+            if (activeAdminSet.value) {
+              activeAdminSet.value.verified_status = 'RESOLVED_RESTORED';
+              activeAdminSet.value.is_declined = false;
+              const found = (adminPendingSets.value || []).find(s => (s.assembly_id || s.id) === setAssyId);
+              if (found) {
+                found.p15_status = 'Tersedia';
+                found.p1_status = 'Tersedia';
+                found.p12_status = 'Tersedia';
+                found.verified_status = 'RESOLVED_RESTORED';
+                found.is_declined = false;
+              }
+              const foundQC = (adminPendingQCSets.value || []).find(s => (s.assembly_id || s.id) === setAssyId);
+              if (foundQC) {
+                foundQC.p15_status = 'Tersedia';
+                foundQC.p1_status = 'Tersedia';
+                foundQC.p12_status = 'Tersedia';
+                foundQC.verified_status = 'RESOLVED_RESTORED';
+                foundQC.is_declined = false;
+              }
+            }
+
             triggerToast('Verifikasi Selesai', `Semua part Set #${activeAdminSet.value.set_number} berhasil dipulihkan menjadi Tersedia!`, 'success');
             await loadMasterData();
             await loadPendingVerifications();
@@ -1866,7 +2200,7 @@
           const actualDecision = isQC ? (decision.endsWith('_QC') ? decision : `${decision}_QC`) : decision;
           const isGood = actualDecision === 'APPROVE_GOOD' || actualDecision === 'APPROVE_GOOD_QC';
           const label = isGood
-            ? (isQC ? 'menyetujui sebagai GOOD (lanjut ke Verifikasi Dokumen & Gudang)' : 'menyetujui sebagai GOOD (lanjut ke QC)')
+            ? (isQC ? 'menyetujui sebagai GOOD (Lanjut GR)' : 'menyetujui sebagai GOOD (lanjut ke QC)')
             : (isQC ? 'mengalihkan ke status REWORK QC (kembali ke Gudang)' : 'mengalihkan ke status REWORK (kembali ke Gudang)');
           const ok = await showConfirmCard({
             title: isGood ? 'Setujui Status Rakitan' : 'Alihkan Status Rakitan',
@@ -2091,6 +2425,9 @@
               masterStockList.value = json.data;
               masterFilter.value.total = json.total || 0;
               masterFilter.value.totalPages = Math.max(1, Math.ceil((json.total || 0) / (json.limit || 100)));
+              if (pgState && pgState.masterStock) {
+                pgState.masterStock.page = 1;
+              }
             }
           } catch (e) {
             triggerToast('Error', e.message, 'error');
@@ -2146,6 +2483,39 @@
         const recentAddedParts = ref([]);
         const recentAddedLoading = ref(false);
         const recentAddedFilter = ref('');
+        const recentAddedSearch = ref('');
+        const existingMasterPart = ref(null);
+        const isCheckingExistingPart = ref(false);
+        const bulkPreviewData = ref(null);
+
+        const filteredRecentAddedParts = computed(() => {
+          let list = recentAddedParts.value || [];
+          if (recentAddedFilter.value) {
+            list = list.filter(p => String(p.part_type) === String(recentAddedFilter.value));
+          }
+          if (recentAddedSearch.value && recentAddedSearch.value.trim()) {
+            const q = recentAddedSearch.value.trim().toLowerCase();
+            list = list.filter(p =>
+              (p.sn && p.sn.toLowerCase().includes(q)) ||
+              (p.cs && p.cs.toLowerCase().includes(q)) ||
+              (p.created_by && p.created_by.toLowerCase().includes(q)) ||
+              (p.reason && p.reason.toLowerCase().includes(q))
+            );
+          }
+          return list;
+        });
+
+        const pagedRecentAdded = computed(() => {
+          const s = (pgState && pgState.recentAdded) || { page: 1, size: 100 };
+          const list = filteredRecentAddedParts.value || [];
+          return list.slice((s.page - 1) * s.size, s.page * s.size);
+        });
+
+        const totalPgRecentAdded = computed(() => {
+          const s = (pgState && pgState.recentAdded) || { page: 1, size: 100 };
+          const list = filteredRecentAddedParts.value || [];
+          return Math.max(1, Math.ceil(list.length / s.size));
+        });
 
         const resetAddPartForm = () => {
           addPartForm.value = {
@@ -2154,6 +2524,8 @@
             cs: '',
             reason: ''
           };
+          existingMasterPart.value = null;
+          isCheckingExistingPart.value = false;
         };
 
         const resetAddPartBulkForm = () => {
@@ -2166,6 +2538,7 @@
             reason: ''
           };
           addPartBulkResult.value = null;
+          bulkPreviewData.value = null;
         };
 
         const loadRecentlyAddedParts = async (type = null) => {
@@ -2191,6 +2564,83 @@
           }
         };
 
+        let singleCheckTimer = null;
+        const onSingleSnInput = () => {
+          const sn = (addPartForm.value.sn || '').trim();
+          const partType = addPartForm.value.part_type || '1';
+          if (!sn) {
+            existingMasterPart.value = null;
+            isCheckingExistingPart.value = false;
+            return;
+          }
+
+          if (singleCheckTimer) clearTimeout(singleCheckTimer);
+          isCheckingExistingPart.value = true;
+          singleCheckTimer = setTimeout(async () => {
+            try {
+              const res = await fetchAPI(`/master/part-detail?sn=${encodeURIComponent(sn)}&part_type=${encodeURIComponent(partType)}`);
+              if (res && res.ok && res.data) {
+                const stockObj = (res.data && res.data.stock) ? res.data.stock : res.data;
+                existingMasterPart.value = {
+                  ...stockObj,
+                  stock: stockObj,
+                  lifecycle: res.data.lifecycle,
+                  assembly: res.data.assembly,
+                  tray: res.data.tray
+                };
+              } else {
+                existingMasterPart.value = null;
+              }
+            } catch (err) {
+              existingMasterPart.value = null;
+            } finally {
+              isCheckingExistingPart.value = false;
+            }
+          }, 350);
+        };
+
+        let bulkCheckTimer = null;
+        const onBulkSnInput = () => {
+          if (bulkCheckTimer) clearTimeout(bulkCheckTimer);
+          bulkCheckTimer = setTimeout(async () => {
+            const form = addPartBulkForm.value;
+            const mode = addPartBulkMode.value;
+            const payload = {
+              part_type: form.part_type,
+            };
+
+            if (mode === 'range') {
+              if (!form.sn_start || !form.sn_end) {
+                bulkPreviewData.value = null;
+                return;
+              }
+              payload.sn_start = form.sn_start.trim();
+              payload.sn_end = form.sn_end.trim();
+            } else {
+              if (!form.sns_text || !form.sns_text.trim()) {
+                bulkPreviewData.value = null;
+                return;
+              }
+              payload.sns = form.sns_text;
+            }
+
+            try {
+              const res = await fetchAPI('/master/check-bulk', {
+                method: 'POST',
+                body: JSON.stringify(payload)
+              });
+              if (res && res.ok && res.data) {
+                bulkPreviewData.value = res.data;
+              } else {
+                bulkPreviewData.value = null;
+              }
+            } catch (err) {
+              console.error('Error checking bulk preview:', err);
+              bulkPreviewData.value = null;
+            }
+          }, 350);
+        };
+
         const submitAddSinglePart = async () => {
           if (addPartLoading.value) return;
           const form = addPartForm.value;
@@ -2200,6 +2650,10 @@
           }
           if (form.part_type === '15' && (!form.cs || !form.cs.trim())) {
             triggerToast('Validasi Gagal', 'CS wajib diisi untuk Part 15!', 'warn');
+            return;
+          }
+          if (existingMasterPart.value) {
+            triggerToast('Part Duplikat', `Part dengan nomor '${existingMasterPart.value.sn}' sudah terdaftar di Master Stock (Status: ${existingMasterPart.value.status})!`, 'error');
             return;
           }
 
@@ -2223,6 +2677,14 @@
                 loadMasterData();
               }
             } else {
+              if (res && res.existing_part) {
+                const stockObj = (res.existing_part && res.existing_part.stock) ? res.existing_part.stock : res.existing_part;
+                existingMasterPart.value = {
+                  ...stockObj,
+                  stock: stockObj,
+                  ...res.existing_part
+                };
+              }
               triggerToast('Gagal Menambahkan', (res && res.error) || 'Gagal menambahkan part number', 'error');
             }
           } catch (err) {
@@ -2234,6 +2696,7 @@
         };
 
         const submitAddBulkPart = async () => {
+          if (addPartLoading.value) return;
           const form = addPartBulkForm.value;
           const payload = {
             part_type: form.part_type,
@@ -2261,6 +2724,13 @@
             payload.sns = form.sns_text;
           }
 
+          // Strict Atomic Validation Check:
+          // Jika terdeteksi ada duplikat (meskipun hanya 1), tolak transaksi
+          if (bulkPreviewData.value && bulkPreviewData.value.duplicate_count > 0) {
+            triggerToast('Transaksi Ditolak', `Ditemukan ${bulkPreviewData.value.duplicate_count} part yang sudah ada di Master Stock. Seluruh transaksi dibatalkan!`, 'error');
+            return;
+          }
+
           addPartLoading.value = true;
           try {
             const res = await fetchAPI('/master/add-part-bulk', {
@@ -2270,15 +2740,26 @@
 
             if (res && res.ok) {
               addPartBulkResult.value = res.data || null;
-              triggerToast('Bulk Selesai', res.message || 'Batch part number berhasil diproses!', 'success');
-              if (res.data && res.data.added_count > 0) {
-                await loadRecentlyAddedParts();
-                if (typeof loadMasterData === 'function') {
-                  loadMasterData();
-                }
+              triggerToast('Bulk Selesai', res.message || 'Seluruh part number berhasil didaftarkan!', 'success');
+              resetAddPartBulkForm();
+              await loadRecentlyAddedParts();
+              if (typeof loadMasterData === 'function') {
+                loadMasterData();
               }
             } else {
-              triggerToast('Gagal Bulk', (res && res.error) || 'Gagal menambahkan batch part number', 'error');
+              triggerToast('Transaksi Dibatalkan', (res && res.error) || 'Gagal menambahkan batch part number', 'error');
+              if (res && res.data && res.data.duplicates) {
+                // Update preview data to show the duplicates that rejected the transaction
+                bulkPreviewData.value = {
+                  part_type: form.part_type,
+                  total: res.data.total_submitted || res.data.duplicates.length,
+                  duplicates: res.data.duplicates,
+                  duplicate_count: res.data.duplicate_count || res.data.duplicates.length,
+                  new_sns: [],
+                  new_count: 0,
+                  can_submit: false
+                };
+              }
             }
           } catch (err) {
             console.error('Submit bulk part error:', err);
@@ -2953,7 +3434,7 @@
 
         const pagedAdminSets = computed(() => { const s = pgState.adminSets; return (filteredAdminSetsOnly.value || []).slice((s.page - 1) * s.size, s.page * s.size); });
         const pagedAdminParts = computed(() => { const s = pgState.adminParts; return (filteredAdminPartsOnly.value || []).slice((s.page - 1) * s.size, s.page * s.size); });
-        const pagedAdminRepl = computed(() => { const s = pgState.adminRepl; return (filteredAdminReplacements.value || []).slice((s.page - 1) * s.size, s.page * s.size); });
+        const pagedAdminRepl = computed(() => { const s = pgState.adminRepl; const list = filteredAdminReplacements.value || []; const maxPg = Math.max(1, Math.ceil(list.length / s.size)); if (s.page > maxPg) s.page = 1; return list.slice((s.page - 1) * s.size, s.page * s.size); });
         const pagedAuditLogs = computed(() => { const s = pgState.auditLogs; return (filteredAuditLogs.value || []).slice((s.page - 1) * s.size, s.page * s.size); });
         const pagedDowntime = computed(() => { const s = pgState.downtime; return (downtimeLogsList.value || []).slice((s.page - 1) * s.size, s.page * s.size); });
         const pagedTestPoint = computed(() => { const s = pgState.testPoint; return (filteredTestingPointsList.value || []).slice((s.page - 1) * s.size, s.page * s.size); });
@@ -3212,7 +3693,9 @@
       adminPendingQCSets, adminPendingReplacements, adminPendingReplacementsCount, adminPendingRequests,
       adminPendingRequestsCount, adminPendingSets, adminPendingSetsTotalCount, adminRejectReplacement,
       adminRepEndDate, adminRepPartTypeFilter, adminRepSearchQuery, adminRepStartDate,
-      adminRepStatusFilter, adminReregApprovedOperator, adminReregNotes, adminSetEndDate,
+      adminRepStatusFilter, adminRepStageFilter, getReplacementStage, getReplacementStageLabel, replStageCounts,
+      getDeclinedSource,
+      replCountPending, replCountApproved, replCountRejected, adminReregApprovedOperator, adminReregNotes, adminSetEndDate,
       adminSetPartTypeFilter, adminSetProcessCounts, adminSetProcessFilter, adminSetSearchQuery,
       adminSetStartDate, adminSetStatusFilter, adminSetViewMode, adminVerifyFilter,
       adminVerifyForm, allAdminSets, allTotalCount, applyFilterFromDrilldown,
@@ -3248,6 +3731,8 @@
       pagedAdminSets, pagedAuditLogs, pagedDowntime, pagedMasterStock,
       pagedTestPoint, pagedUsers, parseReplacements, prevGuideSlide,
       qcSetsCount, recentAddedFilter, recentAddedLoading, recentAddedParts,
+      recentAddedSearch, filteredRecentAddedParts, pagedRecentAdded, totalPgRecentAdded,
+      existingMasterPart, isCheckingExistingPart, bulkPreviewData, onSingleSnInput, onBulkSnInput,
       removeImageFromForm, repairCmsAnomalies, replacedPartsTotalCount, reregisterForm,
       reregisterNewReworkReason, resetAddPartBulkForm, resetAddPartForm, resetAdminPartFilter,
       resetAdminRepFilter, resetAdminSetFilter, resetAdminVerifyFilter, resetAuditFilter,
