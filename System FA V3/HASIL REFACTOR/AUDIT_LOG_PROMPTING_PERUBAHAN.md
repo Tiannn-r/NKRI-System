@@ -42,10 +42,11 @@ flowchart TD
 ## 3. Log Kronologis Lengkap Seluruh 176 Prompting & Perubahan Sistem
 
 
-### Log Kronologis Perubahan Sistem (Prompt #003)
+### Log Kronologis Perubahan Sistem (Prompt #004)
 
 | No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
 |:---:|:---:|---|---|---|
 | **#001** | `2026-11-06 13:18:21` | **Core App & Layout** | tolong fix eror ini | Perbaikan error inisial pada template Blade dan view rendering. |
 | **#002** | `2026-11-08 07:35:48` | **UI/UX & Layout** | kenapa jadi pada putih sih halamannya padahal semuannya awal nya udah oke tapi kok jadi ngeblank page semua. PERIKSA JANGAN SAMPE ADA YANG BLANK SPACE LAGI DI WEBSITENYA | Mengatasi masalah blank space (layar putih) dengan memperbaiki syntax vue parsing dan container CSS. |
 | **#003** | `2026-11-08 07:49:49` | **UI/UX & Layout** | INI MASIH BLANK SPACE. SAYA MINTA CEK SELURUH FITUR JANGAN SAMPE ADA YANG BALNK SPACE LAGI DAN PASTIKAN FITURNYA BERJALAN DENGAN SESUAI | Mengatasi masalah blank space (layar putih) dengan memperbaiki syntax vue parsing dan container CSS. |
+| **#004** | `2026-11-08 08:14:12` | **Portal Admin & Auth** | perbaiki halaman login ke bagian cms/halaman admin kemudian buatkan di halaman admin itu menu dashboard yang berisi ringkasan dari ssetiap menunya buat halaman cms nya menjadi seperti gambar yang saya lampirkan, sesuaikan seluruh fungsinya, jangan menambah fungsi selain yang saya suruh, dan jangan menambah fungsi ketika saya tidak meminta nya, pakai saja fungsi yang ada dan sesuaikan dengan design yang saya kirim. warnanya memakai pallete yang sama seperti pada bagian user. dan design untuk tampilan login referensi nya seperti itu, sesuaikan saja dengan tema website/sistem yang ada, jangan ada login menggunakan google dan media sosial yang lainnya, hanya menggunakan akun yang sudah di buat di kelola pengguna, Judul nya Masuk kedalam Halaman Admin, tanpa keterangan tambahan kemudian logo didalam cardnya itu menggunakan logo NKRI saja sesuaikkan pallete nya | Pemisahan otentikasi login admin khusus CMS di `/admin` dengan guard kredensial terpisah dari login operator web. |
