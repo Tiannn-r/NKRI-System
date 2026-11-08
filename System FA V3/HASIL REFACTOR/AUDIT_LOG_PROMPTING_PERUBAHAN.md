@@ -42,7 +42,7 @@ flowchart TD
 ## 3. Log Kronologis Lengkap Seluruh 176 Prompting & Perubahan Sistem
 
 
-### Log Kronologis Perubahan Sistem (Prompt #013)
+### Log Kronologis Perubahan Sistem (Prompt #014)
 
 | No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
 |:---:|:---:|---|---|---|
@@ -59,3 +59,4 @@ flowchart TD
 | **#011** | `2026-11-08 09:38:47` | **Admin CMS** | ini bocor harusnya hari ini doang gausah ada opsi itu juga hapus itu label optimal rata rata normal nya kan udah ada status performa dibawah | Membatasi tampilan dashboard hanya pada transaksi hari ini dan menghapus label 'optimal rata-rata'. |
 | **#012** | `2026-11-08 18:18:44` | **Workstation Assembly** | saya belum ngerait kpk data ininya sudah ada? harusnya mulai dari 0 ga sih? soalnya memang sebelum nya ada beberapa yang sudah dirakit namun saya reset data tray dan rakitan harusnya itu ikut ke reset gasih? | Inisialisasi count mulai dari 0 jika belum ada aktivitas perakitan pada hari berjalan. |
 | **#013** | `2026-11-08 21:34:07` | **Warehouse & Supply** | ketika status nya diubah jadi supplied tidak muncul datanya apakah ada yang eror? kalo status nya semua status datanya muncul ketika statusnya ini diubah ke good atau tersedia dan lain lain intinya ketika filtering by status di aktifkan itu tidak muncul datanya | Memperbaiki reaktivitas Vue ketika status part diubah menjadi 'supplied' agar data langsung muncul. |
+| **#014** | `2026-11-08 21:56:47` | **Assembly & Ganti Part** | hapus pilihan part dignati di drop downnya | Menghapus opsi pemilihan part yang diganti dari dropdown. |
