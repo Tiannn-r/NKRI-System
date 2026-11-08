@@ -42,7 +42,7 @@ flowchart TD
 ## 3. Log Kronologis Lengkap Seluruh 176 Prompting & Perubahan Sistem
 
 
-### Log Kronologis Perubahan Sistem (Prompt #031)
+### Log Kronologis Perubahan Sistem (Prompt #032)
 
 | No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
 |:---:|:---:|---|---|---|
@@ -77,3 +77,4 @@ flowchart TD
 | **#029** | `2026-11-09 01:45:53` | **Audit Log & Auth** | standarisasi untuk data actor atau data yang melakukan itu menggunakan nama dari akun yang digunakan, jangan menggunakan operator saja atau gudang saja, tulis saja nama aktual dari akun tersebut. untuk keseluruhan sistem ya dikarenakan itu untuk mengetahui siapa saja yang melakukan action ini, siapa saja yang melakukan perubahan ini jadi gampang untuk diketahuinya terus untuk foto yang saya lampirkan itu kenapa masih ada status rework. saya sudah bilang hapus saja status rework dan keseluruhan status rework | Standarisasi pencatatan aktor (user pelaku) menggunakan nama lengkap dari akun yang sedang login. |
 | **#030** | `2026-11-09 01:51:29` | **Quality Control (TF1)** | ini eror baru saja di verif untuk lanjut ke TF 1 dari perakitan kok sudah 94% seharusnya belum ada test yang dijalan kan ga sih? | Memperbaiki kalkulasi persentase kelolosan pada TF1 yang melonjak sebelum proses pengujian. |
 | **#031** | `2026-11-09 02:22:22` | **Workstation Assembly** | ini kok dirakit ulang padahal kan di history yang perakitan dia good inget untuk history itu tidak bisa dirubah dan hanya hasil dari proses yang dilakukannya saja kalo good yasudah good tidak bisa diubah | Mencegah perakitan ulang pada set yang sudah Good di riwayat perakitan. |
+| **#032** | `2026-11-09 02:36:05` | **UI/UX & Modals** | hapus saja button dan fungsi ini di history | Menghapus tombol aksi yang tidak diperlukan pada modal riwayat. |
