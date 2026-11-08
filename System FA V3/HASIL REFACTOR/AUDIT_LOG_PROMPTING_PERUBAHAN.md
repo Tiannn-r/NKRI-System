@@ -42,7 +42,7 @@ flowchart TD
 ## 3. Log Kronologis Lengkap Seluruh 176 Prompting & Perubahan Sistem
 
 
-### Log Kronologis Perubahan Sistem (Prompt #028)
+### Log Kronologis Perubahan Sistem (Prompt #029)
 
 | No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
 |:---:|:---:|---|---|---|
@@ -74,3 +74,4 @@ flowchart TD
 | **#026** | `2026-11-09 01:33:29` | **Quality Control (TF2)** | sata TF 2 tidak masuk kedalam historynya kemudian itu ilangin saja, hanya diakses lewat tulis manual di link nya dengan /admin jadi rahasia | Menghapus menu TF2 mandiri dan mengintegrasikan akses langsung melalui alur kelolosan sistem. |
 | **#027** | `2026-11-09 01:40:15` | **Quality Control & GR** | ini bisa ga tulisannya ubah jadi lanjut ke Good Receipts dan verifikasi tiap partnya hilangin saja ketika verifikasi TF 1 dan 2 tidak di perlukan soalnya | Mengubah label flow menjadi 'Lanjut ke Good Receipts' serta meniadakan verifikasi part individual yang tidak perlu. |
 | **#028** | `2026-11-09 01:43:30` | **Quality Control & GR** | ini bisa ga tulisannya ubah jadi lanjut ke Good Receipts dan verifikasi tiap partnya hilangin saja ketika verifikasi TF 1 dan 2 tidak di perlukan soalnya | Mengubah label flow menjadi 'Lanjut ke Good Receipts' serta meniadakan verifikasi part individual yang tidak perlu. |
+| **#029** | `2026-11-09 01:45:53` | **Audit Log & Auth** | standarisasi untuk data actor atau data yang melakukan itu menggunakan nama dari akun yang digunakan, jangan menggunakan operator saja atau gudang saja, tulis saja nama aktual dari akun tersebut. untuk keseluruhan sistem ya dikarenakan itu untuk mengetahui siapa saja yang melakukan action ini, siapa saja yang melakukan perubahan ini jadi gampang untuk diketahuinya terus untuk foto yang saya lampirkan itu kenapa masih ada status rework. saya sudah bilang hapus saja status rework dan keseluruhan status rework | Standarisasi pencatatan aktor (user pelaku) menggunakan nama lengkap dari akun yang sedang login. |
