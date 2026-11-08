@@ -42,7 +42,7 @@ flowchart TD
 ## 3. Log Kronologis Lengkap Seluruh 176 Prompting & Perubahan Sistem
 
 
-### Log Kronologis Perubahan Sistem (Prompt #035)
+### Log Kronologis Perubahan Sistem (Prompt #036)
 
 | No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
 |:---:|:---:|---|---|---|
@@ -81,3 +81,4 @@ flowchart TD
 | **#033** | `2026-11-09 02:40:25` | **UI/UX Standarisasi** | standarisasi untuk status bentukannya itu seperti gambar kedua yang saya lampirkan saja. begitupun untuk history penerimaan dan TF 2. jika history yang TF2 itu TF1nya lolos maka tulis saja good jangan ada tambahan kata lolos diatasnya, kemudian untuk yang penerimaan itu tulis saja accepted dengan warna hijau fontnya dan declined dengan font merah fontnya ya | Standarisasi badge status seragam sesuai referensi visual badge modern. |
 | **#034** | `2026-11-09 03:00:19` | **Portal Admin** | INI BAGIAN ADMIN KEMANAA | Mengembalikan navigasi dan tab admin yang sempat tersembunyi. |
 | **#035** | `2026-11-09 03:07:11` | **Quality Control & Verifikasi** | ini kok sudah selesai saya belum verifikasi loh | Memperbaiki bug auto-complete kelolosan; unit wajib menunggu verifikasi manual operator/admin. |
+| **#036** | `2026-11-09 03:12:56` | **Admin & Verifikasi** | ini untuk apa? | Menghapus opsi verifikasi duplikat yang fungsinya redundan dengan tombol verifikasi utama. |
