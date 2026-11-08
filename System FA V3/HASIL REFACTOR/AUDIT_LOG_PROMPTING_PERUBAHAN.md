@@ -42,7 +42,7 @@ flowchart TD
 ## 3. Log Kronologis Lengkap Seluruh 176 Prompting & Perubahan Sistem
 
 
-### Log Kronologis Perubahan Sistem (Prompt #016)
+### Log Kronologis Perubahan Sistem (Prompt #017)
 
 | No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
 |:---:|:---:|---|---|---|
@@ -62,3 +62,4 @@ flowchart TD
 | **#014** | `2026-11-08 21:56:47` | **Assembly & Ganti Part** | hapus pilihan part dignati di drop downnya | Menghapus opsi pemilihan part yang diganti dari dropdown. |
 | **#015** | `2026-11-08 21:59:15` | **Assembly State** | ini masih nyangkutt | Pembersihan state reaktif agar data form tidak menyangkut saat berganti tray/set. |
 | **#016** | `2026-11-08 22:08:12` | **Workstation Assembly** | ketika set 1 nya itu diganti part 1 nya yang asalnya 013 menjadi 019 itu set 10 nya kok hilang | Memperbaiki bug penggantian part di mana pergantian pada set 1 tidak lagi menghilangkan set 10. |
+| **#017** | `2026-11-08 22:23:19` | **Warehouse & Returns** | ketika pengembalian digudang kemudian di declined maka setnya tidak hilang tetep ada di dalam situ untuk historynya | Memastikan data set tidak hilang saat pengembalian barang ke gudang dideclined. |
