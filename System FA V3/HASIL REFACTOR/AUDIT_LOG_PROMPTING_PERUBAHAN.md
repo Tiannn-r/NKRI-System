@@ -42,7 +42,7 @@ flowchart TD
 ## 3. Log Kronologis Lengkap Seluruh 176 Prompting & Perubahan Sistem
 
 
-### Log Kronologis Perubahan Sistem (Prompt #011)
+### Log Kronologis Perubahan Sistem (Prompt #012)
 
 | No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
 |:---:|:---:|---|---|---|
@@ -57,3 +57,4 @@ flowchart TD
 | **#009** | `2026-11-08 09:19:48` | **Laporan & Filter** | tolong rentang periode nya bisa di ubah ubah ga jadi data backdate itu masih bisa ke tracking | Penambahan filter rentang tanggal (periode fleksibel) agar data historis/backdate tetap dapat terdeteksi. |
 | **#010** | `2026-11-08 09:38:28` | **Admin CMS** | ini bocor harusnya hari ini doang gausah ada opsi itu | Membatasi tampilan dashboard hanya pada transaksi hari ini dan menghapus label 'optimal rata-rata'. |
 | **#011** | `2026-11-08 09:38:47` | **Admin CMS** | ini bocor harusnya hari ini doang gausah ada opsi itu juga hapus itu label optimal rata rata normal nya kan udah ada status performa dibawah | Membatasi tampilan dashboard hanya pada transaksi hari ini dan menghapus label 'optimal rata-rata'. |
+| **#012** | `2026-11-08 18:18:44` | **Workstation Assembly** | saya belum ngerait kpk data ininya sudah ada? harusnya mulai dari 0 ga sih? soalnya memang sebelum nya ada beberapa yang sudah dirakit namun saya reset data tray dan rakitan harusnya itu ikut ke reset gasih? | Inisialisasi count mulai dari 0 jika belum ada aktivitas perakitan pada hari berjalan. |
