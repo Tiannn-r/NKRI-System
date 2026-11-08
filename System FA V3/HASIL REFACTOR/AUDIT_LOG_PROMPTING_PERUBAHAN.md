@@ -42,7 +42,7 @@ flowchart TD
 ## 3. Log Kronologis Lengkap Seluruh 176 Prompting & Perubahan Sistem
 
 
-### Log Kronologis Perubahan Sistem (Prompt #020)
+### Log Kronologis Perubahan Sistem (Prompt #021)
 
 | No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
 |:---:|:---:|---|---|---|
@@ -66,3 +66,4 @@ flowchart TD
 | **#018** | `2026-11-08 22:38:42` | **Hold & Declined** | status partnya jadi declined bukan tersedia kan harus di verif admin dulu | Mengubah status part yang ditolak menjadi 'declined' (wajib verifikasi admin) bukan langsung 'tersedia'. |
 | **#019** | `2026-11-08 22:47:50` | **Workstation Assembly** | ini format dokumen yang selesaikan sesi dan dilanjutkan ke orang selanjutnya kok udah berubah? kan harussnya ada - S2 nya | Menstandarisasi format dokumen serah terima sesi kerja antar operator. |
 | **#020** | `2026-11-08 23:55:14` | **Workstation Assembly** | ini masih gada s2nya terus itu didalamnya satu set kok tertulisnya malah 2? | Memperbaiki penomoran set dan penandaan sesi S2 agar konsisten 1 set = 3 part. |
+| **#021** | `2026-11-09 00:37:49` | **Warehouse & Returns** | ini statusnya kok masih tersupply padahal sudah dikembalikan ke gudang kan? harus nya historynya tertulis selesai kemudian ketika dilihat detail barang yanng dikembalikan ke gudang bertuliskan dikembalikan ke gudang gitu | Memperbaiki riwayat status agar part yang dikembalikan ke gudang tidak lagi berstatus tersupply. |
