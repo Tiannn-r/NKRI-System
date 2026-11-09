@@ -42,7 +42,7 @@ flowchart TD
 ## 3. Log Kronologis Lengkap Seluruh 176 Prompting & Perubahan Sistem
 
 
-### Log Kronologis Perubahan Sistem (Prompt #089)
+### Log Kronologis Perubahan Sistem (Prompt #090)
 
 | No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
 |:---:|:---:|---|---|---|
@@ -135,3 +135,4 @@ flowchart TD
 | **#087** | `2026-11-10 05:02:23` | **Delivery Order** | untuk yang PL dan SJ harusnya itu tidak bisa di click harus menyelesaikan Formnya dulu baru bisa lanjut kalo belum bisa tahap selanjutnya itu di lock, ketika form nya sudah selesai dan sudah lanjut ke form selanjutnnya form yang sudah slesai itu terkunci dan hanya bisa di buka kembali lewat button back tidak bisa di click click gitu lebih aman jadi ga acak isinya | Mencegah klik tombol cetak sebelum form Packing List dan Surat Jalan selesai diisi. |
 | **#088** | `2026-11-10 05:51:45` | **UI/UX Polish** | kurang rapih | Merapikan kerapatan elemen visual dan spacing pada form. |
 | **#089** | `2026-11-10 06:11:02` | **UI/UX Polish** | ga rapih | Merapikan kerapatan elemen visual dan spacing pada form. |
+| **#090** | `2026-11-10 06:16:10` | **Master Stock & Validation** | revisi untuk di bagian tambah part ketika memasukan data satu satu, ketika terdeteksi sama munculkan number yang samanya. dan untuk data bulk ketika memasukan 5 data dan terdapat salah satu data yang ternyata sudah ada didalam master stock ketika di submit itu tidak bisa meskipun 4 data yang lainnya itu belum tersedia(bisa dimasukan), dengan kata lain meskipun banyak memasukan data jika ada data yang sudah tersedia di master stock maka membatalkan transaksi nya. ngerti ga? buatkan dulu planningnya | Memberikan alert merah tegas saat mendeteksi duplikasi input part ganda. |
