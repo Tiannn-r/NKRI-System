@@ -42,7 +42,7 @@ flowchart TD
 ## 3. Log Kronologis Lengkap Seluruh 176 Prompting & Perubahan Sistem
 
 
-### Log Kronologis Perubahan Sistem (Prompt #067)
+### Log Kronologis Perubahan Sistem (Prompt #068)
 
 | No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
 |:---:|:---:|---|---|---|
@@ -113,3 +113,4 @@ flowchart TD
 | **#065** | `2026-11-10 01:28:20` | **UI/UX & Modal Z-Index** | kebuka nya malah dibelakangnya | Memperbaiki z-index modal ganti part agar muncul di atas modal utama (tidak tertimpa di belakang). |
 | **#066** | `2026-11-10 01:41:52` | **Hold & Status Logic** | ini kan status saat ini nya hold kemudian di pilihannya itu ada status hold juga, harusnya dihilangkan saja tidak sih? jadi ketika status ini berstatus "1" maka opsi "1" dhilangkan artinya ketika status ini berstatus hold maka opsi daftar ulang ke hold ini dihilangkan. logika enaknya seperti itu tidak sih? | Menghilangkan pilihan status 'Hold' jika status part saat ini sudah dalam kondisi 'Hold'. |
 | **#067** | `2026-11-10 01:50:39` | **Warehouse & Master Stock** | @[Quote] ini tidak usah karena jika status nya tersedia tidak bisa diubah kemanapun | Mengunci part berstatus 'Tersedia' agar tidak dapat diubah statusnya sembarangan. |
+| **#068** | `2026-11-10 02:01:24` | **Print Layout & Kalibrasi** | terlihat tidak warnanya beda. ketika saya ingin cetak dokumen saya menemuka kejanggalan seperti ada warna lain jadi baground colornya tidak pure menggunakan warna putih | Kalibrasi presisi tata letak cetak: margin kiri/kanan, warna batas abu-abu, posisi footer, dan margin simetris cetak dokumen. |
