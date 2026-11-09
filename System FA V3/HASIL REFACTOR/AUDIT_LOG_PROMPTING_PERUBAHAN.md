@@ -42,7 +42,7 @@ flowchart TD
 ## 3. Log Kronologis Lengkap Seluruh 176 Prompting & Perubahan Sistem
 
 
-### Log Kronologis Perubahan Sistem (Prompt #056)
+### Log Kronologis Perubahan Sistem (Prompt #057)
 
 | No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
 |:---:|:---:|---|---|---|
@@ -102,3 +102,4 @@ flowchart TD
 | **#054** | `2026-11-09 06:30:00` | **UI/UX & Tipografi** | ini nya kok item? | Memperbaiki kontras warna gelap dan memperbesar ukuran huruf 'm' agar mudah dibaca. |
 | **#055** | `2026-11-09 06:30:45` | **UI/UX & Tipografi** | bisa di buat lebih mudah dibaca ga? tulisan m nya terlalu kecil | Memperbaiki kontras warna gelap dan memperbesar ukuran huruf 'm' agar mudah dibaca. |
 | **#056** | `2026-11-09 08:15:31` | **Audit Log & Master Stock** | tolong perbaiki 1. ketika barang dilepas dari setnya itu audit partnya hilang harusnya masih ada dari dokumen pada, set keberapa, pasangan setnya yang mana, sama seperti ketika verifikasi status part kurang lebih kaya gitu harus ada ya, dan auditnya jangan hilang tetap tercatat namun relasinya yang harus di reset lagi kalo sudah tersedia kembali 2. kemudian status kondisi partnya itu hold aja 3. button ulangnya hide aja, ketika click detail baru muncul (khusus untuk part yang diganti) 4. foto yang kedua saya lampirkan itu tolong hapus saja tulisan di samping button detailnya yaa 5. untuk foto yang saya lampirkan ketiga itu ketika saya mendaftar ulangkan part, memang hanya satu yang bermasalah, namun saya ingin mengganti ketiga nya, ketika saya sudah memilih part yang ingin mengganti di ketiganya itu data yang masuk ke verifikasi perakitan ulang hanya part yang bermasalah namun part yang tidak bermasalahnya itu tidak ikut masuk. harusnya ketika saya memilih tiga tiga nya untuk diganti, itu tiga tiganya ikut masuk kedalam verifikasi pergantian part admin bukan hanya part yang bermasalah. 6. kemudian untuk yang terakhir itu dibagian menu verifikasi pergantian part. ganti filtering status part lama menjadi status card, menunggu verif (artinya yang masih menunggu proses verifikasi dijalankan), Diterima (artinya yang sudah diverifikasi diterima), Ditolak (artinya yang sudah diverifikasi namun di tolak). ngerti kan? | Memperbaiki audit trail part agar data tidak hilang ketika part dilepas dari set rakitan. |
+| **#057** | `2026-11-09 08:28:02` | **Admin CMS & Metrik** | dibagian dasboard admin (CMS). dalam bagian ringkasan itu dihitungnya /part yaa, tolong periksa apakah seluruh perhitungannya sudah sesuai dengan aktual yang yang sebenarnya terjadi, karena itu datanya masih ada beberapa yang kosong, dan ragu itu adalah data asli | Menyesuaikan agregasi dashboard admin dihitung berbasis part (1 Set = 3 Part). |
