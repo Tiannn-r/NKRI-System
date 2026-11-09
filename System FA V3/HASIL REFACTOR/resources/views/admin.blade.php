@@ -1,4863 +1,4294 @@
 <!DOCTYPE html>
-
 <html lang="id">
-
 <head>
-
   <meta charset="UTF-8">
-
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <title>Portal CMS & Diagnostik Server - Sistem Final Assembly P9</title>
-
-  
-
-  <!-- Favicon -->
-
+  <title>Portal Administrator & CMS - Sistem Final Assembly P9</title>
   <link rel="icon" type="image/png" href="/emblem.png">
 
-
-
-  <!-- Inter Font -->
-
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
-
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
-
-
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
 
   <!-- Tailwind CSS CDN -->
-
   <script src="https://cdn.tailwindcss.com"></script>
-
   <script>
-
     tailwind.config = {
-
       theme: {
-
         extend: {
-
           fontFamily: {
-
-            sans: ['Inter', 'sans-serif'],
-
-            mono: ['JetBrains Mono', 'monospace'],
-
+            sans: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
           }
-
         }
-
       }
-
     }
-
   </script>
 
-
-
-  <!-- FontAwesome 6 -->
-
+  <!-- FontAwesome 6.5.1 -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
-
-
   <!-- Vue 3 CDN -->
-
   <script src="https://cdn.jsdelivr.net/npm/vue@3.4.21/dist/vue.global.prod.js"></script>
 
-
+  <!-- Chart.js (Local Bundle with Dynamic CDN Fallback) -->
+  <script src="/chart.min.js"></script>
+  <script>
+    if (typeof Chart === 'undefined') {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+      document.head.appendChild(s);
+    }
+  </script>
 
   <style>
-
-    body {
-
-      font-family: 'Inter', sans-serif;
-
+    * {
+      box-sizing: border-box;
+      font-variant-numeric: tabular-nums lining-nums;
     }
-
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
     [v-cloak] { display: none !important; }
 
+    /* Custom subtle scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    /* Ambient sky atmosphere for login gate */
+    .sky-bg {
+      background: radial-gradient(circle at 50% 15%, #e0f2fe 0%, #f0f9ff 35%, #f8fafc 85%, #f1f5f9 100%);
+    }
+    .halo-ring {
+      position: absolute;
+      border-radius: 9999px;
+      pointer-events: none;
+      border: 1px solid rgba(255, 255, 255, 0.7);
+      box-shadow: inset 0 0 40px rgba(255, 255, 255, 0.5);
+    }
   </style>
-
 </head>
-
-<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col antialiased">
+<body class="bg-[#f8fafc] text-slate-800 min-h-screen flex flex-col antialiased selection:bg-red-500 selection:text-white">
 
   <div id="adminApp" v-cloak class="min-h-screen flex flex-col">
-
     @verbatim
 
-
-
     <!-- ========================================================================= -->
-
-    <!-- STATE 1: GATE LOGIN KHUSUS ADMINISTRATOR (RE-AUTHENTICATION REQUIRED) -->
-
+    <!-- STATE 1: GATE LOGIN KHUSUS ADMINISTRATOR (MATCHING IMAGE 2 REFERENCE)    -->
     <!-- ========================================================================= -->
+    <div v-if="!isCmsAuthenticated" class="sky-bg min-h-screen w-full flex items-center justify-center p-4 relative overflow-hidden select-none">
+      
+      <!-- Ambient Sky / Orbital Elements -->
+      <div class="halo-ring w-[680px] h-[680px] -top-24 sm:-top-16 opacity-70"></div>
+      <div class="halo-ring w-[920px] h-[920px] -top-52 opacity-40"></div>
+      <div class="absolute -top-32 w-96 h-96 bg-white/70 rounded-full blur-3xl pointer-events-none"></div>
 
-    <div v-if="!isCmsAuthenticated" class="flex-grow flex items-center justify-center p-4 sm:p-6 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-
-      <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-700/30 overflow-hidden transform transition-all duration-300">
-
+      <!-- Main Floating Login Card -->
+      <div class="w-full max-w-[420px] bg-white/90 backdrop-blur-2xl rounded-3xl p-8 sm:p-10 shadow-[0_25px_60px_-15px_rgba(15,23,42,0.08)] border border-white/80 relative z-10 transition-all duration-300">
         
-
-        <!-- Header Card -->
-
-        <div class="bg-gradient-to-r from-red-600 via-red-700 to-rose-700 p-6 sm:p-8 text-white text-center relative overflow-hidden">
-
-          <div class="absolute -right-8 -bottom-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
-
-          <div class="relative z-10">
-
-            <div class="w-16 h-16 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 mx-auto flex items-center justify-center text-3xl shadow-lg mb-3">
-
-              <i class="fa-solid fa-server"></i>
-
-            </div>
-
-            <span class="inline-block bg-white/20 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full backdrop-blur-sm mb-2">
-
-              <i class="fa-solid fa-shield-halved mr-1"></i> Area Administrator
-
-            </span>
-
-            <h1 class="text-xl sm:text-2xl font-black tracking-tight leading-tight">Portal CMS & Diagnostik</h1>
-
-          </div>
-
+        <!-- Top Icon / Logo Container (NKRI Emblem) -->
+        <div class="w-14 h-14 bg-white rounded-2xl shadow-md shadow-slate-200/50 border border-slate-100 flex items-center justify-center mx-auto mb-6">
+          <img src="/emblem.png" alt="Logo NKRI" class="w-8 h-8 object-contain" onerror="this.outerHTML='<i class=\'fa-solid fa-shield-halved text-red-600 text-2xl\'></i>'">
         </div>
 
-
+        <!-- Title (Clean without extra text) -->
+        <h1 class="text-xl sm:text-2xl font-black text-slate-900 text-center tracking-tight leading-snug mb-7">
+          Masuk kedalam Halaman Admin
+        </h1>
 
         <!-- Form Login Gate -->
-
-        <div class="p-6 sm:p-8 space-y-5">
-
-          <!-- Alert Pesan Error jika login gagal -->
-
-          <div v-if="loginError" class="bg-red-50 border border-red-200 text-red-700 text-xs rounded-2xl p-3.5 flex items-start space-x-2.5">
-
-            <i class="fa-solid fa-triangle-exclamation text-base mt-0.5 flex-shrink-0"></i>
-
-            <div>
-
-              <strong class="font-bold block">Autentikasi Gagal</strong>
-
-              <span>{{ loginError }}</span>
-
+        <form @submit.prevent="submitCmsLogin" class="space-y-4">
+          
+          <!-- Username Field -->
+          <div class="space-y-1">
+            <div class="relative flex items-center">
+              <i class="fa-solid fa-user text-slate-400 absolute left-4 text-sm pointer-events-none"></i>
+              <input 
+                type="text" 
+                v-model="loginForm.username" 
+                autocomplete="username" 
+                placeholder="Nama Pengguna (Username)" 
+                required 
+                autofocus
+                class="w-full bg-slate-100/80 hover:bg-slate-100 focus:bg-white border border-slate-200/70 focus:border-red-500 focus:ring-4 focus:ring-red-500/10 rounded-2xl py-3.5 pl-11 pr-4 text-sm font-semibold text-slate-800 placeholder-slate-400 outline-none transition-all duration-200"
+              >
             </div>
-
           </div>
 
-
-
-          <form @submit.prevent="submitCmsLogin" class="space-y-4">
-
-            <!-- Username -->
-
-            <div class="space-y-1.5">
-
-              <label class="block text-xs font-bold uppercase text-slate-700 tracking-wider">
-
-                Username Admin <span class="text-red-600">*</span>
-
-              </label>
-
-              <div class="relative">
-
-                <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-
-                  <i class="fa-solid fa-user-shield text-sm"></i>
-
-                </span>
-
-                <input type="text" v-model="loginForm.username" required autofocus placeholder="Masukkan username admin"
-
-                  class="w-full bg-slate-50 border border-slate-300 focus:bg-white focus:border-red-600 focus:ring-2 focus:ring-red-100 rounded-xl pl-10 pr-3.5 py-3 text-sm font-semibold text-slate-900 focus:outline-none transition">
-
-              </div>
-
+          <!-- Password Field -->
+          <div class="space-y-1">
+            <div class="relative flex items-center">
+              <i class="fa-solid fa-lock text-slate-400 absolute left-4 text-sm pointer-events-none"></i>
+              <input 
+                :type="showPassword ? 'text' : 'password'" 
+                v-model="loginForm.password" 
+                autocomplete="current-password" 
+                placeholder="Kata Sandi (Password)" 
+                required 
+                class="w-full bg-slate-100/80 hover:bg-slate-100 focus:bg-white border border-slate-200/70 focus:border-red-500 focus:ring-4 focus:ring-red-500/10 rounded-2xl py-3.5 pl-11 pr-11 text-sm font-semibold text-slate-800 placeholder-slate-400 outline-none transition-all duration-200"
+              >
+              <button 
+                type="button" 
+                @click="showPassword = !showPassword" 
+                class="absolute right-4 text-slate-400 hover:text-slate-600 transition p-1 cursor-pointer"
+                title="Lihat / Sembunyikan Kata Sandi"
+              >
+                <i :class="showPassword ? 'fa-regular fa-eye-slash' : 'fa-regular fa-eye'" class="text-sm"></i>
+              </button>
             </div>
-
-
-
-            <!-- Password -->
-
-            <div class="space-y-1.5">
-
-              <label class="block text-xs font-bold uppercase text-slate-700 tracking-wider">
-
-                Password Admin <span class="text-red-600">*</span>
-
-              </label>
-
-              <div class="relative">
-
-                <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-
-                  <i class="fa-solid fa-key text-sm"></i>
-
-                </span>
-
-                <input :type="showPassword ? 'text' : 'password'" v-model="loginForm.password" required placeholder="Masukkan password admin"
-
-                  class="w-full bg-slate-50 border border-slate-300 focus:bg-white focus:border-red-600 focus:ring-2 focus:ring-red-100 rounded-xl pl-10 pr-10 py-3 text-sm font-semibold text-slate-900 focus:outline-none transition">
-
-                <button type="button" @click="showPassword = !showPassword"
-
-                  class="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer">
-
-                  <i :class="showPassword ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'"></i>
-
-                </button>
-
-              </div>
-
-            </div>
-
-
-
-            <!-- Tombol Masuk -->
-
-            <button type="submit" :disabled="loginLoading"
-
-              class="w-full bg-red-600 hover:bg-red-700 active:scale-[0.98] text-white font-bold py-3.5 px-4 rounded-xl text-sm transition duration-150 shadow-lg shadow-red-600/30 flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50">
-
-              <i v-if="loginLoading" class="fa-solid fa-circle-notch animate-spin"></i>
-
-              <i v-else class="fa-solid fa-lock-open"></i>
-
-              <span>{{ loginLoading ? 'Memverifikasi...' : 'Masuk Portal CMS' }}</span>
-
-            </button>
-
-          </form>
-
-
-
-          <!-- Link Navigasi Kembali -->
-
-          <div class="pt-2 text-center border-t border-slate-100">
-
-            <a href="/" class="text-xs font-bold text-slate-500 hover:text-slate-800 transition inline-flex items-center space-x-1.5 py-1">
-
-              <i class="fa-solid fa-arrow-left text-[11px]"></i>
-
-              <span>Kembali ke Aplikasi Operasional</span>
-
-            </a>
-
           </div>
 
-        </div>
+          <!-- Alert Error jika login gagal -->
+          <div v-if="loginError" class="bg-red-50 border border-red-200 text-red-700 text-xs font-semibold rounded-2xl p-3.5 flex items-start gap-2.5 leading-relaxed text-left">
+            <i class="fa-solid fa-circle-exclamation text-base mt-0.5 shrink-0 text-red-600"></i>
+            <span>{{ loginError }}</span>
+          </div>
 
+          <!-- Submit Button (Red Theme Palette) -->
+          <button 
+            type="submit" 
+            :disabled="loginLoading"
+            class="w-full bg-red-600 hover:bg-red-700 active:scale-[0.99] disabled:opacity-50 text-white font-bold py-3.5 px-6 rounded-2xl text-sm transition-all duration-200 shadow-lg shadow-red-600/25 hover:shadow-red-600/35 flex items-center justify-center gap-2 mt-2 cursor-pointer"
+          >
+            <i v-if="loginLoading" class="fa-solid fa-circle-notch fa-spin"></i>
+            <span>{{ loginLoading ? 'Memverifikasi...' : 'Masuk' }}</span>
+          </button>
 
+        </form>
 
       </div>
 
     </div>
 
-
-
-
-
     <!-- ========================================================================= -->
-
-    <!-- STATE 2: DASHBOARD PORTAL CMS & DIAGNOSTIK SERVER (TERAUTENTIKASI) -->
-
+    <!-- STATE 2: CMS PORTAL & DASHBOARD (MATCHING IMAGE 1 SAAS REFERENCE)         -->
     <!-- ========================================================================= -->
-
-    <div v-else class="flex-grow flex h-screen overflow-hidden bg-slate-100/70 font-sans relative">
-
+    <div v-else class="flex-grow flex h-screen overflow-hidden bg-[#f8fafc] font-sans relative">
       
-
-      <!-- ===================================================================== -->
-
-      <!-- UNIVERSAL SIDEBAR DRAWER (CLEAN WHITE THEME, SMOOTH ANIMATION) -->
-
-      <!-- ===================================================================== -->
-
-
-
-      <!-- Backdrop Overlay -->
-
-      <transition enter-active-class="transition-opacity ease-out duration-300" enter-from-class="opacity-0"
-
-        enter-to-class="opacity-100" leave-active-class="transition-opacity ease-in duration-200"
-
-        leave-from-class="opacity-100" leave-to-class="opacity-0">
-
-        <div v-if="isCmsSidebarOpen" class="fixed inset-0 bg-slate-950/50 backdrop-blur-xs z-40"
-
-          @click="isCmsSidebarOpen = false"></div>
-
-      </transition>
-
-
-
-      <!-- Sidebar Drawer (White Aesthetic) -->
-
-      <transition enter-active-class="transition-transform ease-out duration-300" enter-from-class="-translate-x-full"
-
-        enter-to-class="translate-x-0" leave-active-class="transition-transform ease-in duration-200"
-
-        leave-from-class="translate-x-0" leave-to-class="-translate-x-full">
-
-        <aside v-if="isCmsSidebarOpen"
-
-          class="fixed inset-y-0 left-0 z-50 w-72 sm:w-80 max-w-[85vw] bg-white text-slate-800 shadow-2xl border-r border-slate-200 flex flex-col justify-between overflow-y-auto select-none">
-
-          
-
-          <div>
-
-            <!-- Top Header Logo & Close Button -->
-
-            <div class="p-4 sm:p-5 flex items-center justify-between border-b border-slate-100 bg-slate-50/70">
-
-              <div class="flex items-center space-x-2.5">
-
-                <img src="/emblem.png" alt="Logo" class="h-8 w-auto object-contain bg-white p-1 rounded-lg border border-slate-200 shadow-xs">
-
-                <div class="leading-tight">
-
-                  <div class="flex items-center gap-1.5">
-
-                    <span class="font-black text-sm text-slate-900 tracking-wide">PORTAL CMS</span>
-
-                  </div>
-
-                  <p class="text-[10px] text-slate-500 font-medium">Final Assembly</p>
-
-                </div>
-
-              </div>
-
-              <button type="button" @click="isCmsSidebarOpen = false"
-
-                class="text-slate-400 hover:text-slate-700 p-2 rounded-xl hover:bg-slate-100 transition active:scale-95 cursor-pointer"
-
-                title="Tutup Menu">
-
-                <i class="fa-solid fa-xmark text-lg"></i>
-
-              </button>
-
-            </div>
-
-
-
-            <!-- Navigation Menu Items (Clean & Simple, No Extra Text) -->
-
-            <nav class="p-3 sm:p-4 space-y-4">
-
-              
-
-              <!-- GROUP 1: PENGGUNA & HAK AKSES -->
-
-              <div class="space-y-1">
-
-                <div class="px-3 py-1 text-[10px] font-black text-slate-400 uppercase tracking-wider">
-
-                  Pengguna
-
-                </div>
-
-                <button type="button" @click="activeTab = 'users'; fetchUsers(); isCmsSidebarOpen = false"
-
-                  :class="activeTab === 'users' ? 'bg-red-600 text-white font-bold shadow-md shadow-red-600/20' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-medium'"
-
-                  class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs transition flex items-center justify-between group cursor-pointer">
-
-                  <div class="flex items-center space-x-2.5">
-
-                    <i class="fa-solid fa-users-gear text-sm" :class="activeTab === 'users' ? 'text-white' : 'text-slate-400 group-hover:text-red-600'"></i>
-
-                    <span class="font-bold">Kelola Pengguna</span>
-
-                  </div>
-
-                  <span v-if="usersList.length > 0"
-
-                    class="px-2 py-0.5 rounded-full text-[10px] font-bold"
-
-                    :class="activeTab === 'users' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700 border border-slate-200'">
-
-                    {{ usersList.length }}
-
-                  </span>
-
-                </button>
-
-              </div>
-
-
-
-              <!-- GROUP 2: PEMELIHARAAN DATABASE -->
-
-              <div class="space-y-1">
-
-                <div class="px-3 py-1 text-[10px] font-black text-slate-400 uppercase tracking-wider">
-
-                  Pemeliharaan Data
-
-                </div>
-
-                <button type="button" @click="activeTab = 'cleanup'; isCmsSidebarOpen = false"
-
-                  :class="activeTab === 'cleanup' ? 'bg-red-600 text-white font-bold shadow-md shadow-red-600/20' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-medium'"
-
-                  class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs transition flex items-center justify-between group cursor-pointer">
-
-                  <div class="flex items-center space-x-2.5">
-
-                    <i class="fa-solid fa-broom text-sm" :class="activeTab === 'cleanup' ? 'text-white' : 'text-slate-400 group-hover:text-red-600'"></i>
-
-                    <span class="font-bold">Pembersihan Database</span>
-
-                  </div>
-
-                </button>
-
-                <button type="button" @click="activeTab = 'anomalies'; scanAnomalies(); isCmsSidebarOpen = false"
-
-                  :class="activeTab === 'anomalies' ? 'bg-red-600 text-white font-bold shadow-md shadow-red-600/20' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-medium'"
-
-                  class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs transition flex items-center justify-between group cursor-pointer">
-
-                  <div class="flex items-center space-x-2.5">
-
-                    <i class="fa-solid fa-wand-magic-sparkles text-sm" :class="activeTab === 'anomalies' ? 'text-white' : 'text-slate-400 group-hover:text-red-600'"></i>
-
-                    <span class="font-bold">Pemindai Anomali</span>
-
-                  </div>
-
-                  <span v-if="anomalySummary.total_anomalies > 0"
-
-                    class="px-2 py-0.5 rounded-full text-[10px] font-bold"
-
-                    :class="activeTab === 'anomalies' ? 'bg-white/20 text-white' : 'bg-red-100 text-red-700 border border-red-200'">
-
-                    {{ anomalySummary.total_anomalies }}
-
-                  </span>
-
-                </button>
-
-              </div>
-
-
-
-              <!-- GROUP 3: DIAGNOSTIK & LOG -->
-
-              <div class="space-y-1">
-
-                <div class="px-3 py-1 text-[10px] font-black text-slate-400 uppercase tracking-wider">
-
-                  Diagnostik & Log
-
-                </div>
-
-                <button type="button" @click="activeTab = 'errors'; fetchErrorLogs(); isCmsSidebarOpen = false"
-
-                  :class="activeTab === 'errors' ? 'bg-red-600 text-white font-bold shadow-md shadow-red-600/20' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-medium'"
-
-                  class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs transition flex items-center justify-between group cursor-pointer">
-
-                  <div class="flex items-center space-x-2.5">
-
-                    <i class="fa-solid fa-triangle-exclamation text-sm" :class="activeTab === 'errors' ? 'text-white' : 'text-slate-400 group-hover:text-red-600'"></i>
-
-                    <span class="font-bold">Error Logger</span>
-
-                  </div>
-
-                  <span v-if="errorLogs.length > 0"
-
-                    class="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-500 text-white">
-
-                    {{ errorLogs.length }}
-
-                  </span>
-
-                </button>
-
-                <button type="button" @click="activeTab = 'slow_queries'; fetchSlowQueries(); isCmsSidebarOpen = false"
-
-                  :class="activeTab === 'slow_queries' ? 'bg-red-600 text-white font-bold shadow-md shadow-red-600/20' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-medium'"
-
-                  class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs transition flex items-center justify-between group cursor-pointer">
-
-                  <div class="flex items-center space-x-2.5">
-
-                    <i class="fa-solid fa-stopwatch text-sm" :class="activeTab === 'slow_queries' ? 'text-white' : 'text-slate-400 group-hover:text-amber-500'"></i>
-
-                    <span class="font-bold">Slow Query Monitor</span>
-
-                  </div>
-
-                  <span v-if="slowQueries.length > 0"
-
-                    class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-slate-900">
-
-                    {{ slowQueries.length }}
-
-                  </span>
-
-                </button>
-
-              </div>
-
-
-
-              <!-- GROUP 4: INTEGRASI DOKUMEN -->
-
-              <div class="space-y-1">
-
-                <div class="px-3 py-1 text-[10px] font-black text-slate-400 uppercase tracking-wider">
-
-                  Integrasi Dokumen
-
-                </div>
-
-                <button type="button" @click="activeTab = 'do_settings'; fetchDoSettings(); isCmsSidebarOpen = false"
-
-                  :class="activeTab === 'do_settings' ? 'bg-red-600 text-white font-bold shadow-md shadow-red-600/20' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-medium'"
-
-                  class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs transition flex items-center justify-between group cursor-pointer">
-
-                  <div class="flex items-center space-x-2.5">
-
-                    <i class="fa-solid fa-file-invoice text-sm" :class="activeTab === 'do_settings' ? 'text-white' : 'text-slate-400 group-hover:text-red-600'"></i>
-
-                    <span class="font-bold">DO & Cloudinary</span>
-
-                  </div>
-
-                </button>
-
-              </div>
-
-
-
-            </nav>
-
-          </div>
-
-
-
-          <!-- Sidebar Footer: Admin Profile & Quick Links -->
-
-          <div class="p-3.5 sm:p-4 border-t border-slate-200 bg-slate-50/80 space-y-3">
-
-            <div class="flex items-center space-x-2.5 px-3 py-2 bg-white rounded-xl border border-slate-200 shadow-2xs">
-
-              <div class="w-8 h-8 rounded-lg bg-red-50 text-red-600 border border-red-200 flex items-center justify-center text-xs font-bold shrink-0">
-
-                <i class="fa-solid fa-user-shield"></i>
-
-              </div>
-
-              <div class="leading-tight truncate flex-1 min-w-0">
-
-                <div class="text-xs font-bold text-slate-900 truncate">{{ adminUser.full_name || adminUser.username }}</div>
-
-                <div class="text-[10px] text-slate-400 font-mono truncate">@{{ adminUser.username }}</div>
-
-              </div>
-
-            </div>
-
-
-
-            <!-- Bottom Actions: App & Logout -->
-
-            <div class="grid grid-cols-2 gap-2">
-
-              <a href="/" target="_blank"
-
-                class="bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-center py-2 px-2 rounded-xl text-[11px] font-bold transition flex items-center justify-center gap-1.5 shadow-2xs"
-
-                title="Buka Aplikasi Operasional Pabrik">
-
-                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
-
-                <span class="truncate">Halaman</span>
-
-              </a>
-
-              <button type="button" @click="logoutCms"
-
-                class="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-center py-2 px-2 rounded-xl text-[11px] font-bold transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
-
-                title="Kunci Portal">
-
-                <i class="fa-solid fa-lock text-[10px]"></i>
-
-                <span>Kunci</span>
-
-              </button>
-
-            </div>
-
-          </div>
-
-
-
-        </aside>
-
-      </transition>
-
-
-
-      <!-- ===================================================================== -->
-
-      <!-- MAIN WORKSPACE CONTENT WRAPPER (FULL CANVAS) -->
-
-      <!-- ===================================================================== -->
-
-      <div class="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
-
+      <!-- DESKTOP PERSISTENT SIDEBAR -->
+      <aside class="hidden md:flex flex-col w-64 bg-white border-r border-slate-200/80 shrink-0 h-screen sticky top-0 justify-between select-none z-20">
         
-
-        <!-- STICKY TOPBAR -->
-
-        <header class="bg-white/95 backdrop-blur-md border-b border-slate-200 sticky top-0 z-30 shadow-xs px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-3">
-
+        <div class="flex flex-col flex-1 min-h-0 overflow-y-auto">
           
+          <!-- Brand Header (Workspace Profile) -->
+          <div class="p-5 flex items-center justify-between border-b border-slate-100">
+            <div class="flex items-center space-x-3 min-w-0">
+              <div class="w-9 h-9 bg-white border border-slate-200 rounded-xl flex items-center justify-center p-1 shadow-xs shrink-0">
+                <img src="/emblem.png" alt="Logo" class="w-full h-full object-contain" onerror="this.outerHTML='<i class=\'fa-solid fa-shield-halved text-red-600 text-base\'></i>'">
+              </div>
+              <div class="leading-tight truncate">
+                <h2 class="font-extrabold text-sm text-slate-900 tracking-tight truncate">Sistem FA P9</h2>
+                <p class="text-[11px] text-slate-400 font-medium truncate">Portal Administrator</p>
+              </div>
+            </div>
+            <button type="button" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg transition" title="Menu">
+              <i class="fa-solid fa-angles-left text-xs"></i>
+            </button>
+          </div>
 
-          <!-- Left: Toggle Sidebar Button & Page Title -->
+          <!-- Search Bar (Q Search ⌘K) -->
+          <div class="px-4 pt-4 pb-2">
+            <div class="relative flex items-center">
+              <i class="fa-solid fa-magnifying-glass text-slate-400 absolute left-3 text-xs pointer-events-none"></i>
+              <input 
+                type="text" 
+                v-model="userSearchQuery" 
+                placeholder="Search..." 
+                class="w-full bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200/80 rounded-xl py-2 pl-8 pr-9 text-xs font-medium text-slate-700 placeholder-slate-400 outline-none transition focus:border-red-500 focus:ring-1 focus:ring-red-500/20"
+              >
+              <!-- <span class="absolute right-2.5 text-[10px] font-mono font-bold text-slate-400 bg-white px-1.5 py-0.5 rounded border border-slate-200">⌘</span> -->
+            </div>
+          </div>
 
+          <!-- Navigation Menus -->
+          <nav class="px-3 py-3 space-y-6 flex-1">
+            
+            <!-- MAIN MENU GROUP -->
+            <div class="space-y-1">
+              <div class="text-[10px] font-extrabold text-slate-400 tracking-wider uppercase px-3 py-1">MAIN MENU</div>
+              
+              <!-- 1. DASHBOARD -->
+              <button 
+                type="button" 
+                @click="switchTab('dashboard')"
+                :class="activeTab === 'dashboard' ? 'bg-red-50/80 text-red-600 font-bold border-l-4 border-red-600' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 font-medium border-l-4 border-transparent'"
+                class="w-full text-left px-3 py-2.5 rounded-r-xl text-xs transition flex items-center justify-between group cursor-pointer"
+              >
+                <div class="flex items-center space-x-2.5">
+                  <i class="fa-solid fa-gauge-high text-sm w-4 text-center" :class="activeTab === 'dashboard' ? 'text-red-600' : 'text-slate-400 group-hover:text-slate-700'"></i>
+                  <span>Dashboard</span>
+                </div>
+                <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-red-100 text-red-700" v-if="activeTab === 'dashboard'">Live</span>
+              </button>
+
+              <!-- 2. LAPORAN PRODUKSI (DEDICATED MENU) -->
+              <button 
+                type="button" 
+                @click="switchTab('reports_kpi')"
+                :class="activeTab === 'reports_kpi' ? 'bg-red-50/80 text-red-600 font-bold border-l-4 border-red-600' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 font-medium border-l-4 border-transparent'"
+                class="w-full text-left px-3 py-2.5 rounded-r-xl text-xs transition flex items-center justify-between group cursor-pointer"
+              >
+                <div class="flex items-center space-x-2.5">
+                  <i class="fa-solid fa-chart-line text-sm w-4 text-center" :class="activeTab === 'reports_kpi' ? 'text-red-600' : 'text-slate-400 group-hover:text-slate-700'"></i>
+                  <span>Laporan Produksi</span>
+                </div>
+                <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600"></span>
+              </button>
+
+              <!-- 3. KELOLA PENGGUNA -->
+              <button 
+                type="button" 
+                @click="switchTab('users')"
+                :class="activeTab === 'users' ? 'bg-red-50/80 text-red-600 font-bold border-l-4 border-red-600' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 font-medium border-l-4 border-transparent'"
+                class="w-full text-left px-3 py-2.5 rounded-r-xl text-xs transition flex items-center justify-between group cursor-pointer"
+              >
+                <div class="flex items-center space-x-2.5">
+                  <i class="fa-solid fa-users-gear text-sm w-4 text-center" :class="activeTab === 'users' ? 'text-red-600' : 'text-slate-400 group-hover:text-slate-700'"></i>
+                  <span>Kelola Pengguna</span>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full" :class="activeTab === 'users' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'">
+                  {{ usersList.length }}
+                </span>
+              </button>
+
+              <!-- 3. PEMINDAI ANOMALI -->
+              <button 
+                type="button" 
+                @click="switchTab('anomalies')"
+                :class="activeTab === 'anomalies' ? 'bg-red-50/80 text-red-600 font-bold border-l-4 border-red-600' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 font-medium border-l-4 border-transparent'"
+                class="w-full text-left px-3 py-2.5 rounded-r-xl text-xs transition flex items-center justify-between group cursor-pointer"
+              >
+                <div class="flex items-center space-x-2.5">
+                  <i class="fa-solid fa-wand-magic-sparkles text-sm w-4 text-center" :class="activeTab === 'anomalies' ? 'text-red-600' : 'text-slate-400 group-hover:text-slate-700'"></i>
+                  <span>Pemindai Anomali</span>
+                </div>
+                <span v-if="anomalySummary.total_anomalies > 0" class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-100 text-red-700">
+                  {{ anomalySummary.total_anomalies }}
+                </span>
+              </button>
+
+              <!-- 4. PEMBERSIHAN DATABASE -->
+              <button 
+                type="button" 
+                @click="switchTab('cleanup')"
+                :class="activeTab === 'cleanup' ? 'bg-red-50/80 text-red-600 font-bold border-l-4 border-red-600' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 font-medium border-l-4 border-transparent'"
+                class="w-full text-left px-3 py-2.5 rounded-r-xl text-xs transition flex items-center justify-between group cursor-pointer"
+              >
+                <div class="flex items-center space-x-2.5">
+                  <i class="fa-solid fa-broom text-sm w-4 text-center" :class="activeTab === 'cleanup' ? 'text-red-600' : 'text-slate-400 group-hover:text-slate-700'"></i>
+                  <span>Pembersihan Database</span>
+                </div>
+              </button>
+
+            </div>
+
+            <!-- SISTEM & MONITORING GROUP -->
+            <div class="space-y-1">
+              <div class="text-[10px] font-extrabold text-slate-400 tracking-wider uppercase px-3 py-1">SISTEM & MONITORING</div>
+
+              <!-- 5. BACKEND ERROR LOGGER -->
+              <button 
+                type="button" 
+                @click="switchTab('errors')"
+                :class="activeTab === 'errors' ? 'bg-red-50/80 text-red-600 font-bold border-l-4 border-red-600' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 font-medium border-l-4 border-transparent'"
+                class="w-full text-left px-3 py-2.5 rounded-r-xl text-xs transition flex items-center justify-between group cursor-pointer"
+              >
+                <div class="flex items-center space-x-2.5">
+                  <i class="fa-solid fa-triangle-exclamation text-sm w-4 text-center" :class="activeTab === 'errors' ? 'text-red-600' : 'text-slate-400 group-hover:text-slate-700'"></i>
+                  <span>Backend Error Log</span>
+                </div>
+                <span v-if="errorLogs.length > 0" class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                  {{ errorLogs.length }}
+                </span>
+              </button>
+
+              <!-- 6. SLOW QUERY MONITOR -->
+              <button 
+                type="button" 
+                @click="switchTab('slow_queries')"
+                :class="activeTab === 'slow_queries' ? 'bg-red-50/80 text-red-600 font-bold border-l-4 border-red-600' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 font-medium border-l-4 border-transparent'"
+                class="w-full text-left px-3 py-2.5 rounded-r-xl text-xs transition flex items-center justify-between group cursor-pointer"
+              >
+                <div class="flex items-center space-x-2.5">
+                  <i class="fa-solid fa-stopwatch text-sm w-4 text-center" :class="activeTab === 'slow_queries' ? 'text-red-600' : 'text-slate-400 group-hover:text-slate-700'"></i>
+                  <span>Slow Query Monitor</span>
+                </div>
+              </button>
+
+              <!-- 7. PENGATURAN DO & CLOUD -->
+              <button 
+                type="button" 
+                @click="switchTab('do_settings')"
+                :class="activeTab === 'do_settings' ? 'bg-red-50/80 text-red-600 font-bold border-l-4 border-red-600' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 font-medium border-l-4 border-transparent'"
+                class="w-full text-left px-3 py-2.5 rounded-r-xl text-xs transition flex items-center justify-between group cursor-pointer"
+              >
+                <div class="flex items-center space-x-2.5">
+                  <i class="fa-solid fa-file-invoice text-sm w-4 text-center" :class="activeTab === 'do_settings' ? 'text-red-600' : 'text-slate-400 group-hover:text-slate-700'"></i>
+                  <span>Pengaturan DO & Cloud</span>
+                </div>
+              </button>
+
+            </div>
+
+          </nav>
+
+        </div>
+
+        <!-- Sidebar Footer: Admin Profile & Operational Links -->
+        <div class="p-4 border-t border-slate-100 bg-slate-50/50 space-y-3">
+          
+          <div class="flex items-center space-x-3 px-2 py-1.5">
+            <div class="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs font-bold shrink-0">
+              <i class="fa-solid fa-user-shield"></i>
+            </div>
+            <div class="leading-tight truncate flex-1 min-w-0">
+              <div class="text-xs font-bold text-slate-900 truncate">{{ adminUser.full_name || adminUser.username || 'Administrator' }}</div>
+              <div class="text-[10px] text-slate-400 truncate font-mono">{{ adminUser.username || 'admin' }}</div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 pt-1">
+            <a href="/" target="_blank" class="bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-center py-2 px-2 rounded-xl text-[11px] font-bold transition flex items-center justify-center gap-1.5 shadow-2xs">
+              <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+              <span class="truncate">Operasional</span>
+            </a>
+            <button type="button" @click="logoutCms" class="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-center py-2 px-2 rounded-xl text-[11px] font-bold transition flex items-center justify-center gap-1.5 cursor-pointer">
+              <i class="fa-solid fa-lock text-[10px]"></i>
+              <span>Kunci</span>
+            </button>
+          </div>
+
+        </div>
+
+      </aside>
+
+      <!-- MOBILE SIDEBAR DRAWER -->
+      <transition enter-active-class="transition-opacity ease-out duration-300" enter-from-class="opacity-0" enter-to-class="opacity-100" leave-active-class="transition-opacity ease-in duration-200" leave-from-class="opacity-100" leave-to-class="opacity-0">
+        <div v-if="isCmsSidebarOpen" class="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-40 md:hidden" @click="isCmsSidebarOpen = false"></div>
+      </transition>
+      <transition enter-active-class="transition-transform ease-out duration-300" enter-from-class="-translate-x-full" enter-to-class="translate-x-0" leave-active-class="transition-transform ease-in duration-200" leave-from-class="translate-x-0" leave-to-class="-translate-x-full">
+        <aside v-if="isCmsSidebarOpen" class="fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-white text-slate-800 shadow-2xl border-r border-slate-200 flex flex-col justify-between overflow-y-auto md:hidden">
+          <div class="p-4 flex items-center justify-between border-b border-slate-100">
+            <div class="flex items-center space-x-2.5">
+              <div class="w-8 h-8 bg-white border border-slate-200 rounded-lg flex items-center justify-center p-1 shadow-xs">
+                <img src="/emblem.png" alt="Logo" class="w-full h-full object-contain">
+              </div>
+              <span class="font-extrabold text-sm text-slate-900">Sistem FA P9</span>
+            </div>
+            <button type="button" @click="isCmsSidebarOpen = false" class="text-slate-400 hover:text-slate-700 p-2 rounded-lg">
+              <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+          </div>
+          <nav class="p-4 space-y-4 flex-1">
+            <button @click="switchTab('dashboard'); isCmsSidebarOpen = false" :class="activeTab === 'dashboard' ? 'bg-red-50 text-red-600 font-bold' : 'text-slate-600'" class="w-full text-left px-3 py-2.5 rounded-xl text-xs flex items-center gap-2.5">
+              <i class="fa-solid fa-gauge-high"></i> Dashboard
+            </button>
+            <button @click="switchTab('reports_kpi'); isCmsSidebarOpen = false" :class="activeTab === 'reports_kpi' ? 'bg-red-50 text-red-600 font-bold' : 'text-slate-600'" class="w-full text-left px-3 py-2.5 rounded-xl text-xs flex items-center gap-2.5">
+              <i class="fa-solid fa-chart-line"></i> Laporan Produksi
+            </button>
+            <button @click="switchTab('users'); isCmsSidebarOpen = false" :class="activeTab === 'users' ? 'bg-red-50 text-red-600 font-bold' : 'text-slate-600'" class="w-full text-left px-3 py-2.5 rounded-xl text-xs flex items-center gap-2.5">
+              <i class="fa-solid fa-users-gear"></i> Kelola Pengguna
+            </button>
+            <button @click="switchTab('anomalies'); isCmsSidebarOpen = false" :class="activeTab === 'anomalies' ? 'bg-red-50 text-red-600 font-bold' : 'text-slate-600'" class="w-full text-left px-3 py-2.5 rounded-xl text-xs flex items-center gap-2.5">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> Pemindai Anomali
+            </button>
+            <button @click="switchTab('cleanup'); isCmsSidebarOpen = false" :class="activeTab === 'cleanup' ? 'bg-red-50 text-red-600 font-bold' : 'text-slate-600'" class="w-full text-left px-3 py-2.5 rounded-xl text-xs flex items-center gap-2.5">
+              <i class="fa-solid fa-broom"></i> Pembersihan Database
+            </button>
+            <button @click="switchTab('errors'); isCmsSidebarOpen = false" :class="activeTab === 'errors' ? 'bg-red-50 text-red-600 font-bold' : 'text-slate-600'" class="w-full text-left px-3 py-2.5 rounded-xl text-xs flex items-center gap-2.5">
+              <i class="fa-solid fa-triangle-exclamation"></i> Error Logger
+            </button>
+            <button @click="switchTab('slow_queries'); isCmsSidebarOpen = false" :class="activeTab === 'slow_queries' ? 'bg-red-50 text-red-600 font-bold' : 'text-slate-600'" class="w-full text-left px-3 py-2.5 rounded-xl text-xs flex items-center gap-2.5">
+              <i class="fa-solid fa-stopwatch"></i> Slow Queries
+            </button>
+            <button @click="switchTab('do_settings'); isCmsSidebarOpen = false" :class="activeTab === 'do_settings' ? 'bg-red-50 text-red-600 font-bold' : 'text-slate-600'" class="w-full text-left px-3 py-2.5 rounded-xl text-xs flex items-center gap-2.5">
+              <i class="fa-solid fa-file-invoice"></i> Pengaturan DO
+            </button>
+          </nav>
+        </aside>
+      </transition>
+
+      <!-- MAIN WORKSPACE CONTENT AREA -->
+      <div class="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
+        
+        <!-- STICKY TOPBAR HEADER (MATCHING IMAGE 1) -->
+        <header class="bg-white/95 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-30 px-5 sm:px-8 py-3.5 flex items-center justify-between gap-4">
+          
+          <!-- Left: Title & Mobile Toggle -->
           <div class="flex items-center space-x-3">
-
-            <button type="button" @click="isCmsSidebarOpen = true"
-
-              class="flex items-center space-x-2 px-3 py-2 text-slate-700 hover:text-red-600 hover:bg-slate-100 rounded-xl transition active:scale-95 cursor-pointer border border-slate-200 shadow-2xs"
-
-              title="Buka Menu Navigasi Sidebar">
-
+            <button type="button" @click="isCmsSidebarOpen = true" class="md:hidden text-slate-700 hover:text-red-600 p-2 rounded-xl border border-slate-200">
               <i class="fa-solid fa-bars text-base"></i>
+            </button>
+            <div>
+              <h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-none">
+                <span v-if="activeTab === 'dashboard'">Dashboard</span>
+                <span v-else-if="activeTab === 'reports_kpi'">Laporan Produksi</span>
+                <span v-else-if="activeTab === 'users'">Kelola Pengguna</span>
+                <span v-else-if="activeTab === 'anomalies'">Pemindai Anomali</span>
+                <span v-else-if="activeTab === 'cleanup'">Pembersihan Database</span>
+                <span v-else-if="activeTab === 'errors'">Backend Error Logger</span>
+                <span v-else-if="activeTab === 'slow_queries'">Slow Query Monitor</span>
+                <span v-else-if="activeTab === 'do_settings'">Pengaturan DO & Cloud</span>
+              </h1>
+            </div>
+          </div>
 
+          <!-- Right: Controls & Primary Actions -->
+          <div class="flex items-center space-x-3">
+            
+            <!-- Refresh Button -->
+            <button 
+              type="button" 
+              @click="fetchActiveTabData" 
+              class="w-9 h-9 rounded-xl border border-slate-200/80 hover:bg-slate-50 text-slate-600 hover:text-slate-900 flex items-center justify-center transition shadow-2xs cursor-pointer"
+              title="Perbarui Data"
+            >
+              <i class="fa-solid fa-rotate text-xs" :class="{'fa-spin': loading}"></i>
             </button>
 
+            <!-- Notifications / Anomaly Indicator -->
+            <button 
+              type="button" 
+              @click="switchTab('anomalies')"
+              class="w-9 h-9 rounded-xl border border-slate-200/80 hover:bg-slate-50 text-slate-600 hover:text-slate-900 flex items-center justify-center relative transition shadow-2xs cursor-pointer"
+              title="Notifikasi Anomali"
+            >
+              <i class="fa-regular fa-bell text-xs"></i>
+              <span v-if="anomalySummary.total_anomalies > 0" class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-600 ring-2 ring-white"></span>
+            </button>
 
-
-            <div>
-
-              <h1 class="text-base sm:text-lg font-black text-slate-900 leading-tight">
-
-                <span v-if="activeTab === 'users'"><i class="fa-solid fa-users-gear text-red-600 mr-1.5"></i>Kelola Pengguna</span>
-
-                <span v-else-if="activeTab === 'cleanup'"><i class="fa-solid fa-broom text-red-600 mr-1.5"></i>Pembersihan Database</span>
-
-                <span v-else-if="activeTab === 'anomalies'"><i class="fa-solid fa-wand-magic-sparkles text-red-600 mr-1.5"></i>Pemindai Anomali</span>
-
-                <span v-else-if="activeTab === 'errors'"><i class="fa-solid fa-triangle-exclamation text-red-600 mr-1.5"></i>Backend Error Logger</span>
-
-                <span v-else-if="activeTab === 'slow_queries'"><i class="fa-solid fa-stopwatch text-amber-500 mr-1.5"></i>Slow Query Monitor</span>
-
-                <span v-else-if="activeTab === 'do_settings'"><i class="fa-solid fa-file-invoice text-red-600 mr-1.5"></i>Pengaturan DO & Dokumen</span>
-
-              </h1>
-
+            <!-- Admin Avatar Pill -->
+            <div class="hidden sm:flex items-center space-x-2 pl-2 border-l border-slate-200">
+              <div class="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs font-bold">
+                <i class="fa-solid fa-user-shield"></i>
+              </div>
             </div>
+
+            <!-- Primary Action Button (Dynamic per tab, matching Image 1) -->
+            <button 
+              v-if="activeTab === 'users'" 
+              type="button" 
+              @click="resetUserForm(); openUserForm = true"
+              class="bg-slate-900 hover:bg-slate-800 active:scale-95 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-2 shadow-sm transition cursor-pointer"
+            >
+              <i class="fa-solid fa-plus text-[11px]"></i>
+              <span>+ Tambah Pengguna</span>
+            </button>
+
+            <button 
+              v-else-if="activeTab === 'anomalies'" 
+              type="button" 
+              @click="scanAnomalies"
+              class="bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-2 shadow-sm transition cursor-pointer"
+            >
+              <i class="fa-solid fa-wand-magic-sparkles text-[11px]"></i>
+              <span>Pindai Sekarang</span>
+            </button>
+
+            <button 
+              v-else-if="activeTab === 'dashboard'" 
+              type="button" 
+              @click="loadDashboardStats(false)"
+              class="bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-2 shadow-sm transition cursor-pointer"
+            >
+              <i class="fa-solid fa-arrows-rotate text-[11px]" :class="{'fa-spin': dashboardStats.loading}"></i>
+              <span>Perbarui Ringkasan</span>
+            </button>
+
+            <button 
+              v-else-if="activeTab === 'reports_kpi'" 
+              type="button" 
+              @click="loadDashboardStats(false)"
+              class="bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-2 shadow-sm transition cursor-pointer"
+            >
+              <i class="fa-solid fa-arrows-rotate text-[11px]" :class="{'fa-spin': dashboardStats.loading}"></i>
+              <span>Perbarui Laporan</span>
+            </button>
+
+            <button 
+              v-else-if="activeTab === 'errors'" 
+              type="button" 
+              @click="clearErrorLogs"
+              class="bg-slate-900 hover:bg-slate-800 active:scale-95 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-2 shadow-sm transition cursor-pointer"
+            >
+              <i class="fa-solid fa-trash-can text-[11px]"></i>
+              <span>Bersihkan Log</span>
+            </button>
 
           </div>
 
         </header>
 
-
-
-        <!-- FULL FUNGSI MAIN CONTENT AREA -->
-
-        <main class="flex-grow p-4 sm:p-6 lg:p-8 space-y-6">
-
-
-
-        <!-- ========================================================= -->
-
-        <!-- TAB 1: ALAT PEMBERSIHAN DATABASE (CLEAN & SIMPLE) -->
-
-        <!-- ========================================================= -->
-
-        <div v-if="activeTab === 'cleanup'" class="space-y-4">
-
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-
-            
-
-            <!-- Card 1: Reset Tray & Pulihkan Stok -->
-
-            <div class="bg-white border-2 border-red-200 rounded-2xl p-5 shadow-sm space-y-4 flex flex-col justify-between">
-
-              <div>
-
-                <div class="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center text-lg mb-3">
-
-                  <i class="fa-solid fa-trash-can"></i>
-
-                </div>
-
-                <h3 class="text-sm font-black text-slate-900 uppercase tracking-wide">Pembersihan Tray & Pulihkan Stok</h3>
-
-                <p class="text-xs text-slate-500 mt-1">Mengosongkan seluruh data tray dan mengembalikan stok part ke status <span class="text-emerald-600 font-bold">'Tersedia'</span>.</p>
-
-              </div>
-
-              <button type="button" @click="confirmClearTrays" :disabled="loading"
-
-                class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition shadow-md shadow-red-600/20 flex items-center justify-center space-x-2 cursor-pointer active:scale-95 disabled:opacity-50">
-
-                <i class="fa-solid fa-arrows-rotate" :class="loading ? 'animate-spin' : ''"></i>
-
-                <span>Reset Tray & Pulihkan Stok</span>
-
-              </button>
-
-            </div>
-
-
-
-            <!-- Card 2: Hapus Riwayat Downtime Operator -->
-
-            <div class="bg-white border border-amber-200 rounded-2xl p-5 shadow-sm space-y-4 flex flex-col justify-between">
-
-              <div>
-
-                <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center text-lg mb-3">
-
-                  <i class="fa-solid fa-clock-rotate-left"></i>
-
-                </div>
-
-                <h3 class="text-sm font-black text-slate-900 uppercase tracking-wide">Hapus Riwayat Jeda / Downtime</h3>
-
-                <p class="text-xs text-slate-500 mt-1">Mengosongkan seluruh riwayat catatan jeda workstation perakitan.</p>
-
-              </div>
-
-              <button type="button" @click="confirmClearDowntimes" :disabled="loading"
-
-                class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition shadow-md shadow-amber-500/20 flex items-center justify-center space-x-2 cursor-pointer active:scale-95 disabled:opacity-50">
-
-                <i class="fa-solid fa-trash"></i>
-
-                <span>Bersihkan Riwayat Jeda</span>
-
-              </button>
-
-            </div>
-
-
-
-            <!-- Card 3: Hapus Riwayat Audit Trail Sistem -->
-
-            <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4 flex flex-col justify-between">
-
-              <div>
-
-                <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center text-lg mb-3">
-
-                  <i class="fa-solid fa-list-check"></i>
-
-                </div>
-
-                <h3 class="text-sm font-black text-slate-900 uppercase tracking-wide">Hapus Riwayat Audit Trail</h3>
-
-                <p class="text-xs text-slate-500 mt-1">Mengosongkan seluruh catatan log audit pergantian part dan aktivitas.</p>
-
-              </div>
-
-              <button type="button" @click="confirmClearAuditLogs" :disabled="loading"
-
-                class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition shadow-md shadow-slate-800/20 flex items-center justify-center space-x-2 cursor-pointer active:scale-95 disabled:opacity-50">
-
-                <i class="fa-solid fa-eraser"></i>
-
-                <span>Bersihkan Seluruh Audit Log</span>
-
-              </button>
-
-            </div>
-
-
-
-          </div>
-
-        </div>
-
-
-
-        <!-- ========================================================= -->
-
-        <!-- TAB 2: BACKEND ERROR LOGGER (RINGKAS & PAGINATION 20) -->
-
-        <!-- ========================================================= -->
-
-        <div v-if="activeTab === 'errors'" class="space-y-4">
-
-          <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm space-y-5">
-
-            
-
-            <!-- Header Banner Ringkas dengan Total Error -->
-
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
-
-              <div class="flex items-center gap-3">
-
-                <div class="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center text-lg shrink-0">
-
-                  <i class="fa-solid fa-triangle-exclamation"></i>
-
-                </div>
-
-                <div>
-
-                  <div class="flex items-center gap-2">
-
-                    <h3 class="text-base font-black text-slate-900">Backend Error Logs</h3>
-
-                    <span class="bg-red-500 text-white font-mono font-bold text-xs px-2.5 py-0.5 rounded-full">
-
-                      {{ errorLogs.length }} Data
-
-                    </span>
-
-                  </div>
-
-                  <p class="text-xs text-slate-500">Rekaman exception server backend.</p>
-
-                </div>
-
-              </div>
-
-
-
-              <!-- Action Buttons -->
-
-              <div class="flex items-center space-x-2 shrink-0 self-end sm:self-auto">
-
-                <button type="button" @click="fetchErrorLogs"
-
-                  class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
-
-                  <i class="fa-solid fa-rotate-right"></i>
-
-                  <span>Refresh</span>
-
-                </button>
-
-                <button type="button" @click="clearErrorLogs" :disabled="errorLogs.length === 0"
-
-                  class="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50">
-
-                  <i class="fa-solid fa-trash"></i>
-
-                  <span>Bersihkan</span>
-
-                </button>
-
-              </div>
-
-            </div>
-
-
-
-            <!-- List Error Logs -->
-
-            <div v-if="errorLogs.length === 0" class="text-center py-12 text-slate-400">
-
-              <i class="fa-solid fa-circle-check text-3xl text-emerald-400 mb-1.5 block"></i>
-
-              <span class="text-xs font-semibold text-slate-600">Tidak ada error backend tercatat.</span>
-
-            </div>
-
-            
-
-            <div v-else class="space-y-4">
-
-              <!-- Item List (Paged 20 Data) -->
-
-              <div class="space-y-2">
-
-                <div v-for="(err, idx) in pagedErrorLogs" :key="err.id || idx"
-
-                  class="p-3.5 bg-slate-50/70 hover:bg-slate-50 border border-slate-200 rounded-xl space-y-1.5 transition">
-
-                  <div class="flex items-center justify-between gap-2">
-
-                    <div class="flex items-center gap-2">
-
-                      <span class="text-xs font-bold font-mono text-slate-400">
-
-                        #{{ (errorPage - 1) * errorPerPage + idx + 1 }}
-
-                      </span>
-
-                      <span class="bg-red-100 text-red-700 font-mono font-bold text-[10px] px-2 py-0.5 rounded border border-red-200">
-
-                        HTTP {{ err.error_code || '500' }}
-
-                      </span>
-
-                    </div>
-
-                    <span class="text-[11px] font-mono text-slate-400">{{ err.created_at }}</span>
-
-                  </div>
-
-                  <div class="text-xs font-bold text-slate-900 font-mono break-all bg-white p-2.5 rounded-lg border border-slate-200/80">
-
-                    {{ err.message }}
-
-                  </div>
-
-                  <div v-if="err.file" class="text-[11px] text-slate-500 font-mono truncate">
-
-                    {{ err.file }}:{{ err.line }}
-
-                  </div>
-
-                </div>
-
-              </div>
-
-
-
-              <!-- Pagination Controls (Batas 20 Data) -->
-
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-100">
-
-                <div class="text-xs text-slate-500 font-medium">
-
-                  Menampilkan <strong>{{ (errorPage - 1) * errorPerPage + 1 }}</strong> - <strong>{{ Math.min(errorPage * errorPerPage, errorLogs.length) }}</strong> dari <strong>{{ errorLogs.length }}</strong> data
-
-                </div>
-
-                
-
-                <div v-if="totalErrorPages > 1" class="flex items-center space-x-1.5 self-end sm:self-auto">
-
-                  <button type="button" @click="errorPage = Math.max(1, errorPage - 1)" :disabled="errorPage === 1"
-
-                    class="px-2.5 py-1.5 rounded-lg text-xs font-bold border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 disabled:opacity-40 transition cursor-pointer">
-
-                    <i class="fa-solid fa-chevron-left mr-1"></i> Sebelumnya
-
-                  </button>
-
-                  
-
-                  <span class="px-3 py-1.5 text-xs font-bold text-slate-700 font-mono">
-
-                    Hal {{ errorPage }} / {{ totalErrorPages }}
-
-                  </span>
-
-
-
-                  <button type="button" @click="errorPage = Math.min(totalErrorPages, errorPage + 1)" :disabled="errorPage === totalErrorPages"
-
-                    class="px-2.5 py-1.5 rounded-lg text-xs font-bold border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 disabled:opacity-40 transition cursor-pointer">
-
-                    Berikutnya <i class="fa-solid fa-chevron-right ml-1"></i>
-
-                  </button>
-
-                </div>
-
-              </div>
-
-            </div>
-
-
-
-          </div>
-
-        </div>
-
-
-
-        <!-- ========================================================= -->
-
-        <!-- TAB 3: SLOW QUERY MONITOR (RINGKAS & PAGINATION 20) -->
-
-        <!-- ========================================================= -->
-
-        <div v-if="activeTab === 'slow_queries'" class="space-y-4">
-
-          <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm space-y-5">
-
-            
-
-            <!-- Header Banner Ringkas dengan Total Slow Query -->
-
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
-
-              <div class="flex items-center gap-3">
-
-                <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-lg shrink-0">
-
-                  <i class="fa-solid fa-stopwatch"></i>
-
-                </div>
-
-                <div>
-
-                  <div class="flex items-center gap-2">
-
-                    <h3 class="text-base font-black text-slate-900">Slow Query Monitor (>500ms)</h3>
-
-                    <span class="bg-amber-500 text-slate-950 font-mono font-bold text-xs px-2.5 py-0.5 rounded-full">
-
-                      {{ slowQueries.length }} Query
-
-                    </span>
-
-                  </div>
-
-                  <p class="text-xs text-slate-500">Query SQL dengan durasi eksekusi >500ms.</p>
-
-                </div>
-
-              </div>
-
-
-
-              <!-- Action Buttons -->
-
-              <div class="flex items-center space-x-2 shrink-0 self-end sm:self-auto">
-
-                <button type="button" @click="fetchSlowQueries"
-
-                  class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
-
-                  <i class="fa-solid fa-rotate-right"></i>
-
-                  <span>Refresh</span>
-
-                </button>
-
-                <button type="button" @click="clearSlowQueries" :disabled="slowQueries.length === 0"
-
-                  class="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50">
-
-                  <i class="fa-solid fa-trash"></i>
-
-                  <span>Bersihkan</span>
-
-                </button>
-
-              </div>
-
-            </div>
-
-
-
-            <!-- List Slow Queries -->
-
-            <div v-if="slowQueries.length === 0" class="text-center py-12 text-slate-400">
-
-              <i class="fa-solid fa-gauge-high text-3xl text-emerald-400 mb-1.5 block"></i>
-
-              <span class="text-xs font-semibold text-slate-600">Semua query dieksekusi di bawah 500ms.</span>
-
-            </div>
-
-
-
-            <div v-else class="space-y-4">
-
-              <!-- Item List (Paged 20 Data) -->
-
-              <div class="space-y-2">
-
-                <div v-for="(q, idx) in pagedSlowQueries" :key="q.id || idx"
-
-                  class="p-3.5 bg-slate-50/70 hover:bg-slate-50 border border-slate-200 rounded-xl space-y-1.5 transition">
-
-                  <div class="flex items-center justify-between gap-2">
-
-                    <div class="flex items-center gap-2">
-
-                      <span class="text-xs font-bold font-mono text-slate-400">
-
-                        #{{ (slowPage - 1) * slowPerPage + idx + 1 }}
-
-                      </span>
-
-                      <span class="bg-amber-100 text-amber-900 font-mono font-bold text-[10px] px-2 py-0.5 rounded border border-amber-300">
-
-                        {{ Math.round(q.duration_ms || q.execution_time_ms) }} ms
-
-                      </span>
-
-                      <span v-if="q.endpoint" class="text-[10px] font-mono text-slate-500 bg-slate-200/60 px-1.5 py-0.5 rounded">
-
-                        {{ q.method || 'GET' }} /{{ q.endpoint }}
-
-                      </span>
-
-                    </div>
-
-                    <span class="text-[11px] font-mono text-slate-400">{{ q.created_at }}</span>
-
-                  </div>
-
-                  <div class="text-xs font-mono text-slate-800 bg-white p-2.5 rounded-lg border border-slate-200 overflow-x-auto shadow-2xs break-all">
-
-                    {{ q.sql_query || q.query_sql }}
-
-                  </div>
-
-                </div>
-
-              </div>
-
-
-
-              <!-- Pagination Controls (Batas 20 Data) -->
-
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-100">
-
-                <div class="text-xs text-slate-500 font-medium">
-
-                  Menampilkan <strong>{{ (slowPage - 1) * slowPerPage + 1 }}</strong> - <strong>{{ Math.min(slowPage * slowPerPage, slowQueries.length) }}</strong> dari <strong>{{ slowQueries.length }}</strong> data
-
-                </div>
-
-
-
-                <div v-if="totalSlowPages > 1" class="flex items-center space-x-1.5 self-end sm:self-auto">
-
-                  <button type="button" @click="slowPage = Math.max(1, slowPage - 1)" :disabled="slowPage === 1"
-
-                    class="px-2.5 py-1.5 rounded-lg text-xs font-bold border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 disabled:opacity-40 transition cursor-pointer">
-
-                    <i class="fa-solid fa-chevron-left mr-1"></i> Sebelumnya
-
-                  </button>
-
-
-
-                  <span class="px-3 py-1.5 text-xs font-bold text-slate-700 font-mono">
-
-                    Hal {{ slowPage }} / {{ totalSlowPages }}
-
-                  </span>
-
-
-
-                  <button type="button" @click="slowPage = Math.min(totalSlowPages, slowPage + 1)" :disabled="slowPage === totalSlowPages"
-
-                    class="px-2.5 py-1.5 rounded-lg text-xs font-bold border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 disabled:opacity-40 transition cursor-pointer">
-
-                    Berikutnya <i class="fa-solid fa-chevron-right ml-1"></i>
-
-                  </button>
-
-                </div>
-
-              </div>
-
-            </div>
-
-
-
-          </div>
-
-        </div>
-
-
-
-        <!-- ========================================================= -->
-
-        <!-- TAB 4: PEMINDAI ANOMALI (RINGKAS & PAGINATION 20) -->
-
-        <!-- ========================================================= -->
-
-        <div v-if="activeTab === 'anomalies'" class="space-y-5">
-
+        <!-- SUBHEADER / SECONDARY TOOLBAR -->
+        <div class="px-5 sm:px-8 py-3 bg-white border-b border-slate-200/60 flex flex-wrap items-center justify-between gap-3">
           
-
-          <!-- Summary Cards & Controls -->
-
-          <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
-
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
-
-              <div>
-
-                <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
-
-                  <i class="fa-solid fa-wand-magic-sparkles text-red-600"></i>
-
-                  <span>Pemindai Anomali</span>
-
-                </h3>
-
-                <p class="text-xs text-slate-500">Pemeriksaan integritas nomor seri gantung dan desync data.</p>
-
-              </div>
-
-              <div class="flex items-center space-x-2">
-
-                <button type="button" @click="scanAnomalies" :disabled="loading"
-
-                  class="bg-red-600 hover:bg-red-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-md shadow-red-600/20 cursor-pointer disabled:opacity-50">
-
-                  <i class="fa-solid fa-magnifying-glass" :class="loading ? 'animate-spin' : ''"></i>
-
-                  <span>Pindai</span>
-
-                </button>
-
-                <button type="button" @click="repairAnomalies" :disabled="loading || anomalySummary.total_anomalies === 0"
-
-                  class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-md shadow-emerald-600/20 cursor-pointer disabled:opacity-50">
-
-                  <i class="fa-solid fa-wrench"></i>
-
-                  <span>1-Click Auto Repair</span>
-
-                </button>
-
-              </div>
-
+          <div class="flex items-center space-x-2">
+            <!-- View Selector Pill -->
+            <div class="inline-flex items-center bg-slate-100 rounded-lg p-0.5 border border-slate-200/70 text-xs font-semibold text-slate-700">
+              <span class="px-2.5 py-1 bg-white rounded-md shadow-2xs font-bold text-slate-900 flex items-center gap-1.5">
+                <i class="fa-solid fa-table-cells-large text-[11px]"></i>
+                <span v-if="activeTab === 'dashboard'">Ringkasan Harian & Menu</span>
+                <span v-else-if="activeTab === 'reports_kpi'">Laporan Produksi</span>
+                <span v-else>Table View</span>
+              </span>
             </div>
 
-
-
-            <!-- 5 Summary Metric Cards -->
-
-            <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
-
-              <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
-
-                <span class="text-[11px] text-slate-500 font-bold block">Orphan Parts</span>
-
-                <strong class="text-xl font-mono text-slate-800">{{ anomalySummary.orphan_parts?.count || 0 }}</strong>
-
-              </div>
-
-              <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
-
-                <span class="text-[11px] text-slate-500 font-bold block">Stuck Sessions</span>
-
-                <strong class="text-xl font-mono text-slate-800">{{ anomalySummary.stuck_sessions?.count || 0 }}</strong>
-
-              </div>
-
-              <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
-
-                <span class="text-[11px] text-slate-500 font-bold block">Desynced Stocks</span>
-
-                <strong class="text-xl font-mono text-slate-800">{{ anomalySummary.desynced_stocks?.count || 0 }}</strong>
-
-              </div>
-
-              <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
-
-                <span class="text-[11px] text-slate-500 font-bold block">Duplicate Parts</span>
-
-                <strong class="text-xl font-mono text-slate-800">{{ anomalySummary.duplicate_parts?.count || 0 }}</strong>
-
-              </div>
-
-              <div class="col-span-2 sm:col-span-4 lg:col-span-1 p-3 rounded-xl border flex flex-col justify-between"
-
-                :class="anomalySummary.total_anomalies > 0 ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200'">
-
-                <span class="text-[11px] font-bold block" :class="anomalySummary.total_anomalies > 0 ? 'text-red-700' : 'text-emerald-700'">
-
-                  Total Anomali
-
-                </span>
-
-                <strong class="text-2xl font-mono" :class="anomalySummary.total_anomalies > 0 ? 'text-red-600' : 'text-emerald-600'">
-
-                  {{ anomalySummary.total_anomalies || 0 }}
-
-                </strong>
-
-              </div>
-
+            <!-- Dept / Category Filter -->
+            <div v-if="activeTab === 'users'" class="relative inline-block text-xs">
+              <select v-model="userDeptFilter" class="bg-slate-100 border border-slate-200 text-slate-700 rounded-lg px-2.5 py-1 font-semibold focus:outline-none focus:bg-white cursor-pointer">
+                <option value="all">Semua Departemen</option>
+                <option value="administrator">Administrator</option>
+                <option value="assembly">Assembly</option>
+                <option value="qc">Quality Control</option>
+                <option value="warehouse">Warehouse</option>
+              </select>
             </div>
-
           </div>
 
-
-
-          <!-- DETAILED ANOMALIES TABLE -->
-
-          <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
-
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
-
-              <div>
-
-                <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
-
-                  <i class="fa-solid fa-list-check text-slate-700"></i>
-
-                  <span>Rincian Data Anomali</span>
-
-                  <span class="bg-slate-100 text-slate-700 text-xs font-bold px-2 py-0.5 rounded-full">
-
-                    {{ filteredAnomalyItems.length }}
-
-                  </span>
-
-                </h3>
-
-              </div>
-
-
-
-              <!-- Filter Kategori Anomali -->
-
-              <div class="flex items-center gap-2">
-
-                <select v-model="anomalyCategoryFilter"
-
-                  class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-red-600 min-h-[34px] cursor-pointer">
-
-                  <option value="all">Semua Kategori ({{ allAnomalyItems.length }})</option>
-
-                  <option value="orphan">Orphan Parts ({{ anomalySummary.orphan_parts?.count || 0 }})</option>
-
-                  <option value="stuck">Stuck Assembly ({{ anomalySummary.stuck_sessions?.count || 0 }})</option>
-
-                  <option value="desync">Desynced Stocks ({{ anomalySummary.desynced_stocks?.count || 0 }})</option>
-
-                  <option value="duplicate">Duplicate Parts ({{ anomalySummary.duplicate_parts?.count || 0 }})</option>
-
-                </select>
-
-              </div>
-
-            </div>
-
-
-
-            <!-- Tabel Data Anomali -->
-
-            <div class="overflow-x-auto rounded-xl border border-slate-200">
-
-              <table class="w-full text-left text-xs">
-
-                <thead class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
-
-                  <tr>
-
-                    <th class="p-3 w-12 text-center">No</th>
-
-                    <th class="p-3">Kategori</th>
-
-                    <th class="p-3">Part / Rakitan</th>
-
-                    <th class="p-3">Serial Number</th>
-
-                    <th class="p-3">Konteks / Baki</th>
-
-                    <th class="p-3">Keterangan</th>
-
-                  </tr>
-
-                </thead>
-
-                <tbody class="divide-y divide-slate-100 text-slate-700">
-
-                  <tr v-for="(item, idx) in pagedAnomalyItems" :key="item.id || idx" class="hover:bg-slate-50 transition">
-
-                    <td class="p-3 text-center font-mono font-bold text-slate-400">
-
-                      {{ (anomalyPage - 1) * anomalyPerPage + idx + 1 }}
-
-                    </td>
-
-                    <td class="p-3 whitespace-nowrap">
-
-                      <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border inline-flex items-center gap-1.5"
-
-                        :class="item.badgeClass">
-
-                        <i :class="item.icon"></i>
-
-                        <span>{{ item.category }}</span>
-
-                      </span>
-
-                    </td>
-
-                    <td class="p-3 font-semibold text-slate-900">{{ item.partType }}</td>
-
-                    <td class="p-3 font-mono font-bold text-red-600">{{ item.sn }}</td>
-
-                    <td class="p-3">
-
-                      <div class="font-bold text-xs" :class="item.type === 'duplicate' ? 'text-rose-600 font-mono' : 'font-mono text-slate-700'">
-
-                        {{ item.trayInfo }}
-
-                      </div>
-
-                      <div v-if="item.trayCodes" class="text-[11px] font-mono text-slate-600 mt-1.5 flex flex-wrap gap-1 max-w-lg">
-
-                        <span v-for="tc in item.trayCodes.split(', ')" :key="tc"
-
-                              class="bg-slate-100 hover:bg-slate-200 border border-slate-200 px-1.5 py-0.5 rounded text-[10px] text-slate-700 font-semibold inline-flex items-center gap-1 select-all"
-
-                              :title="'Baki: ' + tc">
-
-                          <i class="fa-solid fa-box text-slate-400 text-[9px]"></i> @{{ tc }}
-
-                        </span>
-
-                      </div>
-
-                    </td>
-
-                    <td class="p-3 text-slate-600 text-xs">{{ item.description }}</td>
-
-                  </tr>
-
-
-
-                  <tr v-if="filteredAnomalyItems.length === 0">
-
-                    <td colspan="6" class="p-8 text-center text-slate-400">
-
-                      <i class="fa-solid fa-circle-check text-3xl text-emerald-400 mb-1.5 block"></i>
-
-                      <span class="text-xs font-semibold text-slate-600">Tidak ada anomali. Database konsisten.</span>
-
-                    </td>
-
-                  </tr>
-
-                </tbody>
-
-              </table>
-
-            </div>
-
-
-
-            <!-- Pagination Bar (Batas 20 Data) -->
-
-            <div v-if="filteredAnomalyItems.length > 0" class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-100">
-
-              <div class="text-xs text-slate-500 font-medium">
-
-                Menampilkan <strong>{{ (anomalyPage - 1) * anomalyPerPage + 1 }}</strong> - <strong>{{ Math.min(anomalyPage * anomalyPerPage, filteredAnomalyItems.length) }}</strong> dari <strong>{{ filteredAnomalyItems.length }}</strong> data
-
-              </div>
-
-
-
-              <div v-if="totalAnomalyPages > 1" class="flex items-center space-x-1.5 self-end sm:self-auto">
-
-                <button type="button" @click="anomalyPage = Math.max(1, anomalyPage - 1)" :disabled="anomalyPage === 1"
-
-                  class="px-2.5 py-1.5 rounded-lg text-xs font-bold border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 disabled:opacity-40 transition cursor-pointer">
-
-                  <i class="fa-solid fa-chevron-left mr-1"></i> Sebelumnya
-
-                </button>
-
-
-
-                <span class="px-3 py-1.5 text-xs font-bold text-slate-700 font-mono">
-
-                  Hal {{ anomalyPage }} / {{ totalAnomalyPages }}
-
-                </span>
-
-
-
-                <button type="button" @click="anomalyPage = Math.min(totalAnomalyPages, anomalyPage + 1)" :disabled="anomalyPage === totalAnomalyPages"
-
-                  class="px-2.5 py-1.5 rounded-lg text-xs font-bold border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 disabled:opacity-40 transition cursor-pointer">
-
-                  Berikutnya <i class="fa-solid fa-chevron-right ml-1"></i>
-
-                </button>
-
-              </div>
-
-            </div>
-
-
-
+          <!-- Right Filters & Stat Toggle -->
+          <div class="flex items-center space-x-3 text-xs">
+            <label class="flex items-center space-x-2 cursor-pointer text-slate-600 font-semibold select-none">
+              <span>Show Statistics</span>
+              <input type="checkbox" v-model="statsVisible" class="sr-only peer">
+              <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-600 relative"></div>
+            </label>
           </div>
 
         </div>
 
+        <!-- MAIN SCROLLABLE CONTENT BODY -->
+        <main class="flex-grow p-5 sm:p-8 space-y-6">
 
-
-        <!-- ========================================================= -->
-
-        <!-- TAB 5: PENGATURAN DELIVERY ORDER & DOKUMEN -->
-
-        <!-- ========================================================= -->
-
-        <div v-if="activeTab === 'do_settings'" class="space-y-4">
-
-          <div class="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-sm space-y-4">
-
-            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-
-              <div>
-
-                <h3 class="text-base font-black text-slate-900">Pengaturan Delivery Order & Dokumen</h3>
-
-                <p class="text-xs text-slate-500">Konfigurasi prefix nomor surat jalan, packing list, dan kapasitas.</p>
-
+          <!-- ================================================================= -->
+          <!-- TOP 4 KPI STATS SUMMARY CARDS ROW (LAPORAN HARIAN & PIPELINE)     -->
+          <!-- ================================================================= -->
+          <div v-if="statsVisible && activeTab === 'dashboard'" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            
+            <!-- CARD 1: TOTAL SET DIRAKIT (GOOD SAJA) -->
+            <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs space-y-2">
+              <div class="flex items-center justify-between text-xs text-slate-500 font-bold">
+                <span>Total Set Dirakit (Good)</span>
+                <i class="fa-solid fa-screwdriver-wrench text-red-500"></i>
               </div>
-
-              <button type="button" @click="saveDoSettings" :disabled="loading"
-
-                class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-xl text-xs transition shadow-md shadow-red-600/20 flex items-center space-x-2 cursor-pointer disabled:opacity-50">
-
-                <i class="fa-solid fa-floppy-disk"></i>
-
-                <span>Simpan Pengaturan</span>
-
-              </button>
-
+              <div class="text-2xl font-black text-slate-900 tracking-tight">
+                {{ dashboardStats.assembly.good }} <span class="text-xs font-normal text-slate-400">Set Good</span>
+              </div>
+              <div class="text-[11px] font-semibold text-emerald-600 flex items-center gap-1">
+                <i class="fa-solid fa-calendar-day text-[10px]"></i>
+                <span>{{ dailyKpi.assembledGoodToday }} Selesai ({{ dailyKpi.periodLabel }})</span>
+                <span class="text-slate-300">•</span>
+                <span class="text-slate-500">{{ dashboardStats.assembly.activeTrays }} Tray</span>
+              </div>
             </div>
 
-
-
-            <form @submit.prevent="saveDoSettings" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
-
-              <div>
-
-                <label class="block font-bold text-slate-700 mb-1">Prefix Surat Jalan (DO)</label>
-
-                <input type="text" v-model="doSettings.do_prefix" placeholder="/SJ/PPIC/" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-mono">
-
+            <!-- CARD 2: SIAP KIRIM (LOLOS GUDANG) -->
+            <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs space-y-2">
+              <div class="flex items-center justify-between text-xs text-slate-500 font-bold">
+                <span>Siap Kirim (Lolos Gudang)</span>
+                <i class="fa-solid fa-boxes-packing text-amber-500"></i>
               </div>
-
-              <div>
-
-                <label class="block font-bold text-slate-700 mb-1">Prefix Packing List (PL)</label>
-
-                <input type="text" v-model="doSettings.pl_prefix" placeholder="/PL/PPIC/" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-mono">
-
+              <div class="text-2xl font-black text-slate-900 tracking-tight">
+                {{ dashboardStats.pipeline.readyToShip }} <span class="text-xs font-normal text-slate-400">Set Siap Kirim</span>
               </div>
-
-              <div>
-
-                <label class="block font-bold text-slate-700 mb-1">Prefix Crate ID</label>
-
-                <input type="text" v-model="doSettings.crate_prefix" placeholder="2609-" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-mono">
-
+              <div class="text-[11px] font-semibold text-emerald-600 flex items-center gap-1">
+                <i class="fa-solid fa-circle-check text-[10px]"></i>
+                <span>{{ dailyKpi.warehouseAccToday }} ACC ({{ dailyKpi.periodLabel }})</span>
+                <span class="text-slate-300">•</span>
+                <span class="text-slate-500">Menunggu DO</span>
               </div>
+            </div>
 
-              <div>
-
-                <label class="block font-bold text-slate-700 mb-1">Kapasitas Maksimal Crate (Peti)</label>
-
-                <input type="number" v-model="doSettings.crate_capacity" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5">
-
+            <!-- CARD 3: SET SUDAH DIKIRIM (DO) -->
+            <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs space-y-2">
+              <div class="flex items-center justify-between text-xs text-slate-500 font-bold">
+                <span>Set Sudah Dikirim</span>
+                <i class="fa-solid fa-truck-fast text-indigo-500"></i>
               </div>
-
-              <div>
-
-                <label class="block font-bold text-slate-700 mb-1">Kapasitas Maksimal Box</label>
-
-                <input type="number" v-model="doSettings.box_capacity" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5">
-
+              <div class="text-2xl font-black text-slate-900 tracking-tight">
+                {{ dashboardStats.delivery.shippedSNCount }} <span class="text-xs font-normal text-slate-400">Unit SN Dikirim</span>
               </div>
-
-              <div>
-
-                <label class="block font-bold text-slate-700 mb-1">Nama Produk Default</label>
-
-                <input type="text" v-model="doSettings.default_product_name" placeholder="Nanggala P9" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5">
-
+              <div class="text-[11px] font-semibold text-slate-600 flex items-center gap-1">
+                <i class="fa-solid fa-file-invoice text-[10px] text-indigo-600"></i>
+                <span class="font-bold text-slate-900">{{ dashboardStats.delivery.totalDO }} Dokumen DO</span>
+                <span class="text-slate-300">•</span>
+                <span>{{ dashboardStats.delivery.totalCrates }} Peti</span>
               </div>
+            </div>
 
-              <div>
-
-                <label class="block font-bold text-slate-700 mb-1">Nama Customer Default</label>
-
-                <input type="text" v-model="doSettings.default_customer_name" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5">
-
+            <!-- CARD 4: RATA-RATA WAKTU OPERASIONAL (HARI INI / SESI AKTIF) -->
+            <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs space-y-2">
+              <div class="flex items-center justify-between text-xs text-slate-500 font-bold">
+                <span>Rata-rata Waktu ({{ dailyKpi.periodLabel }})</span>
+                <i class="fa-solid fa-stopwatch" :class="dailyKpi.countAssy > 0 ? 'text-emerald-500' : 'text-slate-400'"></i>
               </div>
-
-              <div>
-
-                <label class="block font-bold text-slate-700 mb-1">Alamat Customer Default</label>
-
-                <input type="text" v-model="doSettings.default_customer_address" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5">
-
-              </div>
-
-              <div>
-
-                <label class="block font-bold text-slate-700 mb-1">Nama Penandatangan (PPIC)</label>
-
-                <input type="text" v-model="doSettings.default_signer_name" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5">
-
-              </div>
-
-            </form>
-
-          </div>
-
-
-
-          <!-- Card Kredensial Cloudinary (Admin CMS Terpusat) -->
-
-          <div class="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-sm space-y-4">
-
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
-
-              <div>
-
-                <div class="flex items-center space-x-2">
-
-                  <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm font-bold">
-
-                    <i class="fa-solid fa-cloud-arrow-up"></i>
-
-                  </div>
-
-                  <h3 class="text-base font-black text-slate-900">Integrasi Cloud Storage</h3>
-
-                  <span v-if="cloudSettings.configured" class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center space-x-1">
-
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1"></span> Aktif
-
-                  </span>
-
-                  <span v-else class="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center space-x-1">
-
-                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1"></span> Belum Diatur
-
-                  </span>
-
+              <div class="text-2xl font-black text-slate-900 tracking-tight flex items-baseline gap-2 flex-wrap">
+                <div class="flex items-baseline gap-1">
+                  <span class="font-mono">{{ dailyKpi.avgAssyDisplayNumber }}</span>
+                  <span class="text-xs font-bold text-slate-600">{{ dailyKpi.avgAssyDisplayUnit }} <span class="text-[10.5px] font-medium text-slate-400">Rakit / set</span></span>
                 </div>
-
-                <p class="text-xs text-slate-500 mt-1">Konfigurasi penyimpanan PDF Packing List & QR Code.</p>
-
               </div>
-
-              <div class="flex items-center space-x-2">
-
-                <button type="button" @click="testCloudinaryConnection" :disabled="isTestingCloud"
-
-                  class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-3.5 rounded-xl text-xs transition flex items-center space-x-1.5 cursor-pointer">
-
-                  <i class="fa-solid" :class="isTestingCloud ? 'fa-spinner fa-spin' : 'fa-plug'"></i>
-
-                  <span>{{ isTestingCloud ? 'Menguji...' : 'Uji Koneksi' }}</span>
-
-                </button>
-
-                <button type="button" @click="saveCloudinarySettings" :disabled="isSavingCloud"
-
-                  class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-xl text-xs transition shadow-md shadow-indigo-600/20 flex items-center space-x-1.5 cursor-pointer">
-
-                  <i class="fa-solid" :class="isSavingCloud ? 'fa-spinner fa-spin' : 'fa-floppy-disk'"></i>
-
-                  <span>{{ isSavingCloud ? 'Menyimpan...' : 'Simpan Kredensial' }}</span>
-
-                </button>
-
+              <div class="text-[11px] font-semibold flex items-center gap-1" :class="dashboardStats.times.trendColor">
+                <i :class="dashboardStats.times.trendIcon"></i>
+                <span>{{ dashboardStats.times.trendText }}</span>
               </div>
-
-            </div>
-
-
-
-            <!-- Test Result Banner -->
-
-            <div v-if="cloudTestResult" class="p-3.5 rounded-xl text-xs flex items-start space-x-2.5"
-
-              :class="cloudTestResult.ok ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' : 'bg-red-50 border border-red-200 text-red-800'">
-
-              <i :class="cloudTestResult.ok ? 'fa-solid fa-circle-check text-emerald-600' : 'fa-solid fa-circle-xmark text-red-600'" class="text-base mt-0.5"></i>
-
-              <div class="flex-1">
-
-                <strong class="font-bold block">{{ cloudTestResult.ok ? 'Koneksi Berhasil' : 'Koneksi Gagal' }}</strong>
-
-                <span>{{ cloudTestResult.message }}</span>
-
-              </div>
-
-              <button type="button" @click="cloudTestResult = null" class="text-slate-400 hover:text-slate-700 cursor-pointer">&times;</button>
-
-            </div>
-
-
-
-            <!-- Form Inputs -->
-
-            <form @submit.prevent="saveCloudinarySettings" class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-
-              <div>
-
-                <label class="block font-bold text-slate-700 mb-1">Cloud Name <span class="text-red-500">*</span></label>
-
-                <input type="text" v-model="cloudForm.cloud_name" :placeholder="cloudSettings.cloud_name || 'Contoh: dxyz987'"
-
-                  class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-mono text-xs">
-
-              </div>
-
-              <div>
-
-                <label class="block font-bold text-slate-700 mb-1">API Key <span class="text-red-500">*</span></label>
-
-                <input type="text" v-model="cloudForm.api_key" :placeholder="cloudSettings.api_key_masked || 'Contoh: 123456789012345'"
-
-                  class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-mono text-xs">
-
-              </div>
-
-              <div>
-
-                <label class="block font-bold text-slate-700 mb-1">API Secret <span class="text-red-500">*</span></label>
-
-                <input type="password" v-model="cloudForm.api_secret" :placeholder="cloudSettings.has_secret ? '•••••••••••••••• (tersimpan)' : 'Masukkan API Secret'"
-
-                  class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-mono text-xs">
-
-              </div>
-
-            </form>
-
-          </div>
-
-        </div>
-
-
-
-        <!-- ========================================================= -->
-
-        <!-- TAB 6: KELOLA PENGGUNA, HAK AKSES & AKSES CMS -->
-
-        <!-- Accordion per group (Gudang, Assembly, QC, Admin) default TUTUP -->
-
-        <!-- ========================================================= -->
-
-        <div v-if="activeTab === 'users'" class="space-y-6">
-
-
-
-          <!-- Ringkasan Statistik Pengguna & Akses CMS -->
-
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-
-            <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
-
-              <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Pengguna</div>
-
-              <div class="text-2xl font-black text-slate-900 mt-1">{{ usersList.length }}</div>
-
-            </div>
-
-            <div class="bg-white border border-purple-200 rounded-2xl p-4 shadow-sm bg-gradient-to-br from-white to-purple-50/30">
-
-              <div class="text-[11px] font-bold text-purple-700 uppercase tracking-wider flex items-center gap-1.5">
-
-                <i class="fa-solid fa-shield-halved text-purple-600"></i>
-
-                <span>Akses CMS</span>
-
-              </div>
-
-              <div class="text-2xl font-black text-purple-700 mt-1">{{ countCmsUsers() }}</div>
-
-            </div>
-
-            <div class="bg-white border border-blue-200 rounded-2xl p-4 shadow-sm">
-
-              <div class="text-[11px] font-bold text-blue-700 uppercase tracking-wider">Assembly</div>
-
-              <div class="text-2xl font-black text-blue-700 mt-1">{{ countRoleUsers('assembly') }}</div>
-
-            </div>
-
-            <div class="bg-white border border-amber-200 rounded-2xl p-4 shadow-sm">
-
-              <div class="text-[11px] font-bold text-amber-700 uppercase tracking-wider">Gudang & QC</div>
-
-              <div class="text-2xl font-black text-amber-700 mt-1">{{ countRoleUsers('warehouse') + countRoleUsers('qc') }}</div>
-
             </div>
 
           </div>
 
+          <!-- ================================================================= -->
+          <!-- 1. TAB DASHBOARD: RINGKASAN HARIAN, GRAFIK & MODUL OPERASIONAL    -->
+          <!-- ================================================================= -->
+          <div v-if="activeTab === 'dashboard'" class="space-y-6">
+            
+            <!-- SECTION A: GRAFIK TREN RATA-RATA WAKTU HARIAN (REQUESTED BY USER) -->
+            <div class="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-2xs space-y-4">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div class="flex items-center space-x-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse"></span>
+                    <h2 class="text-base font-extrabold text-slate-900 tracking-tight">Tren Rata-rata Waktu Pengerjaan per Hari</h2>
+                  </div>
+                  <p class="text-xs text-slate-500 mt-0.5">Pemantauan efisiensi waktu operator perakitan per hari</p>
+                </div>
 
-
-          <!-- FORM TAMBAH / EDIT PENGGUNA -->
-
-          <div id="user-form-card" class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm space-y-5">
-
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
-
-              <div>
-
-                <h3 class="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
-
-                  <i class="fa-solid" :class="editingUserId ? 'fa-user-pen text-amber-600' : 'fa-user-plus text-red-600'"></i>
-
-                  <span>{{ editingUserId ? 'Edit Akun: ' + userForm.username : 'Tambah Pengguna Baru' }}</span>
-
-                  <span v-if="editingUserId" class="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full">Mode Edit</span>
-
-                </h3>
-
+                <div class="flex items-center">
+                  <!-- Legend Indicators -->
+                  <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700">
+                    <span class="flex items-center gap-1.5">
+                      <span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span>
+                      <span>Rakit (Menit)</span>
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              <button v-if="editingUserId" type="button" @click="resetUserForm"
-
-                class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 self-start sm:self-auto cursor-pointer">
-
-                <i class="fa-solid fa-xmark"></i>
-
-                <span>Batal Edit</span>
-
-              </button>
-
-            </div>
-
-
-
-            <form @submit.prevent="saveUser" class="space-y-5">
-
-              <!-- Profil Dasar User -->
-
-              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5">
-
-                <!-- NIK -->
-
-                <div>
-
-                  <label class="block text-xs font-bold uppercase text-slate-700 mb-1">NIK Pegawai</label>
-
-                  <input type="text" v-model="userForm.nik" placeholder="Contoh: 262048"
-
-                    class="w-full bg-slate-50 border border-slate-300 focus:bg-white focus:border-red-600 rounded-xl px-3 py-2 text-xs text-slate-900 font-semibold focus:outline-none min-h-[38px]">
-
-                </div>
-
-
-
-                <!-- Nama Lengkap -->
-
-                <div class="xl:col-span-2">
-
-                  <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Nama Lengkap <span class="text-red-600">*</span></label>
-
-                  <input type="text" v-model="userForm.full_name" required placeholder="Nama Lengkap Karyawan"
-
-                    class="w-full bg-slate-50 border border-slate-300 focus:bg-white focus:border-red-600 rounded-xl px-3 py-2 text-xs text-slate-900 font-semibold focus:outline-none min-h-[38px]">
-
-                </div>
-
-
-
-                <!-- Departemen -->
-
-                <div>
-
-                  <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Departemen <span class="text-red-600">*</span></label>
-
-                  <select v-model="userForm.department" required
-
-                    class="w-full bg-slate-50 border border-slate-300 focus:bg-white focus:border-red-600 rounded-xl px-3 py-2 text-xs text-slate-900 font-semibold focus:outline-none min-h-[38px] cursor-pointer">
-
-                    <option value="Warehouse">Warehouse (Gudang)</option>
-
-                    <option value="Assembly">Assembly (Perakitan)</option>
-
-                    <option value="Quality Control">Quality Control (QC)</option>
-
-                    <option value="Administrator">Administrator</option>
-
-                  </select>
-
-                </div>
-
-
-
-                <!-- Username -->
-
-                <div>
-
-                  <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Username <span class="text-red-600">*</span></label>
-
-                  <input type="text" v-model="userForm.username" required placeholder="username_login"
-
-                    class="w-full bg-slate-50 border border-slate-300 focus:bg-white focus:border-red-600 rounded-xl px-3 py-2 text-xs text-slate-900 font-mono font-bold focus:outline-none min-h-[38px]">
-
-                </div>
-
-
-
-                <!-- Password -->
-
-                <div>
-
-                  <label class="block text-xs font-bold uppercase text-slate-700 mb-1">
-
-                    Password {{ editingUserId ? '(Opsional)' : '*' }}
-
-                  </label>
-
-                  <div class="relative">
-
-                    <input :type="showUserPw ? 'text' : 'password'" v-model="userForm.password"
-
-                      :required="!editingUserId" placeholder="Min 4 karakter"
-
-                      class="w-full bg-slate-50 border border-slate-300 focus:bg-white focus:border-red-600 rounded-xl px-3 py-2 pr-9 text-xs text-slate-900 font-mono font-semibold focus:outline-none min-h-[38px]">
-
-                    <button type="button" @click="showUserPw = !showUserPw" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs p-1 cursor-pointer">
-
-                      <i :class="showUserPw ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'"></i>
-
-                    </button>
-
-                  </div>
-
-                </div>
-
+              <!-- CHART CANVAS CONTAINER -->
+              <div class="relative w-full h-64 sm:h-72 pt-2">
+                <canvas id="dailyTimeTrendsChart"></canvas>
               </div>
 
-
-
-              <!-- KARTU KHUSUS: IZIN AKSES PORTAL CMS ADMINISTRATOR (/admin) (SIMPLE & SESUAI GAMBAR) -->
-
-              <div class="bg-gradient-to-r from-purple-50/70 via-indigo-50/30 to-white border border-purple-200/90 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs">
-
-                <div class="flex items-center gap-3.5">
-
-                  <div class="w-10 h-10 rounded-2xl bg-purple-600 text-white flex items-center justify-center text-lg shrink-0 shadow-sm shadow-purple-600/30">
-
-                    <i class="fa-solid fa-shield-halved"></i>
-
-                  </div>
-
+              <!-- CHART SUMMARY CARDS -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-slate-100 text-xs">
+                <div class="p-3 bg-red-50/50 border border-red-100 rounded-xl flex items-center justify-between">
                   <div>
+                    <div class="text-[11px] font-bold text-red-600 uppercase">Rata-rata Rakit ({{ dailyKpi.periodLabel }})</div>
+                    <div class="text-lg font-black text-slate-900">{{ dailyKpi.avgAssyDisplay }} <span class="text-xs font-semibold text-slate-500">/ set</span></div>
+                  </div>
+                  <i class="fa-solid fa-screwdriver-wrench text-xl text-red-400"></i>
+                </div>
 
-                    <div class="flex items-center gap-2">
+                <div class="p-3 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between">
+                  <div>
+                    <div class="text-[11px] font-bold text-slate-500 uppercase">Status Performa</div>
+                    <div class="text-xs font-bold text-slate-800 leading-snug">{{ dashboardStats.times.evaluationNote }}</div>
+                  </div>
+                  <i class="fa-solid fa-gauge-simple-high text-xl text-slate-400"></i>
+                </div>
+              </div>
+            </div>
 
-                      <h4 class="text-sm font-black text-slate-900">
+            <!-- SECTION B: RINGKASAN MODUL & MENU SISTEM (7 KARTU OPERASIONAL) -->
+            <div class="space-y-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h2 class="text-base font-extrabold text-slate-900">Ringkasan Modul & Menu Sistem</h2>
+                  <p class="text-xs text-slate-500">Pemantauan menyeluruh alur produksi, pengujian, gudang, pengiriman, dan pengguna</p>
+                </div>
+                <div class="flex items-center gap-3">
+                  <div class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-bold text-emerald-700" title="Data diperbarui otomatis setiap 10 detik">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>Live Auto-Update</span>
+                    <span v-if="lastSyncTimeStr" class="text-emerald-500 font-mono text-[10px]">• {{ lastSyncTimeStr }}</span>
+                  </div>
+                  <button type="button" @click="loadDashboardStats(false)" class="text-xs text-slate-600 hover:text-red-600 font-bold flex items-center gap-1.5 transition cursor-pointer">
+                    <i class="fa-solid fa-arrows-rotate text-[11px]" :class="{'fa-spin': dashboardStats.loading}"></i>
+                    <span>Sinkronisasi Status</span>
+                  </button>
+                </div>
+              </div>
 
-                        Akses Portal CMS (/admin)
-
-                      </h4>
-
-                      <span v-if="userForm.can_access_cms" class="bg-purple-100 text-purple-800 text-[10px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1">
-
-                        <i class="fa-solid fa-circle-check"></i> Diizinkan
-
+              <!-- GRID 7 SUMMARY CARDS FOR OPERATIONAL MENUS -->
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                
+                <!-- CARD 1: AREA PERAKITAN (ASSEMBLY) -->
+                <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs flex flex-col justify-between hover:border-slate-300 transition space-y-4">
+                  <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center space-x-2.5">
+                        <div class="w-9 h-9 rounded-xl bg-red-50 text-red-600 flex items-center justify-center font-bold text-sm">
+                          <i class="fa-solid fa-screwdriver-wrench"></i>
+                        </div>
+                        <div>
+                          <h3 class="font-bold text-sm text-slate-900 leading-tight">Area Perakitan</h3>
+                          <p class="text-[11px] text-slate-400">Assembly & Barcode P9</p>
+                        </div>
+                      </div>
+                      <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        Aktif
                       </span>
-
-                      <span v-else class="bg-slate-200 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1">
-
-                        <i class="fa-solid fa-ban"></i> Terkunci
-
-                      </span>
-
                     </div>
 
-                    
-
+                    <div class="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-center">
+                      <div class="p-2 bg-slate-50 rounded-xl">
+                        <div class="text-[10px] font-bold text-slate-400 uppercase">Good</div>
+                        <div class="text-base font-black text-emerald-600">{{ dashboardStats.assembly.good * 3 }} <span class="text-[10px] font-bold text-emerald-700">Part</span></div>
+                        <div class="text-[9.5px] font-medium text-slate-400">({{ dashboardStats.assembly.good }} Set)</div>
+                      </div>
+                      <div class="p-2 bg-slate-50 rounded-xl">
+                        <div class="text-[10px] font-bold text-slate-400 uppercase">Hold</div>
+                        <div class="text-base font-black text-amber-600">{{ dashboardStats.assembly.hold * 3 }} <span class="text-[10px] font-bold text-amber-700">Part</span></div>
+                        <div class="text-[9.5px] font-medium text-slate-400">({{ dashboardStats.assembly.hold }} Set)</div>
+                      </div>
+                      <div class="p-2 bg-slate-50 rounded-xl">
+                        <div class="text-[10px] font-bold text-slate-400 uppercase">Scrap</div>
+                        <div class="text-base font-black text-red-600">{{ dashboardStats.assembly.scrap * 3 }} <span class="text-[10px] font-bold text-red-700">Part</span></div>
+                        <div class="text-[9.5px] font-medium text-slate-400">({{ dashboardStats.assembly.scrap }} Set)</div>
+                      </div>
+                    </div>
                   </div>
 
+                  <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <span class="text-xs text-slate-500 font-medium">{{ dashboardStats.assembly.activeTrays }} Tray Terdaftar</span>
+                    <a href="/perakitan" target="_blank" class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1">
+                      <span>Buka Menu</span>
+                      <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                    </a>
+                  </div>
                 </div>
 
+                <!-- CARD 2: TEST FUNCTIONAL 1 (TF 1) - GOOD & NOT GOOD SAJA -->
+                <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs flex flex-col justify-between hover:border-slate-300 transition space-y-4">
+                  <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center space-x-2.5">
+                        <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm">
+                          <i class="fa-solid fa-microchip"></i>
+                        </div>
+                        <div>
+                          <h3 class="font-bold text-sm text-slate-900 leading-tight">Test Functional 1</h3>
+                          <p class="text-[11px] text-slate-400">Pengujian Fungsional Awal</p>
+                        </div>
+                      </div>
+                      <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                        Operasional
+                      </span>
+                    </div>
 
+                    <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-center">
+                      <div class="p-2.5 bg-emerald-50/50 border border-emerald-100 rounded-xl">
+                        <div class="text-[10px] font-bold text-emerald-700 uppercase">Good</div>
+                        <div class="text-xl font-black text-emerald-600">{{ dashboardStats.tf1.passed * 3 }} <span class="text-xs font-bold text-emerald-700">Part</span></div>
+                        <div class="text-[10px] font-medium text-slate-400">({{ dashboardStats.tf1.passed }} Set)</div>
+                      </div>
+                      <div class="p-2.5 bg-rose-50/50 border border-rose-100 rounded-xl">
+                        <div class="text-[10px] font-bold text-rose-700 uppercase">Not Good</div>
+                        <div class="text-xl font-black text-rose-600">{{ (dashboardStats.tf1.notGood + dashboardStats.tf1.hold) * 3 }} <span class="text-xs font-bold text-rose-700">Part</span></div>
+                        <div class="text-[10px] font-medium text-slate-400">({{ dashboardStats.tf1.notGood + dashboardStats.tf1.hold }} Set)</div>
+                      </div>
+                    </div>
+                  </div>
 
-                <!-- Custom Switch Sesuai Gambar Pengguna -->
+                  <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <span class="text-xs text-slate-500 font-medium">Total: {{ dashboardStats.tf1.total * 3 }} Part ({{ dashboardStats.tf1.total }} Set)</span>
+                    <a href="/tf1" target="_blank" class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1">
+                      <span>Buka Menu</span>
+                      <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                    </a>
+                  </div>
+                </div>
 
-                <div class="flex items-center gap-3 self-end sm:self-auto shrink-0 select-none">
+                <!-- CARD 3: QUALITY CONTROL (QC) - GOOD & NOT GOOD SAJA -->
+                <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs flex flex-col justify-between hover:border-slate-300 transition space-y-4">
+                  <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center space-x-2.5">
+                        <div class="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-sm">
+                          <i class="fa-solid fa-clipboard-check"></i>
+                        </div>
+                        <div>
+                          <h3 class="font-bold text-sm text-slate-900 leading-tight">Quality Control (QC)</h3>
+                          <p class="text-[11px] text-slate-400">Inspeksi & Test Functional 2</p>
+                        </div>
+                      </div>
+                      <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
+                        Standar P9
+                      </span>
+                    </div>
 
-                  <button type="button" @click="userForm.can_access_cms = !userForm.can_access_cms"
+                    <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-center">
+                      <div class="p-2.5 bg-emerald-50/50 border border-emerald-100 rounded-xl">
+                        <div class="text-[10px] font-bold text-emerald-700 uppercase">Good</div>
+                        <div class="text-xl font-black text-emerald-600">{{ dashboardStats.qc.acc * 3 }} <span class="text-xs font-bold text-emerald-700">Part</span></div>
+                        <div class="text-[10px] font-medium text-slate-400">({{ dashboardStats.qc.acc }} Set)</div>
+                      </div>
+                      <div class="p-2.5 bg-rose-50/50 border border-rose-100 rounded-xl">
+                        <div class="text-[10px] font-bold text-rose-700 uppercase">Not Good</div>
+                        <div class="text-xl font-black text-rose-600">{{ dashboardStats.qc.hold * 3 }} <span class="text-xs font-bold text-rose-700">Part</span></div>
+                        <div class="text-[10px] font-medium text-slate-400">({{ dashboardStats.qc.hold }} Set)</div>
+                      </div>
+                    </div>
+                  </div>
 
-                    class="relative inline-flex h-7 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+                  <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <span class="text-xs text-slate-500 font-medium">{{ dashboardStats.qc.total > 0 ? (dashboardStats.qc.total * 3 + ' Part (' + dashboardStats.qc.total + ' Set) Diuji') : (dashboardStats.qc.waiting * 3 + ' Part Menunggu Uji TF 2') }}</span>
+                    <a href="/qc" target="_blank" class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1">
+                      <span>Buka Menu</span>
+                      <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                    </a>
+                  </div>
+                </div>
 
-                    :class="userForm.can_access_cms ? 'bg-purple-600' : 'bg-slate-300'">
+                <!-- CARD 4: GUDANG & PENERIMAAN (WH/GR) - DOKUMEN, ACC & DECLINED -->
+                <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs flex flex-col justify-between hover:border-slate-300 transition space-y-4">
+                  <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center space-x-2.5">
+                        <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-sm">
+                          <i class="fa-solid fa-warehouse"></i>
+                        </div>
+                        <div>
+                          <h3 class="font-bold text-sm text-slate-900 leading-tight">Gudang & Penerimaan</h3>
+                          <p class="text-[11px] text-slate-400">Penerimaan Fisik WH/GR</p>
+                        </div>
+                      </div>
+                    </div>
 
-                    <span class="pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out"
+                    <div class="p-3 bg-slate-50 rounded-xl space-y-2 text-xs">
+                      <div class="flex justify-between items-center">
+                        <span class="text-slate-500">Total Dokumen WH/GR:</span>
+                        <span class="font-bold text-slate-900">{{ dashboardStats.warehouse.totalDocs }} Dokumen</span>
+                      </div>
+                      <div class="flex justify-between items-center">
+                        <span class="text-slate-500">Unit Diterima (ACC):</span>
+                        <span class="font-black text-emerald-600">{{ dashboardStats.warehouse.acceptedSets * 3 }} Part <span class="text-[10px] font-normal text-slate-400">({{ dashboardStats.warehouse.acceptedSets }} Set)</span></span>
+                      </div>
+                      <div class="flex justify-between items-center">
+                        <span class="text-slate-500">Unit Ditolak (Declined):</span>
+                        <span class="font-bold" :class="dashboardStats.warehouse.declinedSets > 0 ? 'text-red-600' : 'text-slate-600'">
+                          {{ dashboardStats.warehouse.declinedSets * 3 }} Part <span class="text-[10px] font-normal text-slate-400">({{ dashboardStats.warehouse.declinedSets }} Set)</span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
 
-                      :class="userForm.can_access_cms ? 'translate-x-7' : 'translate-x-0'"></span>
+                  <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <span class="text-xs text-slate-500 font-medium">Verifikasi Masuk Gudang</span>
+                    <a href="/penerimaan" target="_blank" class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1">
+                      <span>Buka Menu</span>
+                      <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                    </a>
+                  </div>
+                </div>
 
+                <!-- CARD 5: PERAKITAN ULANG (RU) - BELUM vs SUDAH DIARAHKAN -->
+                <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs flex flex-col justify-between hover:border-slate-300 transition space-y-4">
+                  <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center space-x-2.5">
+                        <div class="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold text-sm">
+                          <i class="fa-solid fa-arrows-rotate"></i>
+                        </div>
+                        <div>
+                          <h3 class="font-bold text-sm text-slate-900 leading-tight">Perakitan Ulang (RU)</h3>
+                          <p class="text-[11px] text-slate-400">Perakitan Ulang & Ganti Part</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="p-3 bg-slate-50 rounded-xl space-y-2 text-xs">
+                      <div class="flex justify-between items-center">
+                        <span class="text-slate-500">Belum Diarahkan ke Operator:</span>
+                        <span class="font-black text-amber-600">{{ dashboardStats.reassembly.notDispatched * 3 }} Part <span class="text-[10px] font-normal text-slate-400">({{ dashboardStats.reassembly.notDispatched }} Set)</span></span>
+                      </div>
+                      <div class="flex justify-between items-center">
+                        <span class="text-slate-500">Sudah Diarahkan ke Operator:</span>
+                        <span class="font-black text-emerald-600">{{ dashboardStats.reassembly.dispatched * 3 }} Part <span class="text-[10px] font-normal text-slate-400">({{ dashboardStats.reassembly.dispatched }} Set)</span></span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <span class="text-xs text-slate-500 font-medium">Antrean Rakit Ulang (PU)</span>
+                    <a href="/rakit-ulang" target="_blank" class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1">
+                      <span>Buka Menu</span>
+                      <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                    </a>
+                  </div>
+                </div>
+
+                <!-- CARD 6: DELIVERY ORDER (DO) - DOKUMEN, PETI, DUS, SN -->
+                <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs flex flex-col justify-between hover:border-slate-300 transition space-y-4">
+                  <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center space-x-2.5">
+                        <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-sm">
+                          <i class="fa-solid fa-truck-fast"></i>
+                        </div>
+                        <div>
+                          <h3 class="font-bold text-sm text-slate-900 leading-tight">Delivery Order (DO)</h3>
+                          <p class="text-[11px] text-slate-400">Surat Jalan & Packing List</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="p-3 bg-slate-50 rounded-xl space-y-1.5 text-xs">
+                      <div class="flex justify-between items-center">
+                        <span class="text-slate-500">Total Dokumen DO:</span>
+                        <span class="font-bold text-slate-900">{{ dashboardStats.delivery.totalDO }} Dokumen</span>
+                      </div>
+                      <div class="flex justify-between items-center">
+                        <span class="text-slate-500">Peti Terdaftar:</span>
+                        <span class="font-bold text-indigo-600">{{ dashboardStats.delivery.totalCrates }} Peti</span>
+                      </div>
+                      <div class="flex justify-between items-center">
+                        <span class="text-slate-500">Dus Kemasan:</span>
+                        <span class="font-bold text-slate-800">{{ dashboardStats.delivery.totalBoxes }} Dus</span>
+                      </div>
+                      <div class="flex justify-between items-center">
+                        <span class="text-slate-500">SN Dimasukkan:</span>
+                        <span class="font-black text-emerald-600">{{ dashboardStats.delivery.shippedSNCount }} Part</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <span class="text-xs text-slate-500 font-medium">{{ dashboardStats.delivery.cloudSynced }} Terunggah ke Cloud</span>
+                    <a href="/delivery" target="_blank" class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1">
+                      <span>Buka Menu</span>
+                      <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                    </a>
+                  </div>
+                </div>
+
+                <!-- CARD 7: KELOLA PENGGUNA (CMS) - OPERATOR & WAREHOUSE -->
+                <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs flex flex-col justify-between hover:border-slate-300 transition space-y-4">
+                  <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center space-x-2.5">
+                        <div class="w-9 h-9 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center font-bold text-sm">
+                          <i class="fa-solid fa-users-gear"></i>
+                        </div>
+                        <div>
+                          <h3 class="font-bold text-sm text-slate-900 leading-tight">Kelola Pengguna</h3>
+                          <p class="text-[11px] text-slate-400">Hak Akses & Akun Sistem</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="p-3 bg-slate-50 rounded-xl space-y-1.5 text-xs">
+                      <div class="flex justify-between items-center">
+                        <span class="text-slate-500">Total Akun Terdaftar:</span>
+                        <span class="font-black text-slate-900">{{ usersList.length }} Pengguna</span>
+                      </div>
+                      <div class="flex justify-between items-center">
+                        <span class="text-slate-500">Administrator:</span>
+                        <span class="font-bold text-red-600">{{ countCmsUsers() }} Akun</span>
+                      </div>
+                      <div class="flex justify-between items-center">
+                        <span class="text-slate-500">Operator Assembly:</span>
+                        <span class="font-bold text-blue-600">{{ countDeptUsers('assembly') }} Akun</span>
+                      </div>
+                      <div class="flex justify-between items-center">
+                        <span class="text-slate-500">Warehouse (Gudang):</span>
+                        <span class="font-bold text-amber-600">{{ countDeptUsers('warehouse') }} Akun</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <span class="text-xs text-slate-500 font-medium">{{ usersList.length }} Akun Sistem</span>
+                    <button type="button" @click="switchTab('users')" class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 cursor-pointer">
+                      <span>Kelola Pengguna</span>
+                      <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ================================================================= -->
+          <!-- 2. TAB LAPORAN PRODUKSI (DEDICATED MENU: HARIAN, MINGGUAN, BULANAN)-->
+          <!-- ================================================================= -->
+          <div v-else-if="activeTab === 'reports_kpi'" class="space-y-6">
+            
+            <!-- TOP BAR: HEADER & PERIOD SWITCHER -->
+            <div class="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-2xs space-y-4">
+              <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div>
+                  <div class="flex items-center space-x-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-red-50 text-red-600 flex items-center justify-center font-bold text-sm">
+                      <i class="fa-solid fa-chart-line"></i>
+                    </div>
+                    <div>
+                      <h2 class="text-base font-extrabold text-slate-900 tracking-tight">Pusat Laporan Produksi & Traceability</h2>
+                      <p class="text-xs text-slate-500">Rekapitulasi terpadu kinerja perakitan, pengujian fungsional, suplai gudang, dan pengiriman</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- PERIOD SWITCHER BUTTONS: [Harian] [Mingguan] [Bulanan] [Kustom] -->
+                <div class="flex flex-wrap items-center gap-2">
+                  <div class="inline-flex p-1 bg-slate-100 rounded-2xl border border-slate-200">
+                    <button 
+                      type="button" 
+                      @click="setReportPeriod('daily')"
+                      :class="reportPeriod === 'daily' ? 'bg-white text-red-600 font-extrabold shadow-xs' : 'text-slate-600 hover:text-slate-900 font-medium'"
+                      class="px-3.5 py-1.5 rounded-xl text-xs transition flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <i class="fa-solid fa-calendar-day text-[11px]"></i>
+                      <span>Harian</span>
+                    </button>
+                    <button 
+                      type="button" 
+                      @click="setReportPeriod('weekly')"
+                      :class="reportPeriod === 'weekly' ? 'bg-white text-red-600 font-extrabold shadow-xs' : 'text-slate-600 hover:text-slate-900 font-medium'"
+                      class="px-3.5 py-1.5 rounded-xl text-xs transition flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <i class="fa-solid fa-calendar-week text-[11px]"></i>
+                      <span>Mingguan</span>
+                    </button>
+                    <button 
+                      type="button" 
+                      @click="setReportPeriod('monthly')"
+                      :class="reportPeriod === 'monthly' ? 'bg-white text-red-600 font-extrabold shadow-xs' : 'text-slate-600 hover:text-slate-900 font-medium'"
+                      class="px-3.5 py-1.5 rounded-xl text-xs transition flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <i class="fa-solid fa-calendar-days text-[11px]"></i>
+                      <span>Bulanan</span>
+                    </button>
+                    <button 
+                      type="button" 
+                      @click="setReportPeriod('custom')"
+                      :class="reportPeriod === 'custom' ? 'bg-white text-red-600 font-extrabold shadow-xs' : 'text-slate-600 hover:text-slate-900 font-medium'"
+                      class="px-3.5 py-1.5 rounded-xl text-xs transition flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <i class="fa-solid fa-sliders text-[11px]"></i>
+                      <span>Rentang Kustom</span>
+                    </button>
+                  </div>
+
+                  <div class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-bold text-emerald-700" title="Data diperbarui otomatis setiap 10 detik">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>Live Auto-Update</span>
+                    <span v-if="lastSyncTimeStr" class="text-emerald-500 font-mono text-[10px]">• {{ lastSyncTimeStr }}</span>
+                  </div>
+
+                  <button 
+                    type="button" 
+                    @click="loadDashboardStats(false)" 
+                    class="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs rounded-xl flex items-center gap-1.5 transition cursor-pointer"
+                  >
+                    <i class="fa-solid fa-arrows-rotate text-[11px]" :class="{'fa-spin': dashboardStats.loading}"></i>
+                    <span>Refresh</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- INTERACTIVE DATE NAVIGATOR & BACKDATE SELECTOR -->
+              <div class="p-3 bg-red-50/40 border border-red-100 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs">
+                
+                <!-- 1. IF HARIAN: DATE PICKER + PREV / NEXT / TODAY / JUMP TO LATEST -->
+                <div v-if="reportPeriod === 'daily'" class="flex flex-wrap items-center gap-2">
+                  <span class="font-bold text-slate-700 flex items-center gap-1.5">
+                    <i class="fa-solid fa-calendar-day text-red-600"></i>
+                    <span>Pilih Tanggal:</span>
+                  </span>
+                  
+                  <div class="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
+                    <button type="button" @click="shiftReportDate(-1)" class="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-600 font-bold cursor-pointer" title="Hari Sebelumnya (Backdate)">
+                      <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                    </button>
+                    
+                    <input 
+                      type="date" 
+                      v-model="selectedReportDate" 
+                      @change="renderReportCharts()"
+                      class="bg-transparent font-bold font-mono text-slate-900 text-xs px-2 py-1 outline-none cursor-pointer"
+                    >
+                    
+                    <button type="button" @click="shiftReportDate(1)" class="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-600 font-bold cursor-pointer" title="Hari Berikutnya">
+                      <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                    </button>
+                  </div>
+
+                  <button type="button" @click="setReportDateToday" class="px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 font-bold text-[11px] text-slate-700 cursor-pointer shadow-2xs">
+                    Hari Ini
                   </button>
 
-                  <span class="text-xs font-black tracking-wider uppercase min-w-[70px]"
+                  <button v-if="latestProductionDate && selectedReportDate !== latestProductionDate" type="button" @click="jumpToLatestDate" class="px-2.5 py-1.5 rounded-xl bg-red-100 text-red-700 hover:bg-red-200 font-bold text-[11px] cursor-pointer flex items-center gap-1 shadow-2xs">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span>Lompat ke Data Terakhir ({{ latestProductionDate }})</span>
+                  </button>
+                </div>
 
-                    :class="userForm.can_access_cms ? 'text-purple-700 font-black' : 'text-slate-500 font-bold'">
-
-                    {{ userForm.can_access_cms ? 'AKTIF' : 'NONAKTIF' }}
-
+                <!-- 2. IF MINGGUAN: PREV / NEXT WEEK -->
+                <div v-else-if="reportPeriod === 'weekly'" class="flex flex-wrap items-center gap-2">
+                  <span class="font-bold text-slate-700 flex items-center gap-1.5">
+                    <i class="fa-solid fa-calendar-week text-red-600"></i>
+                    <span>Navigasi Minggu:</span>
                   </span>
 
+                  <div class="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
+                    <button type="button" @click="shiftReportWeek(-1)" class="px-2.5 py-1 rounded-lg hover:bg-slate-100 text-slate-700 font-bold flex items-center gap-1 cursor-pointer">
+                      <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                      <span>Minggu Lalu</span>
+                    </button>
+                    <span class="px-2 text-slate-300 font-mono text-xs">|</span>
+                    <button type="button" @click="setReportWeekCurrent" class="px-2.5 py-1 rounded-lg hover:bg-slate-100 font-bold text-[11px] text-slate-700 cursor-pointer" :class="selectedWeekOffset === 0 ? 'bg-red-50 text-red-600 font-black' : ''">
+                      Minggu Ini
+                    </button>
+                    <span class="px-2 text-slate-300 font-mono text-xs">|</span>
+                    <button type="button" @click="shiftReportWeek(1)" class="px-2.5 py-1 rounded-lg hover:bg-slate-100 text-slate-700 font-bold flex items-center gap-1 cursor-pointer">
+                      <span>Minggu Depan</span>
+                      <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- 3. IF BULANAN: MONTH PICKER + PREV / NEXT -->
+                <div v-else-if="reportPeriod === 'monthly'" class="flex flex-wrap items-center gap-2">
+                  <span class="font-bold text-slate-700 flex items-center gap-1.5">
+                    <i class="fa-solid fa-calendar-days text-red-600"></i>
+                    <span>Pilih Bulan:</span>
+                  </span>
+
+                  <div class="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
+                    <button type="button" @click="shiftReportMonth(-1)" class="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-600 font-bold cursor-pointer" title="Bulan Sebelumnya">
+                      <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                    </button>
+
+                    <input 
+                      type="month" 
+                      v-model="selectedReportMonth" 
+                      @change="renderReportCharts()"
+                      class="bg-transparent font-bold font-mono text-slate-900 text-xs px-2 py-1 outline-none cursor-pointer"
+                    >
+
+                    <button type="button" @click="shiftReportMonth(1)" class="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-600 font-bold cursor-pointer" title="Bulan Berikutnya">
+                      <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                    </button>
+                  </div>
+
+                  <button type="button" @click="setReportMonthCurrent" class="px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 font-bold text-[11px] text-slate-700 cursor-pointer shadow-2xs">
+                    Bulan Ini
+                  </button>
+                </div>
+
+                <!-- 4. IF KUSTOM: FROM DATE - TO DATE -->
+                <div v-else-if="reportPeriod === 'custom'" class="flex flex-wrap items-center gap-2">
+                  <span class="font-bold text-slate-700 flex items-center gap-1">
+                    <i class="fa-solid fa-sliders text-red-600"></i>
+                    <span>Rentang Kustom:</span>
+                  </span>
+
+                  <div class="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-xl border border-slate-200 shadow-2xs">
+                    <label class="text-[10px] font-bold text-slate-400">DARI</label>
+                    <input type="date" v-model="customStartDate" @change="renderReportCharts()" class="bg-transparent font-bold font-mono text-slate-900 text-xs outline-none cursor-pointer">
+                    <span class="text-slate-300 font-bold">—</span>
+                    <label class="text-[10px] font-bold text-slate-400">SAMPAI</label>
+                    <input type="date" v-model="customEndDate" @change="renderReportCharts()" class="bg-transparent font-bold font-mono text-slate-900 text-xs outline-none cursor-pointer">
+                  </div>
+
+                  <div class="flex items-center gap-1">
+                    <button type="button" @click="setQuickCustomRange('7_days')" class="px-2 py-1 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 font-bold text-[10px] text-slate-700 cursor-pointer">
+                      7 Hari
+                    </button>
+                    <button type="button" @click="setQuickCustomRange('30_days')" class="px-2 py-1 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 font-bold text-[10px] text-slate-700 cursor-pointer">
+                      30 Hari
+                    </button>
+                    <button type="button" @click="setQuickCustomRange('all')" class="px-2 py-1 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 font-bold text-[10px] cursor-pointer">
+                      Semua Data
+                    </button>
+                  </div>
+                </div>
+
+                <!-- ACTIVE RANGE BADGE -->
+                <div class="text-[11px] font-mono font-bold bg-white px-3 py-1.5 rounded-xl border border-slate-200 text-slate-800 flex items-center gap-1.5 shadow-2xs ml-auto">
+                  <i class="fa-solid fa-clock text-red-600 text-[10px]"></i>
+                  <span>{{ activePeriodDateRangeLabel }}</span>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- 7 CORE METRIC SUMMARY CARDS FOR ACTIVE PERIOD -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              
+              <!-- METRIC 1: SUPPLY GUDANG -->
+              <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs space-y-2">
+                <div class="flex items-center justify-between text-xs text-slate-500 font-bold">
+                  <span>Supply Gudang</span>
+                  <i class="fa-solid fa-boxes-packing text-amber-500"></i>
+                </div>
+                <div class="text-2xl font-black text-slate-900 tracking-tight">
+                  {{ activePeriodStats.supplySets }} <span class="text-xs font-normal text-slate-400">Set Disuplai</span>
+                </div>
+                <div class="text-[11px] font-semibold text-slate-600 flex items-center gap-1">
+                  <span>{{ activePeriodStats.supplyTrays }} Tray Diterbitkan</span>
+                  <span class="text-slate-300">•</span>
+                  <span>{{ activePeriodStats.supplyParts }} Part</span>
+                </div>
+              </div>
+
+              <!-- METRIC 2: ASSEMBLY MERAKIT -->
+              <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs space-y-2">
+                <div class="flex items-center justify-between text-xs text-slate-500 font-bold">
+                  <span>Assembly Merakit</span>
+                  <i class="fa-solid fa-screwdriver-wrench text-red-500"></i>
+                </div>
+                <div class="text-2xl font-black text-slate-900 tracking-tight">
+                  {{ activePeriodStats.assembledGood }} <span class="text-xs font-normal text-slate-400">Set Good</span>
+                </div>
+                <div class="text-[11px] font-semibold flex items-center gap-1" :class="activePeriodStats.assembledHold > 0 ? 'text-amber-600' : 'text-emerald-600'">
+                  <span>{{ activePeriodStats.assembledHold }} Hold</span>
+                  <span class="text-slate-300">•</span>
+                  <span>{{ activePeriodStats.assembledScrap }} Scrap</span>
+                </div>
+              </div>
+
+              <!-- METRIC 3: TEST FUNCTIONAL 1 (TF 1) -->
+              <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs space-y-2">
+                <div class="flex items-center justify-between text-xs text-slate-500 font-bold">
+                  <span>Test Functional 1</span>
+                  <i class="fa-solid fa-microchip text-blue-500"></i>
+                </div>
+                <div class="text-2xl font-black text-slate-900 tracking-tight">
+                  {{ activePeriodStats.tf1Good }} <span class="text-xs font-normal text-slate-400">Good</span>
+                </div>
+                <div class="text-[11px] font-semibold flex items-center gap-1" :class="activePeriodStats.tf1NotGood > 0 ? 'text-rose-600' : 'text-slate-500'">
+                  <span>{{ activePeriodStats.tf1NotGood }} Not Good</span>
+                  <span class="text-slate-300">•</span>
+                  <span>Total {{ activePeriodStats.tf1Total }} Uji</span>
+                </div>
+              </div>
+
+              <!-- METRIC 4: SET LOLOS SELURUH PROSES (WH/GR ACC) -->
+              <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs space-y-2">
+                <div class="flex items-center justify-between text-xs text-slate-500 font-bold">
+                  <span>Lolos Seluruh Proses</span>
+                  <i class="fa-solid fa-circle-check text-emerald-500"></i>
+                </div>
+                <div class="text-2xl font-black text-slate-900 tracking-tight">
+                  {{ activePeriodStats.whAcceptedSets }} <span class="text-xs font-normal text-slate-400">Set ACC WH</span>
+                </div>
+                <div class="text-[11px] font-semibold text-emerald-600 flex items-center gap-1">
+                  <i class="fa-solid fa-warehouse text-[10px]"></i>
+                  <span>Diterima Fisik Gudang (Siap Kirim)</span>
+                </div>
+              </div>
+
+              <!-- METRIC 5: SET SUDAH DIKIRIM (DELIVERY ORDER) -->
+              <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs space-y-2">
+                <div class="flex items-center justify-between text-xs text-slate-500 font-bold">
+                  <span>Set Sudah Dikirim</span>
+                  <i class="fa-solid fa-truck-fast text-indigo-500"></i>
+                </div>
+                <div class="text-2xl font-black text-slate-900 tracking-tight">
+                  {{ activePeriodStats.doShippedSets }} <span class="text-xs font-normal text-slate-400">Unit SN DO</span>
+                </div>
+                <div class="text-[11px] font-semibold text-slate-600 flex items-center gap-1">
+                  <span>{{ activePeriodStats.doDocsCount }} Dokumen DO</span>
+                  <span class="text-slate-300">•</span>
+                  <span>{{ activePeriodStats.doCratesCount }} Peti</span>
+                </div>
+              </div>
+
+              <!-- METRIC 6: RATA-RATA WAKTU RAKIT PER SET -->
+              <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs space-y-2">
+                <div class="flex items-center justify-between text-xs text-slate-500 font-bold">
+                  <span>Rata-rata Waktu Rakit</span>
+                  <i class="fa-solid fa-stopwatch text-red-500"></i>
+                </div>
+                <div class="text-2xl font-black text-slate-900 tracking-tight">
+                  {{ activePeriodStats.avgAssyNumber }} <span class="text-xs font-normal text-slate-400">{{ activePeriodStats.avgAssyUnit }} / Set</span>
+                </div>
+                <div class="text-[11px] font-semibold text-slate-500 flex items-center gap-1">
+                  <i class="fa-solid fa-user-gear text-[10px]"></i>
+                  <span>Pengerjaan Perakitan Operator</span>
+                </div>
+              </div>
+
+              <!-- METRIC 7: EFISIENSI PIPELINE PRODUKSI -->
+              <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs space-y-2">
+                <div class="flex items-center justify-between text-xs text-slate-500 font-bold">
+                  <span>Tingkat Kelulusan QC</span>
+                  <i class="fa-solid fa-award text-purple-500"></i>
+                </div>
+                <div class="text-2xl font-black text-slate-900 tracking-tight">
+                  {{ activePeriodStats.qcPassRate }}% <span class="text-xs font-normal text-slate-400">Pass Rate</span>
+                </div>
+                <div class="text-[11px] font-semibold text-emerald-600 flex items-center gap-1">
+                  <i class="fa-solid fa-shield-check text-[10px]"></i>
+                  <span>{{ activePeriodStats.qcAccCount }} ACC dari {{ activePeriodStats.qcTotalCount }} Diperiksa</span>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- SECTION B: GRAFIK TREN RATA-RATA WAKTU HARIAN (IDENTIK DENGAN DASHBOARD) -->
+            <div class="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-2xs space-y-4">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div class="flex items-center space-x-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse"></span>
+                    <h2 class="text-base font-extrabold text-slate-900 tracking-tight">Tren Rata-rata Waktu Pengerjaan</h2>
+                  </div>
+                  <p class="text-xs text-slate-500 mt-0.5">Pemantauan efisiensi waktu operator perakitan sesuai periode laporan</p>
+                </div>
+
+                <div class="flex items-center">
+                  <!-- Legend Indicators -->
+                  <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700">
+                    <span class="flex items-center gap-1.5">
+                      <span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span>
+                      <span>Rakit (Menit)</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- CHART CANVAS CONTAINER -->
+              <div class="relative w-full h-64 sm:h-72 pt-2">
+                <canvas id="reportTimeTrendsChart"></canvas>
+              </div>
+
+              <!-- CHART SUMMARY CARDS -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-slate-100 text-xs">
+                <div class="p-3 bg-red-50/50 border border-red-100 rounded-xl flex items-center justify-between">
+                  <div>
+                    <div class="text-[11px] font-bold text-red-600 uppercase">Rata-rata Rakit Periode Ini</div>
+                    <div class="text-lg font-black text-slate-900">{{ activePeriodStats.avgAssyDisplay }} <span class="text-xs font-semibold text-slate-500">/ set</span></div>
+                  </div>
+                  <i class="fa-solid fa-screwdriver-wrench text-xl text-red-400"></i>
+                </div>
+
+                <div class="p-3 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between">
+                  <div>
+                    <div class="text-[11px] font-bold text-slate-500 uppercase">Status Performa</div>
+                    <div class="text-xs font-bold text-slate-800 leading-snug">{{ reportPeriodEvaluationNote }}</div>
+                  </div>
+                  <i class="fa-solid fa-gauge-simple-high text-xl text-slate-400"></i>
+                </div>
+              </div>
+            </div>
+
+            <!-- DETAILED PERIOD BREAKDOWN TABLE -->
+            <div class="bg-white border border-slate-200/80 rounded-2xl shadow-2xs overflow-hidden">
+              <div class="p-5 border-b border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h3 class="font-extrabold text-sm text-slate-900">Rincian Data Produksi Periode {{ reportPeriod === 'daily' ? 'Harian' : (reportPeriod === 'weekly' ? 'Mingguan' : 'Bulanan') }}</h3>
+                  <p class="text-xs text-slate-500">Tabel log operasional tray dan perakitan pada periode yang dipilih</p>
+                </div>
+                <div class="text-xs font-bold text-slate-500">
+                  Total Data: <span class="text-slate-900 font-extrabold">{{ activePeriodTrays.length }} Tray Aktif</span>
+                </div>
+              </div>
+
+              <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr class="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider select-none">
+                      <th class="p-3.5 pl-5">Kode Tray / Batch</th>
+                      <th class="p-3.5">PIC Gudang</th>
+                      <th class="p-3.5">Operator</th>
+                      <th class="p-3.5 text-center">Supply (Set)</th>
+                      <th class="p-3.5 text-center">Good (Rakit)</th>
+                      <th class="p-3.5 text-center">TF 1 Pass</th>
+                      <th class="p-3.5 text-center">WH/GR ACC</th>
+                      <th class="p-3.5 text-center">Waktu Dibuat</th>
+                      <th class="p-3.5 pr-5 text-right">Status Tray</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100 font-medium">
+                    <tr v-if="activePeriodTrays.length === 0">
+                      <td colspan="9" class="p-8 text-center text-slate-400">
+                        <i class="fa-solid fa-inbox text-3xl mb-2 block text-slate-300"></i>
+                        Tidak ada data tray produksi pada periode ini.
+                      </td>
+                    </tr>
+                    <tr v-for="t in activePeriodTrays" :key="t.id" class="hover:bg-slate-50/70 transition">
+                      <td class="p-3.5 pl-5 font-bold font-mono text-slate-900">
+                        <span class="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-800">{{ t.tray_code }}</span>
+                      </td>
+                      <td class="p-3.5 text-slate-700">{{ t.pic_warehouse || '-' }}</td>
+                      <td class="p-3.5 text-slate-700">{{ t.assigned_operator || '-' }}</td>
+                      <td class="p-3.5 text-center font-bold text-slate-800">{{ t.total_sets || 0 }} Set</td>
+                      <td class="p-3.5 text-center font-black text-emerald-600">{{ t.good_count || 0 }} Good</td>
+                      <td class="p-3.5 text-center font-bold text-blue-600">{{ t.good_assy_test_count || 0 }} Pass</td>
+                      <td class="p-3.5 text-center font-bold text-purple-600">{{ t.good_gr_count || 0 }} ACC</td>
+                      <td class="p-3.5 text-center text-slate-500 font-mono text-[11px]">
+                        <div>{{ formatDateTime(t.created_at) }}</div>
+                        <div v-if="t.latest_assembly_at" class="text-[10px] text-slate-400 font-sans">Rakit: {{ formatDateTime(t.latest_assembly_at) }}</div>
+                      </td>
+                      <td class="p-3.5 pr-5 text-right">
+                        <span class="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase" :class="t.status === 'active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-700 border border-slate-200'">
+                          {{ t.status || 'Active' }}
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+          <!-- ================================================================= -->
+          <div v-else-if="activeTab === 'users'" class="space-y-5">
+            
+            <!-- Table Container Card (Matching Image 1 Aesthetic) -->
+            <div class="bg-white border border-slate-200/80 rounded-2xl shadow-2xs overflow-hidden">
+              
+              <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs">
+                  
+                  <!-- Table Header -->
+                  <thead>
+                    <tr class="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider select-none">
+                      <th class="p-4 w-10 text-center">
+                        <input type="checkbox" @change="toggleSelectAllUsers" :checked="isAllUsersSelected" class="rounded border-slate-300 text-red-600 focus:ring-red-500/20 cursor-pointer">
+                      </th>
+                      <th class="py-4 px-4 font-bold text-slate-700">PENGGUNA</th>
+                      <th class="py-4 px-4 font-bold text-slate-700">ROLE & DEPT</th>
+                      <th class="py-4 px-4 font-bold text-slate-700">HAK AKSES</th>
+                      <th class="py-4 px-4 font-bold text-slate-700">PORTAL CMS</th>
+                      <th class="py-4 px-4 font-bold text-slate-700">SESI LOGIN</th>
+                      <th class="py-4 px-4 font-bold text-slate-700 text-right">AKSI</th>
+                    </tr>
+                  </thead>
+
+                  <!-- Table Body -->
+                  <tbody class="divide-y divide-slate-100">
+                    <tr v-for="u in pagedUsersList" :key="u.id" :class="isUserSelected(u.id) ? 'bg-red-50/30' : 'hover:bg-slate-50/80'" class="transition">
+                      
+                      <!-- Checkbox -->
+                      <td class="p-4 text-center">
+                        <input type="checkbox" :value="u.id" v-model="selectedUserIds" class="rounded border-slate-300 text-red-600 focus:ring-red-500/20 cursor-pointer">
+                      </td>
+
+                      <!-- User Info -->
+                      <td class="py-3 px-4">
+                        <div class="flex items-center space-x-3">
+                          <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs uppercase shrink-0 border border-slate-200">
+                            {{ (u.username || 'U').substring(0, 2) }}
+                          </div>
+                          <div class="leading-tight">
+                            <div class="font-bold text-slate-900 text-xs">{{ u.full_name || u.username }}</div>
+                            <div class="text-[11px] text-slate-400 font-mono">{{ u.username }}</div>
+                          </div>
+                        </div>
+                      </td>
+
+                      <!-- Role & Dept -->
+                      <td class="py-3 px-4">
+                        <span :class="getDeptBadgeClass(u.department || u.role)" class="inline-block px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                          {{ u.department || u.role }}
+                        </span>
+                      </td>
+
+                      <!-- Permissions -->
+                      <td class="py-3 px-4 font-mono">
+                        <span class="text-emerald-700 font-bold">{{ countUserWritePerms(u) }} Write</span>
+                        <span class="text-slate-300 mx-1">•</span>
+                        <span class="text-slate-500">{{ countUserReadPerms(u) }} Read</span>
+                      </td>
+
+                      <!-- CMS Access -->
+                      <td class="py-3 px-4">
+                        <span v-if="u.id === 3 || u.can_access_cms" class="inline-flex items-center gap-1 text-[11px] font-bold text-red-600 bg-red-50 px-2.5 py-0.5 rounded-full border border-red-200">
+                          <i class="fa-solid fa-shield-halved text-[9px]"></i> Aktif
+                        </span>
+                        <span v-else class="text-[11px] text-slate-400 font-medium">Tidak</span>
+                      </td>
+
+                      <!-- Session Status -->
+                      <td class="py-3 px-4">
+                        <span v-if="u.is_active || u.has_active_session" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                          Online
+                        </span>
+                        <span v-else class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold text-slate-400 bg-slate-50 border border-slate-200">
+                          Offline
+                        </span>
+                      </td>
+
+                      <!-- Actions -->
+                      <td class="py-3 px-4 text-right whitespace-nowrap">
+                        <div class="flex items-center justify-end space-x-1.5">
+                          <button type="button" @click="editUser(u)" class="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition cursor-pointer" title="Edit Pengguna">
+                            <i class="fa-solid fa-pen-to-square text-xs"></i>
+                          </button>
+                          <button type="button" @click="resetUserSession(u)" class="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition cursor-pointer" title="Reset Sesi Login">
+                            <i class="fa-solid fa-arrow-rotate-right text-xs"></i>
+                          </button>
+                          <button v-if="u.id !== 3" type="button" @click="deleteUser(u)" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition cursor-pointer" title="Hapus Pengguna">
+                            <i class="fa-solid fa-trash-can text-xs"></i>
+                          </button>
+                        </div>
+                      </td>
+
+                    </tr>
+                  </tbody>
+
+                </table>
+              </div>
+
+              <!-- Bottom Pagination Bar (Matching Image 1) -->
+              <div class="p-4 border-t border-slate-200/80 bg-white flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600 select-none">
+                
+                <div class="flex items-center gap-2">
+                  <span>Showing per page:</span>
+                  <span class="font-bold text-slate-800 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">10</span>
+                  <span class="text-slate-400">Total {{ filteredUsersList.length }} pengguna</span>
+                </div>
+
+                <div class="flex items-center space-x-1">
+                  <button type="button" @click="userPage = Math.max(1, userPage - 1)" :disabled="userPage <= 1" class="px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600 disabled:opacity-40 hover:bg-slate-100 cursor-pointer">
+                    <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                  </button>
+                  
+                  <span v-for="p in totalUserPages" :key="p" @click="userPage = p" :class="userPage === p ? 'bg-red-600 text-white font-bold' : 'hover:bg-slate-100 text-slate-700'" class="w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer transition">
+                    {{ p }}
+                  </span>
+
+                  <button type="button" @click="userPage = Math.min(totalUserPages, userPage + 1)" :disabled="userPage >= totalUserPages" class="px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600 disabled:opacity-40 hover:bg-slate-100 cursor-pointer">
+                    <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                  </button>
                 </div>
 
               </div>
 
+            </div>
 
+            <!-- Floating Action Bar when items selected (Matching Image 1) -->
+            <transition enter-active-class="transition ease-out duration-200" enter-from-class="translate-y-4 opacity-0" enter-to-class="translate-y-0 opacity-100" leave-active-class="transition ease-in duration-150" leave-from-class="translate-y-0 opacity-100" leave-to-class="translate-y-4 opacity-0">
+              <div v-if="selectedUserIds.length > 0" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-md border border-slate-200 shadow-2xl rounded-2xl px-5 py-3 flex items-center space-x-4 z-40 text-xs font-bold text-slate-800">
+                <span class="text-red-600">{{ selectedUserIds.length }} Pengguna Dipilih</span>
+                <span class="text-slate-300">|</span>
+                <button type="button" @click="bulkResetSessions" class="text-slate-700 hover:text-amber-600 flex items-center gap-1.5 cursor-pointer">
+                  <i class="fa-solid fa-arrow-rotate-right text-[11px]"></i>
+                  <span>Reset Sesi</span>
+                </button>
+                <button type="button" @click="selectedUserIds = []" class="text-slate-400 hover:text-slate-600 p-1 cursor-pointer">
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+            </transition>
 
-              <!-- HAK AKSES MODUL SISTEM (MENU UTAMA SELALU TERBUKA, KATEGORI GUDANG/ASSEMBLY/QC/ADMIN BISA DITUTUP BUKA) -->
-
-              <div class="border border-slate-200 rounded-2xl p-4 sm:p-5 bg-slate-50/50 space-y-4">
-
+            <!-- USER FORM MODAL / DRAWER (WITH PERMISSION MATRIX) -->
+            <div v-if="openUserForm" class="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+              <div class="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 p-6 sm:p-8 space-y-6">
                 
-
-                <!-- Header Hak Akses & Preset Chips -->
-
-                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
-
-                  <div>
-
-                    <h4 class="text-xs sm:text-sm font-black uppercase text-slate-900 tracking-wider flex items-center gap-2">
-
-                      <i class="fa-solid fa-sliders text-red-600"></i>
-
-                      <span>Hak Akses Modul Sistem</span>
-
-                    </h4>
-
-                    
-
+                <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                  <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center text-lg">
+                      <i class="fa-solid fa-user-plus"></i>
+                    </div>
+                    <div>
+                      <h3 class="text-base font-extrabold text-slate-900">{{ editingUserId ? 'Edit Akun Pengguna' : 'Tambah Pengguna Baru' }}</h3>
+                      <p class="text-xs text-slate-400">Atur kredensial login dan hak akses menu sistem</p>
+                    </div>
                   </div>
-
-
-
-                  <!-- Preset Chips & Expand All Controls -->
-
-                  <div class="flex items-center gap-1.5 flex-wrap">
-
-                    <span class="text-[11px] font-bold text-slate-400 mr-1 hidden sm:inline">Set Otoritas Cepat:</span>
-
-                    <button type="button" @click="applyUserPreset('assembly')"
-
-                      class="px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition cursor-pointer">
-
-                      <i class="fa-solid fa-wand-magic-sparkles text-[10px] mr-1"></i>Preset Assembly
-
-                    </button>
-
-                    <button type="button" @click="applyUserPreset('gudang')"
-
-                      class="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition cursor-pointer">
-
-                      <i class="fa-solid fa-wand-magic-sparkles text-[10px] mr-1"></i>Preset Gudang
-
-                    </button>
-
-                    <button type="button" @click="applyUserPreset('qc')"
-
-                      class="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition cursor-pointer">
-
-                      <i class="fa-solid fa-wand-magic-sparkles text-[10px] mr-1"></i>Preset QC
-
-                    </button>
-
-                    <button type="button" @click="applyUserPreset('admin')"
-
-                      class="px-2.5 py-1 rounded-lg text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 transition cursor-pointer">
-
-                      <i class="fa-solid fa-crown text-[10px] mr-1"></i>Full Admin
-
-                    </button>
-
-                    <button type="button" @click="applyUserPreset('none')"
-
-                      class="px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition cursor-pointer">
-
-                      <i class="fa-solid fa-lock text-[10px] mr-1"></i>Kunci Semua
-
-                    </button>
-
-
-
-                    <div class="h-4 w-px bg-slate-200 mx-1 hidden sm:block"></div>
-
-
-
-                    <button type="button" @click="setAllMenuGroups(true)"
-
-                      class="px-2 py-1 rounded-lg text-[10px] font-bold text-slate-600 hover:bg-slate-100 transition cursor-pointer" title="Buka Semua Kategori">
-
-                      Buka Semua
-
-                    </button>
-
-                    <button type="button" @click="setAllMenuGroups(false)"
-
-                      class="px-2 py-1 rounded-lg text-[10px] font-bold text-slate-600 hover:bg-slate-100 transition cursor-pointer" title="Tutup Semua Kategori">
-
-                      Tutup Semua
-
-                    </button>
-
-                  </div>
-
+                  <button type="button" @click="openUserForm = false; resetUserForm()" class="text-slate-400 hover:text-slate-700 p-2 rounded-xl">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                  </button>
                 </div>
 
+                <form @submit.prevent="saveUser" class="space-y-5">
+                  
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="space-y-1.5">
+                      <label class="text-xs font-bold text-slate-700 uppercase">Username *</label>
+                      <input type="text" v-model="userForm.username" required placeholder="username_login" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:border-red-500 focus:bg-white">
+                    </div>
+                    <div class="space-y-1.5">
+                      <label class="text-xs font-bold text-slate-700 uppercase">Nama Lengkap *</label>
+                      <input type="text" v-model="userForm.full_name" required placeholder="Nama Lengkap Operator" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:border-red-500 focus:bg-white">
+                    </div>
+                  </div>
 
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="space-y-1.5">
+                      <label class="text-xs font-bold text-slate-700 uppercase">Password {{ editingUserId ? '(Kosongkan jika tidak diubah)' : '*' }}</label>
+                      <input type="password" v-model="userForm.password" :required="!editingUserId" placeholder="Kata sandi..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:border-red-500 focus:bg-white">
+                    </div>
+                    <div class="space-y-1.5">
+                      <label class="text-xs font-bold text-slate-700 uppercase">Departemen *</label>
+                      <select v-model="userForm.department" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:border-red-500 focus:bg-white cursor-pointer">
+                        <option value="administrator">Administrator</option>
+                        <option value="assembly">Assembly</option>
+                        <option value="qc">Quality Control</option>
+                        <option value="warehouse">Warehouse</option>
+                      </select>
+                    </div>
+                  </div>
 
-                <!-- 4 Kategori Departemen (Gudang, Assembly, QC, Admin) Masing-Masing Bisa Ditutup Buka (Default Tertutup) -->
+                  <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                    <div class="flex items-center justify-between">
+                      <span class="text-xs font-bold text-slate-800">Akses Portal CMS Administrator</span>
+                      <input type="checkbox" v-model="userForm.can_access_cms" class="rounded text-red-600 focus:ring-red-500/20 cursor-pointer">
+                    </div>
+                  </div>
 
-                <div class="space-y-3">
-
-                  <div v-for="grp in cmsManagedMenuGroups" :key="grp.key"
-
-                    class="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-2xs">
-
-                    
-
-                    <!-- Accordion Header per Kategori -->
-
-                    <button type="button" @click="toggleMenuGroup(grp.key)"
-
-                      class="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-slate-50/80 transition cursor-pointer select-none">
-
-                      <div class="flex items-center gap-2.5">
-
-                        <div class="w-7 h-7 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center text-xs">
-
-                          <i :class="grp.icon"></i>
-
-                        </div>
-
-                        <div class="flex items-center gap-2">
-
-                          <span class="text-xs font-black uppercase text-slate-800 tracking-wide">{{ grp.title }}</span>
-
-                          <span class="text-[10px] font-mono text-slate-400">({{ grp.menus.length }} Menu)</span>
-
-                        </div>
-
+                  <!-- Permission Matrix Preset Buttons -->
+                  <div class="space-y-2">
+                    <div class="flex items-center justify-between text-xs font-bold text-slate-700">
+                      <span>Hak Akses Menu:</span>
+                      <div class="flex gap-2">
+                        <button type="button" @click="applyUserPreset('admin')" class="text-[10px] px-2 py-0.5 rounded bg-red-100 text-red-700 font-bold">Admin</button>
+                        <button type="button" @click="applyUserPreset('operator')" class="text-[10px] px-2 py-0.5 rounded bg-slate-200 text-slate-700 font-bold">Operator</button>
+                        <button type="button" @click="applyUserPreset('readonly')" class="text-[10px] px-2 py-0.5 rounded bg-slate-200 text-slate-700 font-bold">Read-Only</button>
                       </div>
-
-                      <div class="flex items-center gap-2">
-
-                        <span class="text-[11px] font-bold text-slate-400">{{ openMenuGroups[grp.key] ? 'Tutup' : 'Buka' }}</span>
-
-                        <i class="fa-solid fa-chevron-down text-xs text-slate-400 transition-transform duration-200"
-
-                          :class="{ 'rotate-180': openMenuGroups[grp.key] }"></i>
-
-                      </div>
-
-                    </button>
-
-
-
-                    <!-- Body Daftar Menu (Hanya Muncul Jika Diklik Buka) -->
-
-                    <div v-show="openMenuGroups[grp.key]" class="p-3 border-t border-slate-100 bg-slate-50/50 space-y-2">
-
-                      <div v-for="menu in grp.menus" :key="menu.key"
-
-                        class="bg-white p-2.5 rounded-xl border border-slate-200 flex items-center justify-between gap-3 shadow-2xs">
-
-                        <div class="font-bold text-xs text-slate-800 truncate">
-
-                          {{ menu.title }}
-
-                        </div>
-
-
-
-                        <!-- 3-Way Access Switcher (0 = None, 1 = Read, 2 = Write) -->
-
-                        <div class="flex items-center bg-slate-100 p-0.5 rounded-lg shrink-0 border border-slate-200">
-
-                          <button type="button" @click="setUserPermission(menu.key, 0)"
-
-                            :class="(userForm.permissions && userForm.permissions[menu.key] === 0) ? 'bg-rose-600 text-white font-bold shadow-xs' : 'text-slate-500 hover:text-slate-800'"
-
-                            class="px-2.5 py-1 rounded-md text-[10px] transition cursor-pointer" title="Tanpa Akses">
-
-                            None (0)
-
-                          </button>
-
-                          <button type="button" @click="setUserPermission(menu.key, 1)"
-
-                            :class="(userForm.permissions && userForm.permissions[menu.key] === 1) ? 'bg-amber-500 text-white font-bold shadow-xs' : 'text-slate-500 hover:text-slate-800'"
-
-                            class="px-2.5 py-1 rounded-md text-[10px] transition cursor-pointer" title="Hanya Baca">
-
-                            Read (1)
-
-                          </button>
-
-                          <button type="button" @click="setUserPermission(menu.key, 2)"
-
-                            :class="(userForm.permissions && userForm.permissions[menu.key] === 2) ? 'bg-emerald-600 text-white font-bold shadow-xs' : 'text-slate-500 hover:text-slate-800'"
-
-                            class="px-2.5 py-1 rounded-md text-[10px] transition cursor-pointer" title="Akses Tulis">
-
-                            Write (2)
-
-                          </button>
-
-                        </div>
-
-                      </div>
-
                     </div>
 
-
-
+                    <div class="max-h-60 overflow-y-auto border border-slate-200 rounded-2xl divide-y divide-slate-100 bg-white">
+                      <div v-for="g in cmsManagedMenuGroups" :key="g.key" class="p-3">
+                        <div class="font-bold text-xs text-slate-800 mb-2">{{ g.name }}</div>
+                        <div class="grid grid-cols-2 gap-2">
+                          <div v-for="m in g.menus" :key="m.key" class="flex items-center justify-between text-xs p-1.5 rounded-lg bg-slate-50">
+                            <span class="truncate mr-2">{{ m.name }}</span>
+                            <div class="inline-flex rounded-lg p-0.5 bg-slate-200 text-[10px] font-bold">
+                              <button type="button" @click="setUserPermission(m.key, 0)" :class="userForm.permissions[m.key] === 0 || userForm.permissions[m.key] === undefined ? 'bg-white text-slate-700 shadow-2xs' : 'text-slate-400'" class="px-1.5 py-0.5 rounded">Off</button>
+                              <button type="button" @click="setUserPermission(m.key, 1)" :class="userForm.permissions[m.key] === 1 ? 'bg-blue-600 text-white' : 'text-slate-400'" class="px-1.5 py-0.5 rounded">R</button>
+                              <button type="button" @click="setUserPermission(m.key, 2)" :class="userForm.permissions[m.key] === 2 ? 'bg-emerald-600 text-white' : 'text-slate-400'" class="px-1.5 py-0.5 rounded">W</button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
+                  <div class="pt-4 border-t border-slate-100 flex items-center justify-end space-x-3">
+                    <button type="button" @click="openUserForm = false; resetUserForm()" class="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-100">
+                      Batal
+                    </button>
+                    <button type="submit" :disabled="isSavingUser" class="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-md shadow-red-600/20 disabled:opacity-50 flex items-center gap-2">
+                      <i v-if="isSavingUser" class="fa-solid fa-circle-notch fa-spin"></i>
+                      <span>{{ isSavingUser ? 'Menyimpan...' : 'Simpan Pengguna' }}</span>
+                    </button>
+                  </div>
+
+                </form>
+
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ================================================================= -->
+          <!-- 3. TAB PEMINDAI ANOMALI (SAAS STYLED)                             -->
+          <!-- ================================================================= -->
+          <div v-else-if="activeTab === 'anomalies'" class="space-y-6">
+            
+            <div class="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-2xs space-y-5">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 class="font-extrabold text-base text-slate-900">Pemindai Anomali Sistem</h3>
+                  <p class="text-xs text-slate-400">Pemeriksaan integritas referensi part yatim, sesi nyangkut, dan inkonsistensi stok</p>
+                </div>
+                <div class="flex items-center space-x-3">
+                  <button type="button" @click="scanAnomalies" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 font-bold text-slate-700 rounded-xl text-xs transition cursor-pointer">
+                    <i class="fa-solid fa-arrows-rotate mr-1.5"></i> Pindai Ulang
+                  </button>
+                  <button v-if="anomalySummary.total_anomalies > 0" type="button" @click="repairAnomalies" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs shadow-md shadow-red-600/25 transition cursor-pointer">
+                    <i class="fa-solid fa-wrench mr-1.5"></i> Perbaiki Otomatis
+                  </button>
+                </div>
+              </div>
+
+              <!-- Anomaly Categories Grid -->
+              <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-1">
+                  <div class="text-[10px] font-bold text-slate-400 uppercase">Part Yatim (Orphan)</div>
+                  <div class="text-xl font-black" :class="anomalySummary.orphan_parts.count > 0 ? 'text-red-600' : 'text-slate-800'">
+                    {{ anomalySummary.orphan_parts.count }}
+                  </div>
+                </div>
+                <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-1">
+                  <div class="text-[10px] font-bold text-slate-400 uppercase">Sesi Nyangkut</div>
+                  <div class="text-xl font-black" :class="anomalySummary.stuck_sessions.count > 0 ? 'text-amber-600' : 'text-slate-800'">
+                    {{ anomalySummary.stuck_sessions.count }}
+                  </div>
+                </div>
+                <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-1">
+                  <div class="text-[10px] font-bold text-slate-400 uppercase">Stok Desinkron</div>
+                  <div class="text-xl font-black" :class="anomalySummary.desynced_stocks.count > 0 ? 'text-amber-600' : 'text-slate-800'">
+                    {{ anomalySummary.desynced_stocks.count }}
+                  </div>
+                </div>
+                <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-1">
+                  <div class="text-[10px] font-bold text-slate-400 uppercase">Part Duplikat</div>
+                  <div class="text-xl font-black" :class="anomalySummary.duplicate_parts.count > 0 ? 'text-red-600' : 'text-slate-800'">
+                    {{ anomalySummary.duplicate_parts.count }}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Anomaly Items List -->
+              <div v-if="filteredAnomalyItems.length === 0" class="p-8 text-center text-slate-400 text-xs">
+                <i class="fa-solid fa-circle-check text-emerald-500 text-2xl mb-2 block"></i>
+                <span class="font-bold text-slate-700">Tidak ada anomali terdeteksi</span>
+                <p class="text-[11px] text-slate-400 mt-1">Seluruh data database dan referensi part dalam kondisi sehat dan konsisten</p>
+              </div>
+
+              <div v-else class="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
+                <div v-for="(it, idx) in pagedAnomalyItems" :key="idx" class="p-3 text-xs flex items-center justify-between hover:bg-slate-50">
+                  <div class="flex items-center space-x-3">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-100 text-amber-800">
+                      {{ it.category }}
+                    </span>
+                    <span class="font-mono text-slate-700">{{ it.description || it.serial_number || it.key }}</span>
+                  </div>
+                  <span class="text-[11px] text-slate-400 font-mono">{{ it.timestamp || 'Tercatat' }}</span>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+          <!-- ================================================================= -->
+          <!-- 4. TAB PEMBERSIHAN DATABASE (CLEANUP)                             -->
+          <!-- ================================================================= -->
+          <div v-else-if="activeTab === 'cleanup'" class="space-y-6">
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+              
+              <!-- CLEAR TRAYS -->
+              <div class="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-2xs space-y-4 flex flex-col justify-between">
+                <div class="space-y-2">
+                  <div class="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center text-lg font-bold">
+                    <i class="fa-solid fa-trash-can"></i>
+                  </div>
+                  <h3 class="font-extrabold text-sm text-slate-900">Reset Data Tray & Rakitan</h3>
+                  <p class="text-xs text-slate-500 leading-relaxed">
+                    Menghapus seluruh tray produksi, slot rakitan, dan riwayat uji coba pabrik.
+                  </p>
+                </div>
+                <button type="button" @click="confirmClearTrays" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-sm transition cursor-pointer">
+                  Bersihkan Tray & Rakitan
+                </button>
+              </div>
+
+              <!-- CLEAR DOWNTIMES -->
+              <div class="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-2xs space-y-4 flex flex-col justify-between">
+                <div class="space-y-2">
+                  <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-lg font-bold">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                  </div>
+                  <h3 class="font-extrabold text-sm text-slate-900">Reset Catatan Downtime</h3>
+                  <p class="text-xs text-slate-500 leading-relaxed">
+                    Menghapus seluruh riwayat downtime, waktu henti lini perakitan, dan alasan kendala.
+                  </p>
+                </div>
+                <button type="button" @click="confirmClearDowntimes" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 rounded-xl text-xs shadow-sm transition cursor-pointer">
+                  Bersihkan Downtime
+                </button>
+              </div>
+
+              <!-- CLEAR AUDIT LOGS -->
+              <div class="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-2xs space-y-4 flex flex-col justify-between">
+                <div class="space-y-2">
+                  <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-lg font-bold">
+                    <i class="fa-solid fa-list-check"></i>
+                  </div>
+                  <h3 class="font-extrabold text-sm text-slate-900">Reset Audit Log Aktivitas</h3>
+                  <p class="text-xs text-slate-500 leading-relaxed">
+                    Membersihkan riwayat log audit dan jejak aktivitas operasional pengguna.
+                  </p>
+                </div>
+                <button type="button" @click="confirmClearAuditLogs" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 rounded-xl text-xs shadow-sm transition cursor-pointer">
+                  Bersihkan Audit Logs
+                </button>
+              </div>
+
+            </div>
+
+          </div>
+
+          <!-- ================================================================= -->
+          <!-- 5. TAB ERROR LOGGER (ERRORS)                                      -->
+          <!-- ================================================================= -->
+          <div v-else-if="activeTab === 'errors'" class="space-y-5">
+            
+            <div class="bg-white border border-slate-200/80 rounded-2xl shadow-2xs overflow-hidden">
+              <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                  <h3 class="font-extrabold text-sm text-slate-900">Catatan Error Backend & API</h3>
+                  <p class="text-xs text-slate-400">Total {{ errorLogs.length }} entri log kesalahan tercatat</p>
+                </div>
+                <button type="button" @click="clearErrorLogs" class="text-xs font-bold text-red-600 hover:text-red-700 cursor-pointer">
+                  <i class="fa-solid fa-trash-can mr-1"></i> Bersihkan Log
+                </button>
+              </div>
+
+              <div v-if="errorLogs.length === 0" class="p-8 text-center text-slate-400 text-xs font-semibold">
+                Tidak ada log error yang tercatat. Sistem berjalan stabil.
+              </div>
+
+              <div v-else class="overflow-x-auto">
+                <table class="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr class="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                      <th class="p-3 w-40">Waktu</th>
+                      <th class="p-3 w-32">Status</th>
+                      <th class="p-3">Pesan Error</th>
+                      <th class="p-3 w-48">File Sumber</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100 font-mono">
+                    <tr v-for="(err, idx) in pagedErrorLogs" :key="idx" class="hover:bg-slate-50/70">
+                      <td class="p-3 text-slate-500 whitespace-nowrap">{{ err.created_at || err.timestamp || '-' }}</td>
+                      <td class="p-3"><span class="bg-red-50 text-red-700 px-2 py-0.5 rounded font-bold">{{ err.status_code || 500 }}</span></td>
+                      <td class="p-3 font-sans text-slate-800 font-medium">{{ err.message }}</td>
+                      <td class="p-3 text-slate-400 truncate max-w-xs">{{ err.file || '-' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ================================================================= -->
+          <!-- 6. TAB SLOW QUERY MONITOR                                         -->
+          <!-- ================================================================= -->
+          <div v-else-if="activeTab === 'slow_queries'" class="space-y-5">
+            
+            <div class="bg-white border border-slate-200/80 rounded-2xl shadow-2xs overflow-hidden">
+              <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                  <h3 class="font-extrabold text-sm text-slate-900">Pemantauan Kueri Lambat (Slow Queries)</h3>
+                  <p class="text-xs text-slate-400">Total {{ slowQueries.length }} kueri dengan durasi tinggi tercatat</p>
+                </div>
+                <button type="button" @click="clearSlowQueries" class="text-xs font-bold text-red-600 hover:text-red-700 cursor-pointer">
+                  <i class="fa-solid fa-trash-can mr-1"></i> Bersihkan Log
+                </button>
+              </div>
+
+              <div v-if="slowQueries.length === 0" class="p-8 text-center text-slate-400 text-xs font-semibold">
+                Tidak ada slow queries. Seluruh respons kueri database berjalan di bawah ambang batas lambat.
+              </div>
+
+              <div v-else class="overflow-x-auto">
+                <table class="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr class="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                      <th class="p-3 w-28">Durasi</th>
+                      <th class="p-3">Query SQL</th>
+                      <th class="p-3 w-40">Waktu</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100 font-mono">
+                    <tr v-for="(q, idx) in pagedSlowQueries" :key="idx" class="hover:bg-slate-50/70">
+                      <td class="p-3 whitespace-nowrap">
+                        <span class="bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded">{{ q.duration_ms || q.duration }} ms</span>
+                      </td>
+                      <td class="p-3 text-slate-700 font-mono text-[11px] break-all">{{ q.sql }}</td>
+                      <td class="p-3 text-slate-400 whitespace-nowrap">{{ q.created_at || '-' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ================================================================= -->
+          <!-- 7. TAB PENGATURAN DO & CLOUDINARY                                 -->
+          <!-- ================================================================= -->
+          <div v-else-if="activeTab === 'do_settings'" class="space-y-6">
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              
+              <!-- CLOUDINARY SETTINGS -->
+              <div class="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-2xs space-y-4">
+                <div class="flex items-center space-x-3 border-b border-slate-100 pb-3">
+                  <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                  </div>
+                  <div>
+                    <h3 class="font-extrabold text-sm text-slate-900">Integrasi Cloudinary PDF</h3>
+                    <p class="text-xs text-slate-400">Penyimpanan awan otomatis untuk dokumen Packing List & DO</p>
+                  </div>
                 </div>
 
+                <form @submit.prevent="saveCloudinarySettings" class="space-y-3 text-xs">
+                  <div class="space-y-1">
+                    <label class="font-bold text-slate-700">Cloud Name</label>
+                    <input type="text" v-model="cloudForm.cloud_name" required placeholder="Contoh: final-assembly-p9" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:outline-none">
+                  </div>
+                  <div class="space-y-1">
+                    <label class="font-bold text-slate-700">API Key</label>
+                    <input type="text" v-model="cloudForm.api_key" required placeholder="Contoh: 1234567890" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:outline-none">
+                  </div>
+                  <div class="space-y-1">
+                    <label class="font-bold text-slate-700">API Secret {{ cloudSettings.has_secret ? '(Tersimpan - Kosongkan jika tidak diubah)' : '' }}</label>
+                    <input type="password" v-model="cloudForm.api_secret" :required="!cloudSettings.has_secret" placeholder="API Secret..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:outline-none">
+                  </div>
 
-
+                  <div class="pt-2 flex items-center justify-between">
+                    <button type="button" @click="testCloudinaryConnection" :disabled="isTestingCloud" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 font-bold text-slate-700 rounded-xl transition cursor-pointer">
+                      <i class="fa-solid fa-plug text-[11px] mr-1"></i>
+                      <span>{{ isTestingCloud ? 'Menguji...' : 'Uji Koneksi' }}</span>
+                    </button>
+                    <button type="submit" :disabled="isSavingCloud" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition cursor-pointer">
+                      <span>{{ isSavingCloud ? 'Menyimpan...' : 'Simpan Kredensial' }}</span>
+                    </button>
+                  </div>
+                </form>
               </div>
 
+              <!-- DO SETTINGS -->
+              <div class="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-2xs space-y-4">
+                <div class="flex items-center space-x-3 border-b border-slate-100 pb-3">
+                  <div class="w-9 h-9 rounded-xl bg-red-50 text-red-600 flex items-center justify-center font-bold">
+                    <i class="fa-solid fa-file-signature"></i>
+                  </div>
+                  <div>
+                    <h3 class="font-extrabold text-sm text-slate-900">Format &amp; Batch Delivery Order</h3>
+                    <p class="text-xs text-slate-400">Pengaturan batch terpusat dan penomoran otomatis dokumen pengiriman</p>
+                  </div>
+                </div>
 
-
-              <!-- Tombol Aksi Simpan Form -->
-
-              <div class="flex items-center justify-end gap-2.5 pt-2">
-
-                <button v-if="editingUserId" type="button" @click="resetUserForm"
-
-                  class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer">
-
-                  Batal
-
-                </button>
-
-                <button type="submit" :disabled="isSavingUser"
-
-                  class="bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer shadow-md shadow-red-600/20 active:scale-95">
-
-                  <i class="fa-solid" :class="isSavingUser ? 'fa-spinner fa-spin' : 'fa-floppy-disk'"></i>
-
-                  <span>{{ isSavingUser ? 'Menyimpan...' : (editingUserId ? 'Perbarui Pengguna' : 'Simpan Pengguna') }}</span>
-
-                </button>
-
+                <div class="space-y-3 text-xs">
+                  <div class="space-y-1">
+                    <label class="font-bold text-slate-700 flex items-center justify-between">
+                      <span>Nomor Batch Pengiriman Aktif</span>
+                      <span class="text-[10px] text-red-600 font-bold">*Pengaturan Terpusat Batch</span>
+                    </label>
+                    <input type="number" min="1" v-model.number="doSettings.current_batch_number" placeholder="Contoh: 1" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:outline-none font-bold text-slate-800">
+                    <p class="text-[11px] text-slate-500">Nomor batch yang aktif untuk seluruh pembuatan Dokumen Packing List dan Surat Jalan. Jika nomor batch diubah, urutan nomor pengiriman otomatis direset kembali ke 1 (01).</p>
+                  </div>
+                  <div class="space-y-1">
+                    <label class="font-bold text-slate-700">Format Kode Surat Jalan</label>
+                    <input type="text" v-model="doSettings.do_number_format" placeholder="DO/P9/YYMM/XXXX" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:outline-none">
+                  </div>
+                  <div class="space-y-1">
+                    <label class="font-bold text-slate-700">Prefix Peti Default</label>
+                    <input type="text" v-model="doSettings.default_crate_prefix" placeholder="CRATE-" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:outline-none">
+                  </div>
+                  <div class="pt-4 flex justify-end">
+                    <button type="button" @click="saveDoSettings" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-sm transition cursor-pointer">
+                      Simpan Pengaturan DO
+                    </button>
+                  </div>
+                </div>
               </div>
 
-            </form>
+            </div>
 
           </div>
-
-
-
-          <!-- TABEL DAFTAR PENGGUNA SISTEM (TANPA ID + CMS READ-ONLY + PAGINATION 10) -->
-
-          <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
-
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
-
-              <div>
-
-                <h3 class="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
-
-                  <i class="fa-solid fa-users text-slate-700"></i>
-
-                  <span>Daftar Pengguna</span>
-
-                  <span class="bg-slate-100 text-slate-700 text-xs font-bold px-2.5 py-0.5 rounded-full">{{ filteredUsersList.length }} Akun</span>
-
-                </h3>
-
-              </div>
-
-
-
-              <!-- Filter & Search Bar -->
-
-              <div class="flex flex-wrap items-center gap-2">
-
-                <input type="text" v-model="userSearchQuery" placeholder="Cari nama / username / NIK..."
-
-                  class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-red-600 focus:bg-white w-48 sm:w-60 min-h-[34px]">
-
-                <select v-model="userDeptFilter"
-
-                  class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-red-600 min-h-[34px] cursor-pointer">
-
-                  <option value="all">Semua Departemen</option>
-
-                  <option value="Administrator">Administrator</option>
-
-                  <option value="Warehouse">Warehouse (Gudang)</option>
-
-                  <option value="Assembly">Assembly (Perakitan)</option>
-
-                  <option value="Quality Control">Quality Control (QC)</option>
-
-                </select>
-
-                <button type="button" @click="fetchUsers" class="bg-slate-100 hover:bg-slate-200 text-slate-700 p-2 rounded-xl text-xs transition cursor-pointer" title="Refresh">
-
-                  <i class="fa-solid fa-rotate-right" :class="loadingUsers ? 'fa-spin' : ''"></i>
-
-                </button>
-
-              </div>
-
-            </div>
-
-
-
-            <!-- Tabel Data: ID Dihilangkan, CMS Access Read-Only -->
-
-            <div class="overflow-x-auto rounded-xl border border-slate-200">
-
-              <table class="w-full text-left text-xs">
-
-                <thead class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
-
-                  <tr>
-
-                    <th class="p-3 w-12 text-center">No</th>
-
-                    <th class="p-3">Nama & Username</th>
-
-                    <th class="p-3">NIK</th>
-
-                    <th class="p-3">Departemen</th>
-
-                    <th class="p-3 text-center">Akses CMS</th>
-
-                    <th class="p-3 text-center">Otoritas</th>
-
-                    <th class="p-3 text-center w-32">Tindakan</th>
-
-                  </tr>
-
-                </thead>
-
-                <tbody class="divide-y divide-slate-100 text-slate-700">
-
-                  <tr v-for="(u, idx) in pagedUsersList" :key="u.id" class="hover:bg-slate-50/80 transition" :class="editingUserId === u.id ? 'bg-amber-50/40' : ''">
-
-                    <!-- Kolom No (Pengganti ID) -->
-
-                    <td class="p-3 text-center font-mono font-bold text-slate-400">
-
-                      {{ (userPage - 1) * userPerPage + idx + 1 }}
-
-                    </td>
-
-                    <td class="p-3">
-
-                      <div class="font-bold text-slate-900 flex items-center gap-1.5">
-
-                        <span>{{ u.full_name }}</span>
-
-                        <span v-if="u.id === 3" class="bg-red-100 text-red-700 text-[9px] font-black px-1.5 py-0.2 rounded">UTAMA</span>
-
-                      </div>
-
-                      <div class="text-[11px] text-slate-500 font-mono">@{{ u.username }}</div>
-
-                    </td>
-
-                    <td class="p-3 font-mono font-semibold">{{ u.nik || '-' }}</td>
-
-                    <td class="p-3">
-
-                      <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border"
-
-                        :class="getDeptBadgeClass(u.department || u.role)">
-
-                        {{ u.department || u.role }}
-
-                      </span>
-
-                    </td>
-
-
-
-                    <!-- Status Akses Masuk Portal CMS (READ-ONLY) -->
-
-                    <td class="p-3 text-center whitespace-nowrap">
-
-                      <span v-if="u.id === 3 || Boolean(u.can_access_cms)"
-
-                        class="bg-purple-50 text-purple-700 border border-purple-200 font-bold text-[10px] px-2.5 py-1 rounded-full inline-flex items-center gap-1">
-
-                        <i class="fa-solid fa-circle-check text-purple-600"></i> Aktif
-
-                      </span>
-
-                      <span v-else class="bg-slate-100 text-slate-500 border border-slate-200 font-medium text-[10px] px-2.5 py-1 rounded-full inline-flex items-center gap-1">
-
-                        <i class="fa-solid fa-lock text-slate-400"></i> Terkunci
-
-                      </span>
-
-                    </td>
-
-
-
-                    <!-- Ringkasan Otoritas Menu Tulis / Baca -->
-
-                    <td class="p-3 text-center whitespace-nowrap">
-
-                      <div class="inline-flex items-center gap-1 text-[11px] font-mono font-bold">
-
-                        <span class="bg-emerald-50 text-emerald-800 border border-emerald-200 px-1.5 py-0.5 rounded" title="Menu Write">
-
-                          {{ countUserWritePerms(u) }}W
-
-                        </span>
-
-                        <span class="bg-amber-50 text-amber-800 border border-amber-200 px-1.5 py-0.5 rounded" title="Menu Read">
-
-                          {{ countUserReadPerms(u) }}R
-
-                        </span>
-
-                      </div>
-
-                    </td>
-
-
-
-                    <!-- Tombol Aksi -->
-
-                    <td class="p-3 text-center whitespace-nowrap">
-
-                      <div class="inline-flex items-center gap-1">
-
-                        <button type="button" @click="editUser(u)"
-
-                          class="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 p-1.5 rounded-lg text-xs font-bold transition cursor-pointer"
-
-                          title="Edit Pengguna">
-
-                          <i class="fa-solid fa-pen-to-square"></i>
-
-                        </button>
-
-                        <button type="button" @click="resetUserSession(u)"
-
-                          class="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 p-1.5 rounded-lg text-xs font-bold transition cursor-pointer"
-
-                          title="Reset Sesi Login">
-
-                          <i class="fa-solid fa-key"></i>
-
-                        </button>
-
-                        <button v-if="u.id !== 3" type="button" @click="deleteUser(u)"
-
-                          class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 p-1.5 rounded-lg text-xs font-bold transition cursor-pointer"
-
-                          title="Hapus Akun">
-
-                          <i class="fa-solid fa-trash-can"></i>
-
-                        </button>
-
-                      </div>
-
-                    </td>
-
-                  </tr>
-
-
-
-                  <tr v-if="filteredUsersList.length === 0">
-
-                    <td colspan="7" class="p-8 text-center text-slate-400">
-
-                      <i class="fa-solid fa-user-slash text-2xl mb-2 block"></i>
-
-                      <span>Tidak ada pengguna yang cocok.</span>
-
-                    </td>
-
-                  </tr>
-
-                </tbody>
-
-              </table>
-
-            </div>
-
-
-
-            <!-- Pagination Bar Daftar Akun (Batas 10 Akun) -->
-
-            <div v-if="filteredUsersList.length > 0" class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-100">
-
-              <div class="text-xs text-slate-500 font-medium">
-
-                Menampilkan <strong>{{ (userPage - 1) * userPerPage + 1 }}</strong> - <strong>{{ Math.min(userPage * userPerPage, filteredUsersList.length) }}</strong> dari <strong>{{ filteredUsersList.length }}</strong> akun
-
-              </div>
-
-
-
-              <div v-if="totalUserPages > 1" class="flex items-center space-x-1.5 self-end sm:self-auto">
-
-                <button type="button" @click="userPage = Math.max(1, userPage - 1)" :disabled="userPage === 1"
-
-                  class="px-2.5 py-1.5 rounded-lg text-xs font-bold border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 disabled:opacity-40 transition cursor-pointer">
-
-                  <i class="fa-solid fa-chevron-left mr-1"></i> Sebelumnya
-
-                </button>
-
-
-
-                <span class="px-3 py-1.5 text-xs font-bold text-slate-700 font-mono">
-
-                  Hal {{ userPage }} / {{ totalUserPages }}
-
-                </span>
-
-
-
-                <button type="button" @click="userPage = Math.min(totalUserPages, userPage + 1)" :disabled="userPage === totalUserPages"
-
-                  class="px-2.5 py-1.5 rounded-lg text-xs font-bold border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 disabled:opacity-40 transition cursor-pointer">
-
-                  Berikutnya <i class="fa-solid fa-chevron-right ml-1"></i>
-
-                </button>
-
-              </div>
-
-            </div>
-
-
-
-          </div>
-
-        </div>
-
-
 
         </main>
 
-
-
-        <!-- Footer CMS -->
-
-        <footer class="bg-white border-t border-slate-200 py-3 px-6 text-center text-[11px] text-slate-400 flex items-center justify-between select-none">
-
-          <span>Portal Administrator CMS &copy; 2026</span>
-
-          <span class="font-mono text-[10px] text-slate-500">Database: <strong class="text-slate-700">db_final_assembly (Produksi)</strong></span>
-
-        </footer>
-
-
-
       </div>
 
     </div>
 
-
-
-    <!-- ========================================================================= -->
-
-    <!-- TOAST NOTIFICATION (STANDARISASI UI/UX IN-APP)                            -->
-
-    <!-- ========================================================================= -->
-
-    <transition enter-active-class="transition-all duration-300 ease-out"
-
-                enter-from-class="opacity-0 translate-y-4 sm:translate-y-0 sm:translate-x-4"
-
-                enter-to-class="opacity-100 translate-y-0 sm:translate-x-0"
-
-                leave-active-class="transition-all duration-200 ease-in"
-
-                leave-from-class="opacity-100 translate-y-0 sm:translate-x-0"
-
-                leave-to-class="opacity-0 translate-y-4 sm:translate-y-0 sm:translate-x-4">
-
-      <div v-if="toast.show"
-
-        class="fixed bottom-5 right-5 z-[999999] max-w-sm w-full transition-all pointer-events-auto">
-
-        <div
-
-          :class="toast.type === 'error' ? 'bg-red-600 text-white shadow-2xl shadow-red-600/50' : (toast.type === 'warn' ? 'bg-amber-500 text-white shadow-2xl shadow-amber-500/50' : (toast.type === 'info' ? 'bg-blue-600 text-white shadow-2xl shadow-blue-600/50' : 'bg-emerald-600 text-white shadow-2xl shadow-emerald-600/50'))"
-
-          class="p-4 rounded-2xl flex items-center space-x-3 border border-white/20 ring-2 ring-black/10">
-
-          <i :class="toast.type === 'error' ? 'fa-solid fa-circle-exclamation' : (toast.type === 'warn' ? 'fa-solid fa-triangle-exclamation' : (toast.type === 'info' ? 'fa-solid fa-circle-info' : 'fa-solid fa-circle-check'))"
-
-            class="text-2xl flex-shrink-0"></i>
-
-          <div class="flex-grow">
-
-            <div class="font-black text-xs tracking-wide">{{ toast.title }}</div>
-
-            <div class="text-[11px] opacity-95 leading-snug mt-0.5">{{ toast.message }}</div>
-
-          </div>
-
-          <button @click="toast.show = false"
-
-            class="text-white/70 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition cursor-pointer" title="Tutup Notifikasi">
-
-            <i class="fa-solid fa-xmark text-sm"></i>
-
-          </button>
-
+    <!-- TOAST NOTIFICATION -->
+    <transition enter-active-class="transition-all duration-300 ease-out" enter-from-class="opacity-0 translate-y-4 sm:translate-y-0 sm:translate-x-4" enter-to-class="opacity-100 translate-y-0 sm:translate-x-0" leave-active-class="transition-all duration-200 ease-in" leave-from-class="opacity-100 translate-y-0 sm:translate-x-0" leave-to-class="opacity-0 translate-y-4 sm:translate-y-0 sm:translate-x-4">
+      <div v-if="toast.show" class="fixed bottom-5 right-5 z-50 max-w-sm w-full bg-white rounded-2xl shadow-2xl border border-slate-200 p-4 flex items-start space-x-3 select-none">
+        <div :class="toast.type === 'error' ? 'bg-red-100 text-red-600' : (toast.type === 'warn' ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600')" class="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-sm">
+          <i :class="toast.type === 'error' ? 'fa-solid fa-circle-xmark' : (toast.type === 'warn' ? 'fa-solid fa-triangle-exclamation' : 'fa-solid fa-circle-check')"></i>
         </div>
-
+        <div class="flex-1 min-w-0">
+          <div class="text-xs font-bold text-slate-900">{{ toast.title }}</div>
+          <div class="text-[11px] text-slate-600 mt-0.5 leading-snug break-words">{{ toast.message }}</div>
+        </div>
+        <button type="button" @click="toast.show = false" class="text-slate-400 hover:text-slate-600 p-1">
+          <i class="fa-solid fa-xmark text-xs"></i>
+        </button>
       </div>
-
     </transition>
 
-
-
-    <!-- ========================================================================= -->
-
-    <!-- GLOBAL IN-APP CONFIRMATION & PROMPT CARD MODAL (STANDARISASI UI/UX)       -->
-
-    <!-- ========================================================================= -->
-
-    <div v-if="confirmModalState.isOpen"
-
-      class="fixed inset-0 z-[999998] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs transition-opacity animate-fadeIn">
-
-      <div
-
-        class="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full p-5 sm:p-6 space-y-4">
-
-        <div class="flex items-start gap-3.5">
-
-          <div
-
-            :class="['w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-xs', confirmModalState.iconBg]">
-
-            <i :class="[confirmModalState.icon, 'text-lg']"></i>
-
-          </div>
-
-          <div class="flex-1 min-w-0">
-
-            <h3 class="text-base font-black text-slate-900 leading-snug">{{ confirmModalState.title }}</h3>
-
-            <p class="text-xs text-slate-600 mt-1 leading-relaxed whitespace-pre-line font-medium">{{
-
-              confirmModalState.message }}</p>
-
-          </div>
-
+    <!-- IN-APP CONFIRMATION MODAL -->
+    <div v-if="confirmModalState.isOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-xs select-none">
+      <div class="w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-5 text-center">
+        <div :class="confirmModalState.iconBg" class="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center text-xl shadow-sm">
+          <i :class="confirmModalState.icon"></i>
         </div>
-
-
-
-        <!-- Optional Input Field (Prompt mode) -->
-
-        <div v-if="confirmModalState.hasInput" class="space-y-1.5 pt-1">
-
-          <label v-if="confirmModalState.inputLabel"
-
-            class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
-
-            {{ confirmModalState.inputLabel }}
-
-          </label>
-
-          <input type="text" v-model="confirmModalState.inputValue" :placeholder="confirmModalState.inputPlaceholder"
-
-            @keyup.enter="handleConfirmCard(true)" autofocus
-
-            class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 font-semibold focus:outline-none focus:border-red-600 focus:bg-white transition shadow-inner">
-
+        <div>
+          <h4 class="text-base font-extrabold text-slate-900">{{ confirmModalState.title }}</h4>
+          <p class="text-xs text-slate-500 mt-1 leading-relaxed">{{ confirmModalState.message }}</p>
         </div>
-
-
-
-        <!-- Action Buttons -->
-
-        <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-
-          <button type="button" @click="handleConfirmCard(false)"
-
-            class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition active:scale-95 cursor-pointer min-h-[40px]">
-
+        <div class="flex items-center space-x-3 pt-2">
+          <button type="button" @click="handleConfirmCard(false)" class="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-100 transition cursor-pointer">
             {{ confirmModalState.cancelText }}
-
           </button>
-
-          <button type="button" @click="handleConfirmCard(true)"
-
-            :class="['px-5 py-2.5 rounded-xl text-xs font-bold shadow-md transition active:scale-95 cursor-pointer flex items-center gap-1.5 min-h-[40px]', confirmModalState.confirmBtnClass]">
-
-            <span>{{ confirmModalState.confirmText }}</span>
-
+          <button type="button" @click="handleConfirmCard(true)" :class="confirmModalState.confirmBtnClass" class="flex-1 px-4 py-2.5 rounded-xl font-bold text-xs shadow-md transition cursor-pointer">
+            {{ confirmModalState.confirmText }}
           </button>
-
         </div>
-
       </div>
-
     </div>
 
-
-
     @endverbatim
-
   </div>
 
-
-
+  <!-- VUE 3 APPLICATION LOGIC SCRIPT -->
   <script>
-
-    const { createApp, ref, computed, watch, onMounted } = Vue;
-
-
+    const { createApp, ref, reactive, computed, onMounted, nextTick } = Vue;
 
     createApp({
-
       setup() {
-
         const isCmsAuthenticated = ref(false);
-
         const adminUser = ref({});
-
         const cmsToken = ref('');
 
-
-
         const loginForm = ref({ username: '', password: '' });
-
         const showPassword = ref(false);
-
         const loginLoading = ref(false);
-
         const loginError = ref('');
 
-
-
-        const activeTab = ref('users');
-
+        // Tab state: default to 'dashboard' as requested by user
+        const activeTab = ref('dashboard');
         const loading = ref(false);
-
-
-
-        // Sidebar drawer state
-
         const isCmsSidebarOpen = ref(false);
+        const statsVisible = ref(true);
 
-
-
-        // In-App Toast Notification State
-
+        // Toast Notification State
         const toast = ref({ show: false, title: '', message: '', type: 'success' });
-
         let toastTimeout = null;
-
         const triggerToast = (title, message, type = 'success') => {
-
           if (toastTimeout) clearTimeout(toastTimeout);
-
           toast.value = { show: true, title, message, type };
-
           toastTimeout = setTimeout(() => { toast.value.show = false; }, 3500);
-
         };
 
-
-
-        // In-App Confirmation & Prompt Card Modal State
-
-        const confirmModalState = Vue.reactive({
-
+        // Confirmation Modal State
+        const confirmModalState = reactive({
           isOpen: false,
-
           title: 'Konfirmasi',
-
           message: '',
-
           icon: 'fa-solid fa-circle-question',
-
           iconBg: 'bg-blue-100 text-blue-600',
-
           confirmText: 'Ya, Lanjutkan',
-
           cancelText: 'Batal',
-
           confirmBtnClass: 'bg-blue-600 hover:bg-blue-700 text-white',
-
-          hasInput: false,
-
-          inputLabel: '',
-
-          inputPlaceholder: '',
-
-          inputValue: '',
-
           resolve: null
-
         });
-
-
 
         const showConfirmCard = (opts = {}) => {
-
           return new Promise((resolve) => {
-
             confirmModalState.title = opts.title || 'Konfirmasi';
-
             confirmModalState.message = opts.message || 'Apakah Anda yakin ingin melanjutkan tindakan ini?';
-
             confirmModalState.icon = opts.icon || 'fa-solid fa-circle-question';
-
-            confirmModalState.iconBg = opts.iconBg || (opts.confirmBtnClass && opts.confirmBtnClass.includes('red') ? 'bg-red-100 text-red-600' : (opts.confirmBtnClass && opts.confirmBtnClass.includes('emerald') ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600'));
-
+            confirmModalState.iconBg = opts.iconBg || (opts.confirmBtnClass && opts.confirmBtnClass.includes('red') ? 'bg-red-100 text-red-600' : 'bg-slate-900 text-white');
             confirmModalState.confirmText = opts.confirmText || 'Ya, Lanjutkan';
-
             confirmModalState.cancelText = opts.cancelText || 'Batal';
-
-            confirmModalState.confirmBtnClass = opts.confirmBtnClass || 'bg-blue-600 hover:bg-blue-700 text-white';
-
-            confirmModalState.hasInput = false;
-
-            confirmModalState.inputLabel = '';
-
-            confirmModalState.inputPlaceholder = '';
-
-            confirmModalState.inputValue = '';
-
+            confirmModalState.confirmBtnClass = opts.confirmBtnClass || 'bg-red-600 hover:bg-red-700 text-white';
             confirmModalState.resolve = resolve;
-
             confirmModalState.isOpen = true;
-
           });
-
         };
-
-
-
-        const showPromptCard = (opts = {}) => {
-
-          return new Promise((resolve) => {
-
-            confirmModalState.title = opts.title || 'Masukkan Keterangan';
-
-            confirmModalState.message = opts.message || '';
-
-            confirmModalState.icon = opts.icon || 'fa-solid fa-pen-to-square';
-
-            confirmModalState.iconBg = opts.iconBg || 'bg-amber-100 text-amber-600';
-
-            confirmModalState.confirmText = opts.confirmText || 'Kirim / Simpan';
-
-            confirmModalState.cancelText = opts.cancelText || 'Batal';
-
-            confirmModalState.confirmBtnClass = opts.confirmBtnClass || 'bg-blue-600 hover:bg-blue-700 text-white';
-
-            confirmModalState.hasInput = true;
-
-            confirmModalState.inputLabel = opts.inputLabel || 'Keterangan:';
-
-            confirmModalState.inputPlaceholder = opts.inputPlaceholder || 'Ketik di sini...';
-
-            confirmModalState.inputValue = opts.defaultValue || '';
-
-            confirmModalState.resolve = (confirmed) => {
-
-              if (!confirmed) resolve(null);
-
-              else resolve(confirmModalState.inputValue);
-
-            };
-
-            confirmModalState.isOpen = true;
-
-          });
-
-        };
-
-
 
         const handleConfirmCard = (confirmed) => {
-
           confirmModalState.isOpen = false;
-
-          if (confirmModalState.resolve) {
-
-            const r = confirmModalState.resolve;
-
+          if (typeof confirmModalState.resolve === 'function') {
+            confirmModalState.resolve(confirmed);
             confirmModalState.resolve = null;
+          }
+        };
 
-            r(confirmed);
+        // =====================================================================
+        // DASHBOARD COMPREHENSIVE STATS & REPORTING DATA STATE (WITH BACKDATE)
+        // =====================================================================
+        const reportPeriod = ref('daily'); // 'daily', 'weekly', 'monthly', 'custom'
+        const setReportPeriod = (period) => {
+          reportPeriod.value = period;
+          if (typeof nextTick === 'function') {
+            nextTick(() => renderReportCharts());
+          } else {
+            setTimeout(renderReportCharts, 50);
+          }
+        };
 
+        const todayIsoStr = () => {
+          const d = new Date();
+          const y = d.getFullYear();
+          const m = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          return `${y}-${m}-${day}`;
+        };
+        const currentMonthIsoStr = () => {
+          const d = new Date();
+          const y = d.getFullYear();
+          const m = String(d.getMonth() + 1).padStart(2, '0');
+          return `${y}-${m}`;
+        };
+
+        const parseDateSafe = (dateStr) => {
+          if (!dateStr) return null;
+          try {
+            if (dateStr instanceof Date) return isNaN(dateStr.getTime()) ? null : dateStr;
+            const s = String(dateStr).trim();
+            if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+              const [y, m, d] = s.split('-').map(Number);
+              return new Date(y, m - 1, d, 0, 0, 0, 0);
+            }
+            const clean = s.includes('T') ? s : s.replace(' ', 'T');
+            const d = new Date(clean);
+            return isNaN(d.getTime()) ? null : d;
+          } catch (_) {
+            return null;
+          }
+        };
+
+        const getWeekDateRange = (offset = selectedWeekOffset.value) => {
+          const now = new Date();
+          const day = now.getDay();
+          const diffToMonday = day === 0 ? -6 : 1 - day;
+          const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + diffToMonday + (offset * 7), 0, 0, 0, 0);
+          const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6, 23, 59, 59, 999);
+          return { monday, sunday };
+        };
+
+        const isDateInDay = (dateStr, targetDateStr = todayIsoStr()) => {
+          if (!dateStr) return false;
+          try {
+            const d = parseDateSafe(dateStr);
+            if (!d) return false;
+            const target = parseDateSafe(targetDateStr);
+            if (!target) return false;
+            return d.getFullYear() === target.getFullYear() &&
+                   d.getMonth() === target.getMonth() &&
+                   d.getDate() === target.getDate();
+          } catch(e) {
+            return false;
+          }
+        };
+
+        const formatShortDate = (dateStr) => {
+          if (!dateStr) return '-';
+          try {
+            const d = parseDateSafe(dateStr);
+            if (!d) return dateStr;
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+            return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+          } catch(e) {
+            return dateStr;
+          }
+        };
+
+        // Date selection state for backdate tracking
+        const selectedReportDate = ref(todayIsoStr());
+        const selectedWeekOffset = ref(0); // 0 = current week, -1 = last week, etc.
+        const selectedReportMonth = ref(currentMonthIsoStr());
+        const customStartDate = ref(todayIsoStr());
+        const customEndDate = ref(todayIsoStr());
+        const chartWindowMode = ref('active_dates'); // '7_days', '30_days', 'active_dates'
+        const latestProductionDate = ref('');
+
+        const shiftReportDate = (deltaDays) => {
+          const d = parseDateSafe(selectedReportDate.value) || new Date();
+          d.setDate(d.getDate() + deltaDays);
+          const y = d.getFullYear();
+          const m = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          selectedReportDate.value = `${y}-${m}-${day}`;
+          updateChartDataFromRaw();
+          if (typeof nextTick === 'function') nextTick(() => renderReportCharts());
+          else renderReportCharts();
+        };
+
+        const setReportDateToday = () => {
+          selectedReportDate.value = todayIsoStr();
+          updateChartDataFromRaw();
+          if (typeof nextTick === 'function') nextTick(() => renderReportCharts());
+          else renderReportCharts();
+        };
+
+        const jumpToLatestDate = () => {
+          if (latestProductionDate.value) {
+            selectedReportDate.value = latestProductionDate.value;
+            updateChartDataFromRaw();
+            if (typeof nextTick === 'function') nextTick(() => renderReportCharts());
+            else renderReportCharts();
+          }
+        };
+
+        const shiftReportWeek = (deltaWeeks) => {
+          selectedWeekOffset.value += deltaWeeks;
+          if (typeof nextTick === 'function') nextTick(() => renderReportCharts());
+          else renderReportCharts();
+        };
+
+        const setReportWeekCurrent = () => {
+          selectedWeekOffset.value = 0;
+          if (typeof nextTick === 'function') nextTick(() => renderReportCharts());
+          else renderReportCharts();
+        };
+
+        const shiftReportMonth = (deltaMonths) => {
+          const parts = selectedReportMonth.value.split('-').map(Number);
+          const y = parts[0] || new Date().getFullYear();
+          const m = parts[1] || (new Date().getMonth() + 1);
+          const d = new Date(y, m - 1 + deltaMonths, 1);
+          const yr = d.getFullYear();
+          const mo = String(d.getMonth() + 1).padStart(2, '0');
+          selectedReportMonth.value = `${yr}-${mo}`;
+          renderReportCharts();
+        };
+
+        const setReportMonthCurrent = () => {
+          selectedReportMonth.value = currentMonthIsoStr();
+          renderReportCharts();
+        };
+
+        const setQuickCustomRange = (mode) => {
+          const now = new Date();
+          customEndDate.value = todayIsoStr();
+          if (mode === '7_days') {
+            const d = new Date(now);
+            d.setDate(now.getDate() - 6);
+            customStartDate.value = d.toISOString().split('T')[0];
+          } else if (mode === '30_days') {
+            const d = new Date(now);
+            d.setDate(now.getDate() - 29);
+            customStartDate.value = d.toISOString().split('T')[0];
+          } else if (mode === 'all') {
+            customStartDate.value = '2026-01-01';
+          }
+          renderReportCharts();
+        };
+
+        const setChartWindow = (mode) => {
+          chartWindowMode.value = mode;
+          updateChartDataFromRaw();
+        };
+
+        const rawTraysList = ref([]);
+        const rawAssyTestsList = ref([]);
+        const rawQcTestsList = ref([]);
+        const rawWarehouseReceiptsList = ref([]);
+        const rawDeliveryOrdersList = ref([]);
+        const rawPendingReassemblyList = ref([]);
+        const lastSyncTimeStr = ref('');
+        let autoUpdateTimer = null;
+        let lastDailyTrendsData = [];
+        let timeTrendsChartInstance = null;
+
+        const dailyKpi = computed(() => {
+          const assyItems = rawAssyTestsList.value;
+          const whItems = rawWarehouseReceiptsList.value;
+          const today = todayIsoStr();
+          const latest = latestProductionDate.value;
+
+          const calcMetricsFor = (targetDate) => {
+            if (!targetDate) return null;
+            let goodCount = 0;
+            let countAssy = 0;
+            let totalAssyMin = 0;
+            let countTf1 = 0;
+            let totalTf1Min = 0;
+            let whAccCount = 0;
+
+            assyItems.forEach(i => {
+              if (isDateInDay(i.created_at || i.finished_at || i.started_at, targetDate)) {
+                const st = (i.assy_test_status || i.status || '').toUpperCase();
+                if (st === 'GOOD' || st === 'PASS') {
+                  goodCount++;
+                }
+                if (i.started_at && i.finished_at) {
+                  const diff = (new Date(i.finished_at) - new Date(i.started_at)) / 1000 / 60;
+                  if (diff > 0 && diff < 1440) {
+                    totalAssyMin += diff;
+                    countAssy++;
+                  }
+                }
+                if (i.finished_at && i.assy_tested_at) {
+                  const diffTf1 = (new Date(i.assy_tested_at) - new Date(i.finished_at)) / 1000 / 60;
+                  if (diffTf1 > 0 && diffTf1 < 1440) {
+                    totalTf1Min += diffTf1;
+                    countTf1++;
+                  }
+                }
+              }
+            });
+
+            whItems.forEach(w => {
+              if (isDateInDay(w.created_at || w.effective_warehouse_receipt_at, targetDate)) {
+                if ((w.warehouse_receipt_status || w.status || '').toUpperCase() === 'ACCEPTED') {
+                  whAccCount++;
+                }
+              }
+            });
+
+            return {
+              hasActivity: (goodCount > 0 || whAccCount > 0 || countAssy > 0),
+              goodCount,
+              whAccCount,
+              countAssy,
+              totalAssyMin,
+              countTf1,
+              totalTf1Min
+            };
+          };
+
+          const todayM = calcMetricsFor(today);
+          let chosenTarget = today;
+          let periodLabel = 'Hari Ini';
+          let m = todayM;
+
+          // Jika hari ini belum ada aktivitas namun terdapat sesi produksi sebelumnya, otomatis tampilkan sesi terakhir
+          if ((!todayM || !todayM.hasActivity) && latest && latest !== today) {
+            const latestM = calcMetricsFor(latest);
+            if (latestM && latestM.hasActivity) {
+              chosenTarget = latest;
+              periodLabel = 'Sesi ' + formatShortDate(latest);
+              m = latestM;
+            }
           }
 
-        };
+          const rawAvgAssy = m && m.countAssy > 0 ? (m.totalAssyMin / m.countAssy) : 0;
+          const rawAvgTf1 = m && m.countTf1 > 0 ? (m.totalTf1Min / m.countTf1) : 0;
 
+          let avgAssyDisplayNumber = '0';
+          let avgAssyDisplayUnit = 'menit';
+          let avgAssyDisplay = '0 menit';
 
+          if (rawAvgAssy > 0 && rawAvgAssy < 1) {
+            const secs = rawAvgAssy * 60;
+            avgAssyDisplayNumber = secs < 10 ? secs.toFixed(1) : Math.round(secs).toString();
+            avgAssyDisplayUnit = 'detik';
+            avgAssyDisplay = `${avgAssyDisplayNumber} detik`;
+          } else if (rawAvgAssy >= 1) {
+            avgAssyDisplayNumber = rawAvgAssy.toFixed(1);
+            avgAssyDisplayUnit = 'menit';
+            avgAssyDisplay = `${avgAssyDisplayNumber} menit`;
+          }
 
-        // Accordion per departemen (Gudang, Assembly, QC, Admin) default TUTUP
+          let avgTf1Display = '0 menit';
+          if (rawAvgTf1 > 0 && rawAvgTf1 < 1) {
+            const secs = rawAvgTf1 * 60;
+            avgTf1Display = `${secs < 10 ? secs.toFixed(1) : Math.round(secs)} detik`;
+          } else if (rawAvgTf1 >= 1) {
+            avgTf1Display = `${rawAvgTf1.toFixed(1)} menit`;
+          }
 
-        const openMenuGroups = ref({
-
-          gudang: false,
-
-          perakitan: false,
-
-          qc: false,
-
-          admin: false
-
+          return {
+            assembledGoodToday: m ? m.goodCount : 0,
+            warehouseAccToday: m ? m.whAccCount : 0,
+            countAssy: m ? m.countAssy : 0,
+            avgAssyMinutes: rawAvgAssy >= 1 ? Number(rawAvgAssy.toFixed(1)) : Number(rawAvgAssy.toFixed(2)),
+            avgTf1Minutes: rawAvgTf1 >= 1 ? Number(rawAvgTf1.toFixed(1)) : Number(rawAvgTf1.toFixed(2)),
+            avgAssyDisplayNumber,
+            avgAssyDisplayUnit,
+            avgAssyDisplay,
+            avgTf1Display,
+            periodLabel,
+            targetDate: chosenTarget,
+            targetDateLabel: formatShortDate(chosenTarget)
+          };
         });
 
+        const dashboardStats = ref({
+          loading: false,
+          assembly: { total: 0, good: 0, hold: 0, scrap: 0, activeTrays: 0 },
+          tf1: { total: 0, passed: 0, hold: 0, notGood: 0 },
+          qc: { total: 0, acc: 0, hold: 0, waiting: 0 },
+          warehouse: { totalDocs: 0, acceptedSets: 0, declinedSets: 0, totalReceipts: 0 },
+          reassembly: { notDispatched: 0, dispatched: 0, pendingRU: 0 },
+          delivery: { totalDO: 0, totalCrates: 0, totalBoxes: 0, shippedSNCount: 0, cloudSynced: 0 },
+          pipeline: { readyToShip: 0 },
+          times: {
+            avgAssyMinutesToday: 0,
+            avgTf1MinutesToday: 0,
+            trendText: 'Belum Ada Perakitan Hari Ini',
+            trendColor: 'text-slate-400',
+            trendIcon: 'fa-regular fa-clock text-slate-400',
+            trendBadgeClass: 'bg-slate-50 text-slate-600 border-slate-200',
+            evaluationNote: 'Belum ada data perakitan hari ini. Menunggu operator memulai rakitan.'
+          }
+        });
 
+        // Date Period Comparison Helpers (Supporting Backdate & Custom Ranges)
+        const checkDateByPeriod = (dateStr, period = reportPeriod.value) => {
+          const d = parseDateSafe(dateStr);
+          if (!d) return false;
 
-        const toggleMenuGroup = (key) => {
+          if (period === 'daily') {
+            const target = parseDateSafe(selectedReportDate.value);
+            if (!target) return false;
+            return d.getFullYear() === target.getFullYear() &&
+                   d.getMonth() === target.getMonth() &&
+                   d.getDate() === target.getDate();
+          }
 
-          openMenuGroups.value[key] = !openMenuGroups.value[key];
+          if (period === 'weekly') {
+            const { monday, sunday } = getWeekDateRange(selectedWeekOffset.value);
+            return d >= monday && d <= sunday;
+          }
 
+          if (period === 'monthly') {
+            const parts = selectedReportMonth.value.split('-').map(Number);
+            const y = parts[0] || new Date().getFullYear();
+            const m = parts[1] || (new Date().getMonth() + 1);
+            return d.getFullYear() === y && (d.getMonth() + 1) === m;
+          }
+
+          if (period === 'custom') {
+            const start = parseDateSafe(customStartDate.value);
+            const end = parseDateSafe(customEndDate.value);
+            if (start) start.setHours(0, 0, 0, 0);
+            if (end) end.setHours(23, 59, 59, 999);
+            if (start && end) return d >= start && d <= end;
+            if (start) return d >= start;
+            if (end) return d <= end;
+            return true;
+          }
+
+          return true;
         };
 
+        const activePeriodDateRangeLabel = computed(() => {
+          const pad = (n) => String(n).padStart(2, '0');
+          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+          const fmt = (d) => `${pad(d.getDate())} ${months[d.getMonth()]} ${d.getFullYear()}`;
 
+          if (reportPeriod.value === 'daily') {
+            const d = parseDateSafe(selectedReportDate.value) || new Date();
+            return `${fmt(d)} (00:00:00 - 23:59:59)`;
+          }
 
-        const setAllMenuGroups = (open) => {
+          if (reportPeriod.value === 'weekly') {
+            const { monday, sunday } = getWeekDateRange(selectedWeekOffset.value);
+            return `${fmt(monday)} s/d ${fmt(sunday)}`;
+          }
 
-          Object.keys(openMenuGroups.value).forEach(k => {
+          if (reportPeriod.value === 'monthly') {
+            const parts = selectedReportMonth.value.split('-').map(Number);
+            const y = parts[0] || new Date().getFullYear();
+            const m = parts[1] || (new Date().getMonth() + 1);
+            const start = new Date(y, m - 1, 1);
+            const end = new Date(y, m, 0);
+            return `Bulan ${months[m - 1]} ${y} (${fmt(start)} s/d ${fmt(end)})`;
+          }
 
-            openMenuGroups.value[k] = open;
+          if (reportPeriod.value === 'custom') {
+            const start = parseDateSafe(customStartDate.value) || new Date();
+            const end = parseDateSafe(customEndDate.value) || new Date();
+            return `${fmt(start)} s/d ${fmt(end)}`;
+          }
 
+          return fmt(new Date());
+        });
+
+        // Helper to check if a tray was active in the selected period (created, assembled, or updated)
+        const isTrayActiveInPeriod = (t, p) => {
+          if (!t) return false;
+          if (checkDateByPeriod(t.created_at, p)) return true;
+          if (t.latest_assembly_at && checkDateByPeriod(t.latest_assembly_at, p)) return true;
+          if (t.earliest_assembly_at && checkDateByPeriod(t.earliest_assembly_at, p)) return true;
+          if (t.updated_at && checkDateByPeriod(t.updated_at, p)) return true;
+          const hasAssy = (rawAssyTestsList.value || []).some(i => (i.tray_id === t.id || i.tray_code === t.tray_code) && checkDateByPeriod(i.finished_at || i.started_at || i.created_at, p));
+          if (hasAssy) return true;
+          return false;
+        };
+
+        const activePeriodTrays = computed(() => {
+          const p = reportPeriod.value;
+          return rawTraysList.value.filter(t => isTrayActiveInPeriod(t, p));
+        });
+
+        const activePeriodStats = computed(() => {
+          const p = reportPeriod.value;
+
+          // 1. Supply Gudang from Trays (Diterbitkan Gudang pada periode ini)
+          const traysSuppliedInPeriod = rawTraysList.value.filter(t => checkDateByPeriod(t.created_at, p));
+          let supplyTrays = traysSuppliedInPeriod.length;
+          let supplySets = 0;
+          let supplyParts = 0;
+          traysSuppliedInPeriod.forEach(t => {
+            supplySets += parseInt(t.total_sets || 0, 10);
+            supplyParts += parseInt(t.parts_count || 0, 10);
           });
 
+          // 2. Assembly Merakit (Dari seluruh baki yang memiliki aktivitas perakitan pada periode ini)
+          let assembledGood = 0;
+          let assembledHold = 0;
+          let assembledScrap = 0;
+          activePeriodTrays.value.forEach(t => {
+            assembledGood += parseInt(t.good_count || 0, 10);
+            assembledHold += parseInt(t.hold_count || 0, 10);
+            assembledScrap += parseInt(t.scrap_count || 0, 10);
+          });
+          // Cross-check dengan item rakitan pada periode tersebut jika ada
+          const assyGoodCountFromList = (rawAssyTestsList.value || [])
+            .filter(i => checkDateByPeriod(i.finished_at || i.started_at || i.created_at, p))
+            .filter(i => {
+              const st = (i.assembly_status || i.original_assembly_status || i.status || '').toUpperCase();
+              return st === 'GOOD' || st === 'PASS';
+            }).length;
+          if (assyGoodCountFromList > assembledGood) {
+            assembledGood = assyGoodCountFromList;
+          }
+
+          // 2. TF 1 in period
+          const tf1InPeriod = rawAssyTestsList.value.filter(i => checkDateByPeriod(i.created_at || i.finished_at || i.started_at, p));
+          const tf1Total = tf1InPeriod.length;
+          const tf1Good = tf1InPeriod.filter(i => {
+            const s = (i.assy_test_status || i.status || '').toUpperCase();
+            return s === 'GOOD' || s === 'PASS';
+          }).length;
+          const tf1NotGood = tf1Total - tf1Good;
+
+          // 3. Average Durations in Period
+          let totalAssyMinutes = 0, countAssyItems = 0;
+          let totalTf1Minutes = 0, countTf1Items = 0;
+          tf1InPeriod.forEach(i => {
+            if (i.started_at && i.finished_at) {
+              const diffSec = (new Date(i.finished_at) - new Date(i.started_at)) / 1000;
+              if (diffSec > 0 && diffSec < 86400) {
+                totalAssyMinutes += (diffSec / 60);
+                countAssyItems++;
+              }
+            }
+            if (i.finished_at && i.assy_tested_at) {
+              const diffTf1Sec = (new Date(i.assy_tested_at) - new Date(i.finished_at)) / 1000;
+              if (diffTf1Sec > 0 && diffTf1Sec < 86400) {
+                totalTf1Minutes += (diffTf1Sec / 60);
+                countTf1Items++;
+              }
+            }
+          });
+          const rawAssyAvg = countAssyItems > 0 ? (totalAssyMinutes / countAssyItems) : 0;
+          const rawTf1Avg = countTf1Items > 0 ? (totalTf1Minutes / countTf1Items) : 0;
+          const avgAssyDuration = rawAssyAvg >= 1 ? rawAssyAvg.toFixed(1) : (rawAssyAvg > 0 ? Number(rawAssyAvg.toFixed(2)) : '0.0');
+          const avgTf1Duration = rawTf1Avg >= 1 ? rawTf1Avg.toFixed(1) : (rawTf1Avg > 0 ? Number(rawTf1Avg.toFixed(2)) : '0.0');
+          const avgAssyNumber = rawAssyAvg >= 1 ? rawAssyAvg.toFixed(1) : (rawAssyAvg > 0 ? (rawAssyAvg * 60).toFixed(1) : '0');
+          const avgAssyUnit = rawAssyAvg >= 1 ? 'Menit' : (rawAssyAvg > 0 ? 'Detik' : 'Menit');
+          const avgAssyDisplay = rawAssyAvg >= 1 ? `${rawAssyAvg.toFixed(1)} menit` : (rawAssyAvg > 0 ? `${(rawAssyAvg * 60).toFixed(1)} detik` : '0 menit');
+
+          // 4. Warehouse Receipts in Period
+          const whInPeriod = rawWarehouseReceiptsList.value.filter(w => checkDateByPeriod(w.created_at || w.effective_warehouse_receipt_at, p));
+          const whAcceptedSets = whInPeriod.filter(w => (w.warehouse_receipt_status || '').toUpperCase() === 'ACCEPTED').length;
+
+          // 5. Delivery Orders in Period
+          const doInPeriod = rawDeliveryOrdersList.value.filter(d => checkDateByPeriod(d.do_date || d.created_at, p));
+          const doDocsCount = doInPeriod.length;
+          let doCratesCount = 0;
+          let doShippedSets = 0;
+          doInPeriod.forEach(d => {
+            const pls = d.packing_lists || d.packingLists || [];
+            doCratesCount += pls.length;
+            pls.forEach(pl => {
+              const bxs = pl.boxes || [];
+              bxs.forEach(box => {
+                const itms = box.items || [];
+                doShippedSets += itms.length;
+              });
+            });
+          });
+
+          // 6. QC acceptance in period
+          const qcInPeriod = rawQcTestsList.value.filter(q => checkDateByPeriod(q.created_at || q.qc_tested_at, p));
+          const qcTotalCount = qcInPeriod.length;
+          const qcAccCount = qcInPeriod.filter(q => ['GOOD', 'GOOD_QC', 'ACC', 'ACCEPTED'].includes((q.qc_status || q.status || '').toUpperCase())).length;
+          const qcPassRate = qcTotalCount > 0 ? Math.round((qcAccCount / qcTotalCount) * 100) : 100;
+
+          return {
+            supplyTrays,
+            supplySets,
+            supplyParts,
+            assembledGood,
+            assembledHold,
+            assembledScrap,
+            tf1Total,
+            tf1Good,
+            tf1NotGood,
+            avgAssyDuration,
+            avgTf1Duration,
+            avgAssyNumber,
+            avgAssyUnit,
+            avgAssyDisplay,
+            whAcceptedSets,
+            doDocsCount,
+            doCratesCount,
+            doShippedSets,
+            qcTotalCount,
+            qcAccCount,
+            qcPassRate
+          };
+        });
+
+        const countDeptUsers = (deptKey) => {
+          const k = String(deptKey || '').toLowerCase();
+          return usersList.value.filter(u => {
+            const d = String(u.department || '').toLowerCase();
+            return d.includes(k);
+          }).length;
         };
 
-
-
-        // Diagnostic data
-
-        const errorLogs = ref([]);
-
-        const errorPage = ref(1);
-
-        const errorPerPage = 20;
-
-
-
-        const slowQueries = ref([]);
-
-        const slowPage = ref(1);
-
-        const slowPerPage = 20;
-
-
-
-        const anomalySummary = ref({ total_anomalies: 0, orphan_parts: { count: 0, items: [] }, stuck_sessions: { count: 0, items: [] }, desynced_stocks: { count: 0, items: [] }, duplicate_parts: { count: 0, items: [] } });
-
-        const anomalyCategoryFilter = ref('all');
-
-        const anomalyPage = ref(1);
-
-        const anomalyPerPage = 20;
-
-
-
-        const doSettings = ref({});
-
-
-
-        // Cloudinary Admin State
-
-        const cloudSettings = ref({ cloud_name: '', api_key: '', api_key_masked: '', has_secret: false, configured: false });
-
-        const cloudForm = ref({ cloud_name: '', api_key: '', api_secret: '' });
-
-        const isTestingCloud = ref(false);
-
-        const isSavingCloud = ref(false);
-
-        const cloudTestResult = ref(null);
-
-
-
-        // User & Permission Management (CMS Centralized)
-
-        const usersList = ref([]);
-
-        const loadingUsers = ref(false);
-
-        const editingUserId = ref(null);
-
-        const showUserPw = ref(false);
-
-        const isSavingUser = ref(false);
-
-        const userSearchQuery = ref('');
-
-        const userDeptFilter = ref('all');
-
-        const userPage = ref(1);
-
-        const userPerPage = 10;
-
-
-
-        const userForm = ref({
-
-          id: null,
-
-          nik: '',
-
-          full_name: '',
-
-          department: 'Assembly',
-
-          role: 'assembly',
-
-          username: '',
-
-          password: '',
-
-          can_access_cms: false,
-
-          permissions: {}
-
-        });
-
-
-
-        const cmsManagedMenuGroups = [
-
-          {
-
-            key: 'gudang',
-
-            title: 'Gudang (Warehouse)',
-
-            icon: 'fa-solid fa-warehouse',
-
-            menus: [
-
-              { key: 'warehouse', title: 'Work Order (Input Part)' },
-
-              { key: 'production_hold', title: 'Hasil Perakitan' },
-
-              { key: 'returns', title: 'Pengembalian Barang' },
-
-              { key: 'warehouse_receipt', title: 'Penerimaan Gudang' },
-
-              { key: 'reassembly', title: 'Perakitan Ulang (RU)' },
-
-              { key: 'traveler', title: 'Cetak Dokumen & Label' },
-
-              { key: 'master', title: 'Master Stok Part' },
-
-              { key: 'report', title: 'History Transaksi' },
-
-              { key: 'delivery_order', title: 'Delivery Order & PL' }
-
-            ]
-
-          },
-
-          {
-
-            key: 'perakitan',
-
-            title: 'Perakitan (Assembly)',
-
-            icon: 'fa-solid fa-screwdriver-wrench',
-
-            menus: [
-
-              { key: 'assembly', title: 'Area Perakitan (Assembly)' },
-
-              { key: 'assy_testing', title: 'Test Functional 1 (Assy)' }
-
-            ]
-
-          },
-
-          {
-
-            key: 'qc',
-
-            title: 'Quality Control (QC)',
-
-            icon: 'fa-solid fa-list-check',
-
-            menus: [
-
-              { key: 'qc', title: 'Test Functional 2 (QC)' }
-
-            ]
-
-          },
-
-          {
-
-            key: 'admin',
-
-            title: 'Administrator & Verifikasi',
-
-            icon: 'fa-solid fa-shield-halved',
-
-            menus: [
-
-              { key: 'users', title: 'Kelola Pengguna' },
-
-              { key: 'verify_set', title: 'Verifikasi /Set (Satu Set)' },
-
-              { key: 'verify_part', title: 'Verifikasi /Part (1 Part)' },
-
-              { key: 'verify_replacement', title: 'Verifikasi Pergantian Part' },
-
-              { key: 'audit', title: 'Riwayat Audit Gudang' },
-
-              { key: 'downtime', title: 'Audit Downtime Perakitan' },
-
-              { key: 'testing_points', title: 'Master Testing Point' },
-
-              { key: 'add_part', title: 'Tambah Part Number' }
-
-            ]
-
+        const formatDateTime = (val) => {
+          if (!val) return '-';
+          try {
+            const d = new Date(val);
+            if (isNaN(d.getTime())) return String(val);
+            const pad = (n) => String(n).padStart(2, '0');
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+            return `${pad(d.getDate())} ${months[d.getMonth()]} ${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+          } catch(e) {
+            return String(val);
+          }
+        };
+
+        const updateChartDataFromRaw = () => {
+          const assyItems = rawAssyTestsList.value || [];
+          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+          const daysMap = {};
+
+          const distinctDates = new Set();
+          // Selalu sertakan 7 hari terakhir agar grafik tren di Dashboard selalu kontinyu dan tidak kosong
+          const now = new Date();
+          for (let i = 6; i >= 0; i--) {
+            const d = new Date(now);
+            d.setDate(now.getDate() - i);
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            distinctDates.add(`${y}-${m}-${day}`);
           }
 
-        ];
-
-
-
-        // Users Filter & Pagination (10 per page)
-
-        const filteredUsersList = computed(() => {
-
-          let list = usersList.value || [];
-
-          if (userDeptFilter.value !== 'all') {
-
-            const d = userDeptFilter.value.toLowerCase();
-
-            list = list.filter(u => (u.department || '').toLowerCase() === d || (u.role || '').toLowerCase() === d);
-
-          }
-
-          if (userSearchQuery.value && userSearchQuery.value.trim()) {
-
-            const q = userSearchQuery.value.toLowerCase().trim();
-
-            list = list.filter(u =>
-
-              (u.full_name && u.full_name.toLowerCase().includes(q)) ||
-
-              (u.username && u.username.toLowerCase().includes(q)) ||
-
-              (u.nik && u.nik.toLowerCase().includes(q))
-
-            );
-
-          }
-
-          return list;
-
-        });
-
-
-
-        const totalUserPages = computed(() => Math.ceil(filteredUsersList.value.length / userPerPage) || 1);
-
-
-
-        const pagedUsersList = computed(() => {
-
-          const start = (userPage.value - 1) * userPerPage;
-
-          return filteredUsersList.value.slice(start, start + userPerPage);
-
-        });
-
-
-
-        watch([userSearchQuery, userDeptFilter], () => {
-
-          userPage.value = 1;
-
-        });
-
-
-
-        // Error Logs Pagination (20 per page)
-
-        const totalErrorPages = computed(() => Math.ceil(errorLogs.value.length / errorPerPage) || 1);
-
-
-
-        const pagedErrorLogs = computed(() => {
-
-          const start = (errorPage.value - 1) * errorPerPage;
-
-          return errorLogs.value.slice(start, start + errorPerPage);
-
-        });
-
-
-
-        // Slow Queries Pagination (20 per page)
-
-        const totalSlowPages = computed(() => Math.ceil(slowQueries.value.length / slowPerPage) || 1);
-
-
-
-        const pagedSlowQueries = computed(() => {
-
-          const start = (slowPage.value - 1) * slowPerPage;
-
-          return slowQueries.value.slice(start, start + slowPerPage);
-
-        });
-
-
-
-        // Anomaly Items Aggregator & Pagination (20 per page)
-
-        const allAnomalyItems = computed(() => {
-
-          const items = [];
-
-          const s = anomalySummary.value;
-
-          if (!s) return items;
-
-
-
-          // 1. Orphan parts
-
-          if (s.orphan_parts && Array.isArray(s.orphan_parts.items)) {
-
-            s.orphan_parts.items.forEach(it => {
-
-              items.push({
-
-                id: 'orphan_' + it.id,
-
-                category: 'Orphan Part',
-
-                type: 'orphan',
-
-                badgeClass: 'bg-red-50 text-red-700 border-red-200',
-
-                icon: 'fa-solid fa-puzzle-piece',
-
-                partType: it.part_type || '-',
-
-                sn: it.sn || '-',
-
-                trayInfo: it.tray_id ? 'Baki #' + it.tray_id : 'Tanpa Baki',
-
-                description: 'Part terhubung ke ID baki yang tidak ada.'
-
-              });
-
-            });
-
-          }
-
-
-
-          // 2. Stuck sessions
-
-          if (s.stuck_sessions && Array.isArray(s.stuck_sessions.items)) {
-
-            s.stuck_sessions.items.forEach(it => {
-
-              items.push({
-
-                id: 'stuck_' + it.id,
-
-                category: 'Stuck Assembly',
-
-                type: 'stuck',
-
-                badgeClass: 'bg-amber-50 text-amber-700 border-amber-200',
-
-                icon: 'fa-solid fa-clock',
-
-                partType: 'Unit #' + (it.set_number || it.id),
-
-                sn: it.tray_code ? `${it.tray_code}` : `Baki #${it.tray_id || '-'}`,
-
-                trayInfo: 'PIC: ' + (it.pic_assembly || '-'),
-
-                trayCodes: it.tray_code || '',
-
-                description: 'Sesi perakitan menggantung >8 jam.'
-
-              });
-
-            });
-
-          }
-
-
-
-          // 3. Desynced stocks
-
-          if (s.desynced_stocks && Array.isArray(s.desynced_stocks.items)) {
-
-            s.desynced_stocks.items.forEach(it => {
-
-              items.push({
-
-                id: 'desync_' + it.id,
-
-                category: 'Desynced Stock',
-
-                type: 'desync',
-
-                badgeClass: 'bg-purple-50 text-purple-700 border-purple-200',
-
-                icon: 'fa-solid fa-arrows-rotate',
-
-                partType: it.part_type || '-',
-
-                sn: it.sn || '-',
-
-                trayInfo: it.tray_code ? it.tray_code : (it.allocated_tray_id ? 'Baki #' + it.allocated_tray_id : '-'),
-
-                trayCodes: it.tray_code || '',
-
-                description: 'Status Supplied padahal baki selesai / tidak ada.'
-
-              });
-
-            });
-
-          }
-
-
-
-          // 4. Duplicate parts (Disertai daftar nomor baki / tray)
-
-          if (s.duplicate_parts && Array.isArray(s.duplicate_parts.items)) {
-
-            s.duplicate_parts.items.forEach((it, idx) => {
-
-              items.push({
-
-                id: 'dup_' + idx,
-
-                category: 'Duplicate Part',
-
-                type: 'duplicate',
-
-                badgeClass: 'bg-rose-50 text-rose-700 border-rose-200',
-
-                icon: 'fa-solid fa-clone',
-
-                partType: it.part_type || '-',
-
-                sn: it.sn || '-',
-
-                trayInfo: (it.occurrence_count || 2) + 'x Duplikasi',
-
-                trayCodes: it.tray_codes || '',
-
-                description: it.tray_codes ? `Ditemukan pada ${it.occurrence_count} baki aktif.` : 'Nomor seri dialokasikan di >1 baki aktif.'
-
-              });
-
-            });
-
-          }
-
-
-
-          return items;
-
-        });
-
-
-
-        const filteredAnomalyItems = computed(() => {
-
-          if (anomalyCategoryFilter.value === 'all') return allAnomalyItems.value;
-
-          return allAnomalyItems.value.filter(item => item.type === anomalyCategoryFilter.value);
-
-        });
-
-
-
-        const totalAnomalyPages = computed(() => Math.ceil(filteredAnomalyItems.value.length / anomalyPerPage) || 1);
-
-
-
-        const pagedAnomalyItems = computed(() => {
-
-          const start = (anomalyPage.value - 1) * anomalyPerPage;
-
-          return filteredAnomalyItems.value.slice(start, start + anomalyPerPage);
-
-        });
-
-
-
-        watch(anomalyCategoryFilter, () => {
-
-          anomalyPage.value = 1;
-
-        });
-
-
-
-        // Lifecycle Hooks
-
-        onMounted(() => {
-
-          const storedToken = sessionStorage.getItem('cms_admin_token');
-
-          const storedUser = sessionStorage.getItem('cms_admin_user');
-
-          if (storedToken && storedUser) {
+          assyItems.forEach(item => {
+            const dateStr = item.finished_at || item.started_at || item.created_at;
+            if (dateStr) distinctDates.add(dateStr.split(' ')[0] || dateStr.split('T')[0]);
+          });
+          distinctDates.add(todayIsoStr());
+          const sortedDates = Array.from(distinctDates).sort();
+
+          sortedDates.forEach(k => {
+            const d = new Date(k + 'T00:00:00');
+            const lbl = !isNaN(d.getTime()) ? `${d.getDate()} ${months[d.getMonth()]}` : k;
+            daysMap[k] = { label: lbl, assyTotalMin: 0, assyCount: 0, tf1TotalMin: 0, tf1Count: 0 };
+          });
+
+          assyItems.forEach(item => {
+            const dateStr = item.finished_at || item.started_at || item.created_at;
+            if (dateStr) {
+              const key = dateStr.split(' ')[0] || dateStr.split('T')[0];
+              if (daysMap[key]) {
+                if (item.started_at && item.finished_at) {
+                  const diff = (new Date(item.finished_at) - new Date(item.started_at)) / 1000 / 60;
+                  if (diff > 0 && diff < 1440) {
+                    daysMap[key].assyTotalMin += diff;
+                    daysMap[key].assyCount++;
+                  }
+                }
+                if (item.finished_at && item.assy_tested_at) {
+                  const diffTf1 = (new Date(item.assy_tested_at) - new Date(item.finished_at)) / 1000 / 60;
+                  if (diffTf1 > 0 && diffTf1 < 1440) {
+                    daysMap[key].tf1TotalMin += diffTf1;
+                    daysMap[key].tf1Count++;
+                  }
+                }
+              }
+            }
+          });
+
+          const dailyTrendsArray = Object.keys(daysMap).sort().map(k => {
+            const d = daysMap[k];
+            const rawAvgAssy = d.assyCount > 0 ? (d.assyTotalMin / d.assyCount) : 0;
+            const rawAvgTf1 = d.tf1Count > 0 ? (d.tf1TotalMin / d.tf1Count) : 0;
+            // Presisi desimal hingga 2 angka jika durasi sub-menit (detik), sehingga tidak dibulatkan jadi 0
+            const avgAssy = rawAvgAssy >= 1 ? Number(rawAvgAssy.toFixed(1)) : Number(rawAvgAssy.toFixed(2));
+            const avgTf1 = rawAvgTf1 >= 1 ? Number(rawAvgTf1.toFixed(1)) : Number(rawAvgTf1.toFixed(2));
+            return { label: d.label, avgAssy, avgTf1, rawAvgAssy, rawAvgTf1 };
+          });
+
+          lastDailyTrendsData = dailyTrendsArray;
+          renderTimeTrendsChart(dailyTrendsArray);
+        };
+
+        let renderChartRetryCount = 0;
+        const renderTimeTrendsChart = (dailyData) => {
+          const run = () => {
+            const canvas = document.getElementById('dailyTimeTrendsChart');
+            if (!canvas) {
+              if (renderChartRetryCount < 15) {
+                renderChartRetryCount++;
+                setTimeout(run, 100);
+              }
+              return;
+            }
+            renderChartRetryCount = 0;
+
+            if (typeof Chart === 'undefined') {
+              setTimeout(() => renderTimeTrendsChart(dailyData), 200);
+              return;
+            }
 
             try {
+              if (typeof Chart.getChart === 'function') {
+                const existing = Chart.getChart(canvas) || Chart.getChart('dailyTimeTrendsChart');
+                if (existing) existing.destroy();
+              }
+            } catch (_) {}
 
-              cmsToken.value = storedToken;
-
-              adminUser.value = JSON.parse(storedUser);
-
-              isCmsAuthenticated.value = true;
-
-              fetchUsers();
-
-              fetchErrorLogs();
-
-              fetchSlowQueries();
-
-            } catch (e) {
-
-              sessionStorage.removeItem('cms_admin_token');
-
-              sessionStorage.removeItem('cms_admin_user');
-
+            if (timeTrendsChartInstance) {
+              try { timeTrendsChartInstance.destroy(); } catch (_) {}
+              timeTrendsChartInstance = null;
             }
 
-          }
+            const dataList = Array.isArray(dailyData) && dailyData.length > 0 ? dailyData : [{ label: 'Hari Ini', avgAssy: 0, avgTf1: 0 }];
+            const labels = dataList.map(d => d.label);
+            const assyTimes = dataList.map(d => d.avgAssy);
+            const tf1Times = dataList.map(d => d.avgTf1);
 
+            // Deteksi jika semua durasi berkecepatan tinggi / sub-menit (< 1 menit / dalam hitungan detik)
+            const maxAssy = Math.max(...assyTimes, 0);
+            const isSubMinute = maxAssy > 0 && maxAssy < 1;
+
+            let ySuggestedMax = 6;
+            let yStepSize = 1;
+            if (isSubMinute) {
+              ySuggestedMax = Math.max(0.08, Number((maxAssy * 1.5).toFixed(2)));
+              yStepSize = Number((ySuggestedMax / 4).toFixed(2));
+            } else if (maxAssy >= 6) {
+              ySuggestedMax = Math.ceil(maxAssy * 1.25);
+              yStepSize = Math.max(1, Math.ceil(ySuggestedMax / 6));
+            }
+
+            try {
+              timeTrendsChartInstance = new Chart(canvas, {
+                type: 'line',
+                data: {
+                  labels: labels,
+                  datasets: [
+                    {
+                      label: 'Rata-rata Perakitan',
+                      data: assyTimes,
+                      borderColor: '#ef4444',
+                      backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                      fill: true,
+                      tension: 0.35,
+                      borderWidth: 2.5,
+                      pointBackgroundColor: '#ef4444',
+                      pointBorderColor: '#ffffff',
+                      pointBorderWidth: 2,
+                      pointRadius: 4.5,
+                      pointHoverRadius: 6.5
+                    }
+                  ]
+                },
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  interaction: {
+                    mode: 'index',
+                    intersect: false
+                  },
+                  plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                      backgroundColor: '#0f172a',
+                      titleFont: { family: 'Plus Jakarta Sans', size: 12, weight: 'bold' },
+                      bodyFont: { family: 'Plus Jakarta Sans', size: 11 },
+                      padding: 10,
+                      cornerRadius: 10,
+                      callbacks: {
+                        label: function(ctx) {
+                          const val = ctx.parsed.y;
+                          if (val > 0 && val < 1) {
+                            const sec = (val * 60).toFixed(1);
+                            return `${ctx.dataset.label}: ${sec} Detik (${val} m)`;
+                          }
+                          return `${ctx.dataset.label}: ${val} Menit`;
+                        }
+                      }
+                    }
+                  },
+                  scales: {
+                    x: {
+                      grid: { color: 'rgba(226, 232, 240, 0.6)' },
+                      ticks: { font: { family: 'Plus Jakarta Sans', size: 11, weight: '600' }, color: '#64748b' }
+                    },
+                    y: {
+                      beginAtZero: true,
+                      suggestedMin: 0,
+                      suggestedMax: ySuggestedMax,
+                      grid: { color: 'rgba(226, 232, 240, 0.6)' },
+                      ticks: {
+                        stepSize: yStepSize,
+                        font: { family: 'Plus Jakarta Sans', size: 11, weight: '600' },
+                        color: '#64748b',
+                        callback: function(v) {
+                          if (isSubMinute) {
+                            return Math.round(v * 60) + 's';
+                          }
+                          return v + ' m';
+                        }
+                      }
+                    }
+                  }
+                }
+              });
+            } catch (err) {
+              console.error('Gagal membuat grafik Chart.js:', err);
+            }
+          };
+
+          if (typeof nextTick === 'function') {
+            nextTick(run);
+          } else if (typeof Vue !== 'undefined' && typeof Vue.nextTick === 'function') {
+            Vue.nextTick(run);
+          } else {
+            setTimeout(run, 50);
+          }
+        };
+
+        // =====================================================================
+        // LAPORAN PRODUKSI TIME TRENDS CHART (IDENTIK DENGAN DASHBOARD)
+        // =====================================================================
+        let reportTimeTrendsChartInstance = null;
+        let renderReportChartsRetryCount = 0;
+
+        const reportPeriodEvaluationNote = computed(() => {
+          const assy = parseFloat(activePeriodStats.value.avgAssyDuration || 0);
+          if (assy === 0) {
+            return 'Belum ada data perakitan pada periode ini.';
+          } else if (assy < 1.0) {
+            const sec = Math.round(assy * 60);
+            return `Sangat cepat (${sec} detik/set). Efisiensi kerja dan perakitan super optimal.`;
+          } else if (assy <= 5.0) {
+            return `Sangat cepat (${assy} menit/set). Efisiensi kerja dan perakitan sangat optimal.`;
+          } else if (assy <= 10.0) {
+            return `Normal (${assy} menit/set). Kecepatan perakitan stabil dan sesuai standar.`;
+          } else {
+            return `Memerlukan perhatian (${assy} menit/set). Evaluasi kesiapan part & alat.`;
+          }
         });
 
+        const renderReportCharts = () => {
+          renderReportChartsRetryCount = 0; // Selalu reset retry counter saat fungsi dipanggil
 
+          const run = () => {
+            // Jika tab laporan sedang tidak dibuka, jangan render agar tidak membuang resource
+            if (activeTab.value !== 'reports_kpi') {
+              return;
+            }
 
-        // Auth CMS
+            const canvas = document.getElementById('reportTimeTrendsChart');
+            if (!canvas) {
+              if (renderReportChartsRetryCount < 20) {
+                renderReportChartsRetryCount++;
+                setTimeout(run, 100);
+              }
+              return;
+            }
+            renderReportChartsRetryCount = 0;
 
-        const submitCmsLogin = async () => {
+            if (typeof Chart === 'undefined') {
+              setTimeout(run, 200);
+              return;
+            }
 
-          loginLoading.value = true;
+            try {
+              if (typeof Chart.getChart === 'function') {
+                const ex = Chart.getChart(canvas) || Chart.getChart('reportTimeTrendsChart');
+                if (ex) ex.destroy();
+              }
+            } catch (_) {}
 
-          loginError.value = '';
+            if (reportTimeTrendsChartInstance) {
+              try { reportTimeTrendsChartInstance.destroy(); } catch (_) {}
+              reportTimeTrendsChartInstance = null;
+            }
 
+            const p = reportPeriod.value;
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+            const assyItems = rawAssyTestsList.value || [];
+            let labels = [];
+            let assyTimes = [];
 
+            if (p === 'daily') {
+              const trays = activePeriodTrays.value || [];
+              if (trays.length > 0) {
+                labels = trays.map(t => t.tray_code);
+                assyTimes = trays.map(t => {
+                  const trayItems = assyItems.filter(i => (i.tray_id === t.id || i.tray_code === t.tray_code) && i.started_at && i.finished_at);
+                  if (trayItems.length === 0) return 0;
+                  const total = trayItems.reduce((acc, it) => {
+                    const diff = (new Date(it.finished_at) - new Date(it.started_at)) / 1000 / 60;
+                    return acc + (diff > 0 && diff < 1440 ? diff : 0);
+                  }, 0);
+                  const raw = total / trayItems.length;
+                  return raw >= 1 ? Number(raw.toFixed(1)) : Number(raw.toFixed(2));
+                });
+              } else {
+                labels = [formatShortDate(selectedReportDate.value)];
+                assyTimes = [0];
+              }
+            } else if (p === 'weekly') {
+              // MODE MINGGUAN: Render seluruh 7 hari dalam minggu terpilih (Senin s/d Minggu)
+              const { monday } = getWeekDateRange(selectedWeekOffset.value);
+              const dayNames = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+              const dateMap = {};
 
+              for (let i = 0; i < 7; i++) {
+                const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+                const isoKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                const lbl = `${dayNames[i]} (${d.getDate()} ${months[d.getMonth()]})`;
+                dateMap[isoKey] = { label: lbl, assyTotalMin: 0, assyCount: 0 };
+              }
+
+              assyItems.forEach(item => {
+                const dateStr = item.finished_at || item.started_at || item.created_at;
+                if (dateStr) {
+                  const parsed = parseDateSafe(dateStr);
+                  if (parsed) {
+                    const isoKey = `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`;
+                    if (dateMap[isoKey]) {
+                      if (item.started_at && item.finished_at) {
+                        const diff = (new Date(item.finished_at) - new Date(item.started_at)) / 1000 / 60;
+                        if (diff > 0 && diff < 1440) {
+                          dateMap[isoKey].assyTotalMin += diff;
+                          dateMap[isoKey].assyCount++;
+                        }
+                      }
+                    }
+                  }
+                }
+              });
+
+              labels = Object.keys(dateMap).map(k => dateMap[k].label);
+              assyTimes = Object.keys(dateMap).map(k => {
+                if (dateMap[k].assyCount === 0) return 0;
+                const raw = dateMap[k].assyTotalMin / dateMap[k].assyCount;
+                return raw >= 1 ? Number(raw.toFixed(1)) : Number(raw.toFixed(2));
+              });
+            } else if (p === 'monthly') {
+              // MODE BULANAN: Render seluruh hari dalam bulan terpilih
+              const parts = selectedReportMonth.value.split('-').map(Number);
+              const yr = parts[0] || new Date().getFullYear();
+              const mo = parts[1] || (new Date().getMonth() + 1);
+              const daysInMonth = new Date(yr, mo, 0).getDate();
+              const dateMap = {};
+
+              for (let d = 1; d <= daysInMonth; d++) {
+                const isoKey = `${yr}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                dateMap[isoKey] = { label: `${d} ${months[mo - 1]}`, assyTotalMin: 0, assyCount: 0 };
+              }
+
+              assyItems.forEach(item => {
+                const dateStr = item.finished_at || item.started_at || item.created_at;
+                if (dateStr) {
+                  const parsed = parseDateSafe(dateStr);
+                  if (parsed) {
+                    const isoKey = `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`;
+                    if (dateMap[isoKey]) {
+                      if (item.started_at && item.finished_at) {
+                        const diff = (new Date(item.finished_at) - new Date(item.started_at)) / 1000 / 60;
+                        if (diff > 0 && diff < 1440) {
+                          dateMap[isoKey].assyTotalMin += diff;
+                          dateMap[isoKey].assyCount++;
+                        }
+                      }
+                    }
+                  }
+                }
+              });
+
+              labels = Object.keys(dateMap).map(k => dateMap[k].label);
+              assyTimes = Object.keys(dateMap).map(k => {
+                if (dateMap[k].assyCount === 0) return 0;
+                const raw = dateMap[k].assyTotalMin / dateMap[k].assyCount;
+                return raw >= 1 ? Number(raw.toFixed(1)) : Number(raw.toFixed(2));
+              });
+            } else {
+              // MODE RENTANG KUSTOM
+              const dateMap = {};
+              assyItems.forEach(item => {
+                const dateStr = item.finished_at || item.started_at || item.created_at;
+                if (dateStr && checkDateByPeriod(dateStr, p)) {
+                  const parsed = parseDateSafe(dateStr);
+                  if (parsed) {
+                    const isoKey = `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`;
+                    if (!dateMap[isoKey]) {
+                      dateMap[isoKey] = { label: `${parsed.getDate()} ${months[parsed.getMonth()]}`, assyTotalMin: 0, assyCount: 0 };
+                    }
+                    if (item.started_at && item.finished_at) {
+                      const diff = (new Date(item.finished_at) - new Date(item.started_at)) / 1000 / 60;
+                      if (diff > 0 && diff < 1440) {
+                        dateMap[isoKey].assyTotalMin += diff;
+                        dateMap[isoKey].assyCount++;
+                      }
+                    }
+                  }
+                }
+              });
+
+              const sortedKeys = Object.keys(dateMap).sort();
+              if (sortedKeys.length > 0) {
+                labels = sortedKeys.map(k => dateMap[k].label);
+                assyTimes = sortedKeys.map(k => {
+                  if (dateMap[k].assyCount === 0) return 0;
+                  const raw = dateMap[k].assyTotalMin / dateMap[k].assyCount;
+                  return raw >= 1 ? Number(raw.toFixed(1)) : Number(raw.toFixed(2));
+                });
+              } else {
+                labels = ['Periode Ini'];
+                assyTimes = [0];
+              }
+            }
+
+            const maxReportAssy = Math.max(...assyTimes, 0);
+            const isReportSubMinute = maxReportAssy > 0 && maxReportAssy < 1;
+
+            let reportYSuggestedMax = 6;
+            let reportYStepSize = 1;
+            if (isReportSubMinute) {
+              reportYSuggestedMax = Math.max(0.08, Number((maxReportAssy * 1.5).toFixed(2)));
+              reportYStepSize = Number((reportYSuggestedMax / 4).toFixed(2));
+            } else if (maxReportAssy >= 6) {
+              reportYSuggestedMax = Math.ceil(maxReportAssy * 1.25);
+              reportYStepSize = Math.max(1, Math.ceil(reportYSuggestedMax / 6));
+            }
+
+            try {
+              reportTimeTrendsChartInstance = new Chart(canvas, {
+                type: 'line',
+                data: {
+                  labels: labels,
+                  datasets: [
+                    {
+                      label: 'Rata-rata Perakitan',
+                      data: assyTimes,
+                      borderColor: '#ef4444',
+                      backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                      fill: true,
+                      tension: 0.35,
+                      borderWidth: 2.5,
+                      pointBackgroundColor: '#ef4444',
+                      pointBorderColor: '#ffffff',
+                      pointBorderWidth: 2,
+                      pointRadius: 4.5,
+                      pointHoverRadius: 6.5
+                    }
+                  ]
+                },
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  interaction: {
+                    mode: 'index',
+                    intersect: false
+                  },
+                  plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                      backgroundColor: '#0f172a',
+                      titleFont: { family: 'Plus Jakarta Sans', size: 12, weight: 'bold' },
+                      bodyFont: { family: 'Plus Jakarta Sans', size: 11 },
+                      padding: 10,
+                      cornerRadius: 10,
+                      callbacks: {
+                        label: function(ctx) {
+                          const val = ctx.parsed.y;
+                          if (val > 0 && val < 1) {
+                            const sec = (val * 60).toFixed(1);
+                            return `${ctx.dataset.label}: ${sec} Detik (${val} m)`;
+                          }
+                          return `${ctx.dataset.label}: ${val} Menit`;
+                        }
+                      }
+                    }
+                  },
+                  scales: {
+                    x: {
+                      grid: { color: 'rgba(226, 232, 240, 0.6)' },
+                      ticks: { font: { family: 'Plus Jakarta Sans', size: 11, weight: '600' }, color: '#64748b' }
+                    },
+                    y: {
+                      beginAtZero: true,
+                      suggestedMin: 0,
+                      suggestedMax: reportYSuggestedMax,
+                      grid: { color: 'rgba(226, 232, 240, 0.6)' },
+                      ticks: {
+                        stepSize: reportYStepSize,
+                        font: { family: 'Plus Jakarta Sans', size: 11, weight: '600' },
+                        color: '#64748b',
+                        callback: function(v) {
+                          if (isReportSubMinute) {
+                            return Math.round(v * 60) + 's';
+                          }
+                          return v + ' m';
+                        }
+                      }
+                    }
+                  }
+                }
+              });
+            } catch (err) {
+              console.error('Gagal membuat reportTimeTrendsChartInstance:', err);
+            }
+          };
+
+          if (typeof nextTick === 'function') {
+            nextTick(() => { setTimeout(run, 60); });
+          } else {
+            setTimeout(run, 60);
+          }
+        };
+
+        const loadDashboardStats = async (isSilent = false) => {
+          if (!isSilent) {
+            dashboardStats.value.loading = true;
+          }
           try {
+            const [traysRes, assyRes, qcRes, whRes, ruRes, doRes] = await Promise.allSettled([
+              fetch('/api/assembly/trays').then(r => r.json()).catch(() => ({})),
+              fetch('/api/reports/assy-tests').then(r => r.json()).catch(() => ({})),
+              fetch('/api/reports/qc-tests').then(r => r.json()).catch(() => ({})),
+              fetch('/api/reports/warehouse-receipts').then(r => r.json()).catch(() => ({})),
+              fetch('/api/assembly/pending-reassembly').then(r => r.json()).catch(() => ({})),
+              fetch('/api/delivery-orders?all=1').then(r => r.json()).catch(() => ({}))
+            ]);
 
-            const res = await fetch('/api/admin/cms-login', {
+            // Store raw lists
+            if (traysRes.status === 'fulfilled' && traysRes.value.ok && Array.isArray(traysRes.value.data)) {
+              rawTraysList.value = traysRes.value.data;
+            }
+            if (assyRes.status === 'fulfilled' && assyRes.value.ok && Array.isArray(assyRes.value.data)) {
+              rawAssyTestsList.value = assyRes.value.data;
+            }
+            if (qcRes.status === 'fulfilled' && qcRes.value.ok && Array.isArray(qcRes.value.data)) {
+              rawQcTestsList.value = qcRes.value.data;
+            }
+            if (whRes.status === 'fulfilled' && whRes.value.ok && Array.isArray(whRes.value.data)) {
+              rawWarehouseReceiptsList.value = whRes.value.data;
+            }
+            if (ruRes.status === 'fulfilled' && ruRes.value.ok && Array.isArray(ruRes.value.data)) {
+              rawPendingReassemblyList.value = ruRes.value.data;
+            }
+            if (doRes.status === 'fulfilled' && doRes.value.ok && Array.isArray(doRes.value.data)) {
+              rawDeliveryOrdersList.value = doRes.value.data;
+            }
 
-              method: 'POST',
+            // 1. Perakitan & Tray Summary
+            const trays = rawTraysList.value;
+            dashboardStats.value.assembly.activeTrays = trays.length;
+            let g = 0, h = 0, s = 0;
+            let puDispatchedSets = 0;
+            trays.forEach(t => {
+              g += parseInt(t.good_count || 0, 10);
+              h += parseInt(t.hold_count || 0, 10);
+              s += parseInt(t.scrap_count || 0, 10);
+              if (t.tray_code && t.tray_code.includes('-PU')) {
+                puDispatchedSets += parseInt(t.assemblies_count || t.total_sets || 0, 10);
+              }
+            });
+            dashboardStats.value.assembly.good = g;
+            dashboardStats.value.assembly.hold = h;
+            dashboardStats.value.assembly.scrap = s;
+            dashboardStats.value.assembly.total = g + h + s;
 
-              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            // 2. TF 1 Summary (Good vs Not Good)
+            const assyItems = rawAssyTestsList.value;
+            dashboardStats.value.tf1.total = assyItems.length;
+            dashboardStats.value.tf1.passed = assyItems.filter(i => (i.assy_test_status || '').toUpperCase() === 'GOOD' || (i.status || '').toUpperCase() === 'GOOD').length;
+            dashboardStats.value.tf1.hold = assyItems.filter(i => (i.assy_test_status || '').toUpperCase().includes('HOLD') || (i.status || '').toUpperCase().includes('HOLD')).length;
+            dashboardStats.value.tf1.notGood = assyItems.filter(i => (i.assy_test_status || '').toUpperCase().includes('NOT_GOOD') || (i.assy_test_status || '').toUpperCase().includes('NG')).length;
 
-              body: JSON.stringify(loginForm.value)
+            // 3. QC Summary (Good vs Not Good)
+            const qcItems = rawQcTestsList.value;
+            const qcTestedOnly = qcItems.filter(i => {
+              const st = (i.status || i.qc_status || i.qc_test_status || '').toUpperCase();
+              return st && !st.includes('MENUNGGU') && st !== 'PENDING';
+            });
+            dashboardStats.value.qc.total = qcTestedOnly.length;
+            dashboardStats.value.qc.acc = qcTestedOnly.filter(i => {
+              const st = (i.status || i.qc_status || i.qc_test_status || '').toUpperCase();
+              return ['GOOD', 'GOOD_QC', 'ACC', 'ACCEPTED', 'PASS'].includes(st);
+            }).length;
+            dashboardStats.value.qc.hold = qcTestedOnly.filter(i => {
+              const st = (i.status || i.qc_status || i.qc_test_status || '').toUpperCase();
+              return st.includes('HOLD') || st.includes('NOT_GOOD') || st.includes('NG');
+            }).length;
+            dashboardStats.value.qc.waiting = qcItems.length - qcTestedOnly.length;
 
+            // 4. Warehouse Receipts Summary (Total Dokumen, ACC, Declined)
+            const whItems = rawWarehouseReceiptsList.value;
+            dashboardStats.value.warehouse.totalReceipts = whItems.length;
+            const uniqueWhDocs = new Set();
+            let whAccepted = 0, whDeclined = 0;
+            whItems.forEach(w => {
+              if (w.warehouse_doc_number && w.warehouse_doc_number !== '-') uniqueWhDocs.add(w.warehouse_doc_number);
+              const st = (w.warehouse_receipt_status || w.status || '').toUpperCase();
+              if (st === 'ACCEPTED') whAccepted++;
+              else if (st === 'DECLINED') whDeclined++;
+            });
+            dashboardStats.value.warehouse.totalDocs = uniqueWhDocs.size;
+            dashboardStats.value.warehouse.acceptedSets = whAccepted;
+            dashboardStats.value.warehouse.declinedSets = whDeclined;
+
+            // 5. Perakitan Ulang (RU) (Belum Diarahkan vs Sudah Diarahkan)
+            dashboardStats.value.reassembly.notDispatched = rawPendingReassemblyList.value.length;
+            dashboardStats.value.reassembly.dispatched = puDispatchedSets;
+            dashboardStats.value.reassembly.pendingRU = rawPendingReassemblyList.value.length;
+
+            // 6. Delivery Orders (Dokumen, Peti, Dus, SN)
+            const dos = rawDeliveryOrdersList.value;
+            dashboardStats.value.delivery.totalDO = dos.length;
+            let totalCrates = 0, totalBoxes = 0, totalShippedSNs = 0;
+            const shippedSNSet = new Set();
+            dos.forEach(d => {
+              const pls = d.packing_lists || d.packingLists || [];
+              totalCrates += pls.length;
+              pls.forEach(pl => {
+                const bxs = pl.boxes || [];
+                totalBoxes += bxs.length;
+                bxs.forEach(box => {
+                  const itms = box.items || [];
+                  totalShippedSNs += itms.length;
+                  itms.forEach(it => {
+                    if (it.serial_number) shippedSNSet.add(it.serial_number);
+                  });
+                });
+              });
+            });
+            dashboardStats.value.delivery.totalCrates = totalCrates;
+            dashboardStats.value.delivery.totalBoxes = totalBoxes;
+            dashboardStats.value.delivery.shippedSNCount = totalShippedSNs;
+            dashboardStats.value.delivery.cloudSynced = dos.filter(d => Boolean(d.cloud_pdf_url)).length;
+
+            // 7. Ready to Ship (Lolos Gudang belum masuk DO)
+            dashboardStats.value.pipeline.readyToShip = Math.max(0, whAccepted - totalShippedSNs);
+
+            // 8. Determine latest production date across data
+            let latestDate = '';
+            assyItems.forEach(i => {
+              const d = i.finished_at || i.started_at || i.created_at;
+              if (d) {
+                const key = d.split(' ')[0] || d.split('T')[0];
+                if (!latestDate || key > latestDate) latestDate = key;
+              }
+            });
+            trays.forEach(t => {
+              const d = t.latest_assembly_at || t.updated_at || t.created_at;
+              if (d) {
+                const key = d.split(' ')[0] || d.split('T')[0];
+                if (!latestDate || key > latestDate) latestDate = key;
+              }
+            });
+            whItems.forEach(w => {
+              const d = w.created_at || w.effective_warehouse_receipt_at;
+              if (d) {
+                const key = d.split(' ')[0] || d.split('T')[0];
+                if (!latestDate || key > latestDate) latestDate = key;
+              }
+            });
+            latestProductionDate.value = latestDate;
+
+            // 10. Compute Today's times & trend, then render chart
+            let todayAssy = 0;
+            let yesterdayAssy = 0;
+            const now = new Date();
+            const todayKey = now.toISOString().split('T')[0];
+            const yesterdayD = new Date(now);
+            yesterdayD.setDate(now.getDate() - 1);
+            const yesterdayKey = yesterdayD.toISOString().split('T')[0];
+
+            let todayMinSum = 0, todayCount = 0;
+            let todayTf1MinSum = 0, todayTf1Count = 0;
+            let yestMinSum = 0, yestCount = 0;
+            assyItems.forEach(it => {
+              const dateStr = it.finished_at || it.started_at || it.created_at;
+              if (dateStr) {
+                const k = dateStr.split(' ')[0] || dateStr.split('T')[0];
+                if (it.started_at && it.finished_at) {
+                  const diff = (new Date(it.finished_at) - new Date(it.started_at)) / 1000 / 60;
+                  if (diff > 0 && diff < 1440) {
+                    if (k === todayKey) { todayMinSum += diff; todayCount++; }
+                    if (k === yesterdayKey) { yestMinSum += diff; yestCount++; }
+                  }
+                }
+                if (k === todayKey) {
+                  if (it.assy_tested_at && it.finished_at) {
+                    const diffTf1 = (new Date(it.assy_tested_at) - new Date(it.finished_at)) / 1000 / 60;
+                    if (diffTf1 > 0 && diffTf1 < 1440) {
+                      todayTf1MinSum += diffTf1;
+                      todayTf1Count++;
+                    }
+                  }
+                }
+              }
             });
 
+            todayAssy = todayCount > 0 ? (todayMinSum / todayCount) : 0;
+            todayTf1 = todayTf1Count > 0 ? (todayTf1MinSum / todayTf1Count) : 0;
+            yesterdayAssy = yestCount > 0 ? (yestMinSum / yestCount) : 0;
 
+            dashboardStats.value.times.avgAssyMinutesToday = dailyKpi.value.avgAssyMinutes;
+            dashboardStats.value.times.avgTf1MinutesToday = dailyKpi.value.avgTf1Minutes;
 
+            const activeDisplay = dailyKpi.value.avgAssyDisplay;
+            const activePeriod = dailyKpi.value.periodLabel;
+
+            if (todayCount === 0) {
+              if (dailyKpi.value.countAssy > 0) {
+                dashboardStats.value.times.trendText = `${activePeriod}: ${activeDisplay} / set`;
+                dashboardStats.value.times.trendColor = 'text-emerald-600';
+                dashboardStats.value.times.trendIcon = 'fa-solid fa-clock-rotate-left text-emerald-600';
+                dashboardStats.value.times.trendBadgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                dashboardStats.value.times.evaluationNote = `Data terakhir tercatat ${activeDisplay} / set (${activePeriod}). Menunggu rakitan baru hari ini.`;
+              } else {
+                dashboardStats.value.times.trendText = 'Belum Ada Perakitan';
+                dashboardStats.value.times.trendColor = 'text-slate-400';
+                dashboardStats.value.times.trendIcon = 'fa-regular fa-clock text-slate-400';
+                dashboardStats.value.times.trendBadgeClass = 'bg-slate-50 text-slate-600 border-slate-200';
+                dashboardStats.value.times.evaluationNote = 'Belum ada data perakitan. Menunggu operator memulai rakitan.';
+              }
+            } else if (yesterdayAssy > 0 && todayAssy < yesterdayAssy) {
+              const diffMin = yesterdayAssy - todayAssy;
+              const diffText = diffMin < 1 ? `${Math.round(diffMin * 60)} detik` : `${diffMin.toFixed(1)} menit`;
+              dashboardStats.value.times.trendText = `Efisiensi Naik: 🔽 ${diffText} Lebih Cepat`;
+              dashboardStats.value.times.trendColor = 'text-emerald-600';
+              dashboardStats.value.times.trendIcon = 'fa-solid fa-arrow-trend-down text-emerald-600';
+              dashboardStats.value.times.trendBadgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+              dashboardStats.value.times.evaluationNote = `Peningkatan efisiensi waktu ${diffText} lebih cepat dibanding hari kemarin.`;
+            } else if (yesterdayAssy > 0 && todayAssy > yesterdayAssy) {
+              const diffMin = todayAssy - yesterdayAssy;
+              const diffText = diffMin < 1 ? `${Math.round(diffMin * 60)} detik` : `${diffMin.toFixed(1)} menit`;
+              dashboardStats.value.times.trendText = `Performa Melambat: 🔼 ${diffText}`;
+              dashboardStats.value.times.trendColor = 'text-amber-600';
+              dashboardStats.value.times.trendIcon = 'fa-solid fa-arrow-trend-up text-amber-600';
+              dashboardStats.value.times.trendBadgeClass = 'bg-amber-50 text-amber-700 border-amber-200';
+              dashboardStats.value.times.evaluationNote = `Terjadi penambahan durasi rata-rata ${diffText}. Pastikan ketersediaan part dan alat memadai.`;
+            } else {
+              dashboardStats.value.times.trendText = 'Optimal: Rata-rata Normal';
+              dashboardStats.value.times.trendColor = 'text-emerald-600';
+              dashboardStats.value.times.trendIcon = 'fa-solid fa-circle-check text-emerald-600';
+              dashboardStats.value.times.trendBadgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+              dashboardStats.value.times.evaluationNote = `Kecepatan perakitan stabil di ${activeDisplay} / set.`;
+            }
+
+            updateChartDataFromRaw();
+            if (activeTab.value === 'reports_kpi') {
+              renderReportCharts();
+            }
+
+          } catch (e) {
+            console.error('Error loadDashboardStats:', e);
+          } finally {
+            dashboardStats.value.loading = false;
+            const now = new Date();
+            const pad = (n) => String(n).padStart(2, '0');
+            lastSyncTimeStr.value = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+          }
+        };
+
+        const startAutoUpdate = () => {
+          if (autoUpdateTimer) clearInterval(autoUpdateTimer);
+          autoUpdateTimer = setInterval(() => {
+            if (isCmsAuthenticated.value && document.visibilityState === 'visible' && (activeTab.value === 'dashboard' || activeTab.value === 'reports_kpi')) {
+              loadDashboardStats(true);
+            }
+          }, 10000);
+        };
+
+        const stopAutoUpdate = () => {
+          if (autoUpdateTimer) {
+            clearInterval(autoUpdateTimer);
+            autoUpdateTimer = null;
+          }
+        };
+
+        // =====================================================================
+        // DATA STATE FOR CMS MODULES
+        // =====================================================================
+        const errorLogs = ref([]);
+        const errorPage = ref(1);
+        const errorPerPage = 20;
+
+        const slowQueries = ref([]);
+        const slowPage = ref(1);
+        const slowPerPage = 20;
+
+        const anomalySummary = ref({ 
+          total_anomalies: 0, 
+          orphan_parts: { count: 0, items: [] }, 
+          stuck_sessions: { count: 0, items: [] }, 
+          desynced_stocks: { count: 0, items: [] }, 
+          duplicate_parts: { count: 0, items: [] } 
+        });
+        const anomalyCategoryFilter = ref('all');
+        const anomalyPage = ref(1);
+        const anomalyPerPage = 20;
+
+        const doSettings = ref({});
+        const cloudSettings = ref({ cloud_name: '', api_key: '', has_secret: false, configured: false });
+        const cloudForm = ref({ cloud_name: '', api_key: '', api_secret: '' });
+        const isTestingCloud = ref(false);
+        const isSavingCloud = ref(false);
+        const cloudTestResult = ref(null);
+
+        const usersList = ref([]);
+        const loadingUsers = ref(false);
+        const editingUserId = ref(null);
+        const isSavingUser = ref(false);
+        const userSearchQuery = ref('');
+        const userDeptFilter = ref('all');
+        const userPage = ref(1);
+        const userPerPage = 10;
+        const openUserForm = ref(false);
+        const selectedUserIds = ref([]);
+
+        const userForm = ref({
+          username: '',
+          full_name: '',
+          password: '',
+          department: 'assembly',
+          role: 'assembly',
+          can_access_cms: false,
+          permissions: {}
+        });
+
+        const cmsManagedMenuGroups = [
+          {
+            key: 'gudang',
+            name: 'Gudang & Material',
+            menus: [
+              { key: 'warehouse', name: 'Work Order & Supply' },
+              { key: 'warehouse_receipt', name: 'Good Receipts (WH/GR)' },
+              { key: 'returns', name: 'Pengembalian Part' },
+              { key: 'master', name: 'Master Stok' }
+            ]
+          },
+          {
+            key: 'perakitan',
+            name: 'Perakitan & Pengujian',
+            menus: [
+              { key: 'assembly', name: 'Area Perakitan' },
+              { key: 'production_hold', name: 'Hasil Perakitan (Hold)' },
+              { key: 'assy_testing', name: 'Test Functional 1' },
+              { key: 'qc', name: 'Test Functional 2 (QC)' },
+              { key: 'functional_hold', name: 'Hasil Test Hold' },
+              { key: 'reassembly', name: 'Perakitan Ulang (RU)' }
+            ]
+          },
+          {
+            key: 'dokumen',
+            name: 'Dokumen & Pengiriman',
+            menus: [
+              { key: 'traveler', name: 'Cetak Dokumen' },
+              { key: 'delivery_order', name: 'Delivery Order & PL' },
+              { key: 'report', name: 'History & Laporan' }
+            ]
+          },
+          {
+            key: 'admin',
+            name: 'Administrator',
+            menus: [
+              { key: 'users', name: 'Kelola Pengguna' },
+              { key: 'verify_set', name: 'Verifikasi Set' },
+              { key: 'verify_part', name: 'Verifikasi Part' },
+              { key: 'verify_replacement', name: 'Pergantian Part' },
+              { key: 'audit', name: 'Audit Log' },
+              { key: 'downtime', name: 'Downtime Log' },
+              { key: 'testing_points', name: 'Panduan Uji' }
+            ]
+          }
+        ];
+
+        // Multi-select helpers
+        const isUserSelected = (id) => selectedUserIds.value.includes(id);
+        const isAllUsersSelected = computed(() => {
+          return pagedUsersList.value.length > 0 && pagedUsersList.value.every(u => selectedUserIds.value.includes(u.id));
+        });
+        const toggleSelectAllUsers = (e) => {
+          if (e.target.checked) {
+            pagedUsersList.value.forEach(u => {
+              if (!selectedUserIds.value.includes(u.id)) selectedUserIds.value.push(u.id);
+            });
+          } else {
+            const pageIds = pagedUsersList.value.map(u => u.id);
+            selectedUserIds.value = selectedUserIds.value.filter(id => !pageIds.includes(id));
+          }
+        };
+
+        const bulkResetSessions = async () => {
+          if (selectedUserIds.value.length === 0) return;
+          const confirmed = await showConfirmCard({
+            title: 'Reset Sesi Masal',
+            message: `Putuskan sesi login aktif untuk ${selectedUserIds.value.length} pengguna terpilih?`,
+            confirmText: 'Ya, Reset Sesi',
+            confirmBtnClass: 'bg-amber-600 hover:bg-amber-700 text-white'
+          });
+          if (!confirmed) return;
+          for (const id of selectedUserIds.value) {
+            const u = usersList.value.find(x => x.id === id);
+            if (u) {
+              await fetch('/api/admin/users/reset-session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: u.username })
+              }).catch(() => {});
+            }
+          }
+          selectedUserIds.value = [];
+          triggerToast('Berhasil', 'Seluruh sesi pengguna terpilih telah direset.', 'success');
+          fetchUsers();
+        };
+
+        // Computed Lists
+        const filteredUsersList = computed(() => {
+          let list = usersList.value || [];
+          if (userDeptFilter.value && userDeptFilter.value !== 'all') {
+            const d = userDeptFilter.value.toLowerCase();
+            list = list.filter(u => (u.department || '').toLowerCase() === d || (u.role || '').toLowerCase() === d);
+          }
+          if (userSearchQuery.value && userSearchQuery.value.trim()) {
+            const q = userSearchQuery.value.toLowerCase().trim();
+            list = list.filter(u => 
+              (u.username && u.username.toLowerCase().includes(q)) ||
+              (u.full_name && u.full_name.toLowerCase().includes(q)) ||
+              (u.department && u.department.toLowerCase().includes(q))
+            );
+          }
+          return list;
+        });
+
+        const totalUserPages = computed(() => Math.ceil(filteredUsersList.value.length / userPerPage) || 1);
+        const pagedUsersList = computed(() => {
+          const start = (userPage.value - 1) * userPerPage;
+          return filteredUsersList.value.slice(start, start + userPerPage);
+        });
+
+        const totalErrorPages = computed(() => Math.ceil(errorLogs.value.length / errorPerPage) || 1);
+        const pagedErrorLogs = computed(() => {
+          const start = (errorPage.value - 1) * errorPerPage;
+          return errorLogs.value.slice(start, start + errorPerPage);
+        });
+
+        const totalSlowPages = computed(() => Math.ceil(slowQueries.value.length / slowPerPage) || 1);
+        const pagedSlowQueries = computed(() => {
+          const start = (slowPage.value - 1) * slowPerPage;
+          return slowQueries.value.slice(start, start + slowPerPage);
+        });
+
+        const allAnomalyItems = computed(() => {
+          const res = [];
+          const a = anomalySummary.value;
+          (a.orphan_parts?.items || []).forEach(it => res.push({ category: 'Part Yatim', ...it }));
+          (a.stuck_sessions?.items || []).forEach(it => res.push({ category: 'Sesi Nyangkut', ...it }));
+          (a.desynced_stocks?.items || []).forEach(it => res.push({ category: 'Stok Desinkron', ...it }));
+          (a.duplicate_parts?.items || []).forEach(it => res.push({ category: 'Part Duplikat', ...it }));
+          return res;
+        });
+
+        const filteredAnomalyItems = computed(() => {
+          if (anomalyCategoryFilter.value === 'all') return allAnomalyItems.value;
+          return allAnomalyItems.value.filter(it => it.category === anomalyCategoryFilter.value);
+        });
+
+        const totalAnomalyPages = computed(() => Math.ceil(filteredAnomalyItems.value.length / anomalyPerPage) || 1);
+        const pagedAnomalyItems = computed(() => {
+          const start = (anomalyPage.value - 1) * anomalyPerPage;
+          return filteredAnomalyItems.value.slice(start, start + anomalyPerPage);
+        });
+
+        // Tab Navigation
+        const switchTab = (t) => {
+          activeTab.value = t;
+          if (typeof nextTick === 'function') {
+            nextTick(() => {
+              fetchActiveTabData();
+            });
+          } else {
+            setTimeout(fetchActiveTabData, 50);
+          }
+        };
+
+        const fetchActiveTabData = () => {
+          if (activeTab.value === 'dashboard') {
+            loadDashboardStats();
+            scanAnomalies(true);
+            if (lastDailyTrendsData && lastDailyTrendsData.length > 0) {
+              renderTimeTrendsChart(lastDailyTrendsData);
+            }
+          } else if (activeTab.value === 'reports_kpi') {
+            loadDashboardStats();
+            if (typeof nextTick === 'function') {
+              nextTick(() => renderReportCharts());
+            } else {
+              setTimeout(renderReportCharts, 80);
+            }
+          } else if (activeTab.value === 'users') {
+            fetchUsers();
+          } else if (activeTab.value === 'anomalies') {
+            scanAnomalies();
+          } else if (activeTab.value === 'errors') {
+            fetchErrorLogs();
+          } else if (activeTab.value === 'slow_queries') {
+            fetchSlowQueries();
+          } else if (activeTab.value === 'do_settings') {
+            fetchDoSettings();
+            fetchCloudinarySettings();
+          }
+        };
+
+        // Lifecycle check
+        onMounted(() => {
+          const storedToken = sessionStorage.getItem('cms_admin_token');
+          const storedUser = sessionStorage.getItem('cms_admin_user');
+          if (storedToken && storedUser) {
+            try {
+              cmsToken.value = storedToken;
+              adminUser.value = JSON.parse(storedUser);
+              isCmsAuthenticated.value = true;
+              loadDashboardStats(false);
+              startAutoUpdate();
+              fetchUsers();
+              fetchErrorLogs();
+              fetchSlowQueries();
+              scanAnomalies(true);
+            } catch (e) {
+              sessionStorage.removeItem('cms_admin_token');
+              sessionStorage.removeItem('cms_admin_user');
+            }
+          }
+
+          // Real-time tab listeners for background sync
+          document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && isCmsAuthenticated.value && (activeTab.value === 'dashboard' || activeTab.value === 'reports_kpi')) {
+              loadDashboardStats(true);
+            }
+          });
+          window.addEventListener('focus', () => {
+            if (isCmsAuthenticated.value && (activeTab.value === 'dashboard' || activeTab.value === 'reports_kpi')) {
+              loadDashboardStats(true);
+            }
+          });
+        });
+
+        // Authentication Methods
+        const submitCmsLogin = async () => {
+          loginLoading.value = true;
+          loginError.value = '';
+          try {
+            const res = await fetch('/api/admin/cms-login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+              body: JSON.stringify(loginForm.value)
+            });
             const data = await res.json();
-
-            if (data.ok) {
-
+            if (data.ok && data.data?.cms_token) {
               cmsToken.value = data.data.cms_token;
-
-              adminUser.value = data.data.user;
-
+              adminUser.value = data.data.user || {};
               isCmsAuthenticated.value = true;
 
-
-
               sessionStorage.setItem('cms_admin_token', cmsToken.value);
-
               sessionStorage.setItem('cms_admin_user', JSON.stringify(adminUser.value));
-
-
+              localStorage.setItem('token', cmsToken.value);
+              localStorage.setItem('role', adminUser.value.role || 'admin');
+              localStorage.setItem('username', adminUser.value.username || '');
+              localStorage.setItem('full_name', adminUser.value.full_name || '');
 
               loginForm.value = { username: '', password: '' };
-
+              loadDashboardStats(false);
+              startAutoUpdate();
               fetchUsers();
-
               fetchErrorLogs();
-
               fetchSlowQueries();
-
+              scanAnomalies(true);
               triggerToast('Login Berhasil', 'Selamat datang di Portal Administrator CMS.', 'success');
-
             } else {
-
               loginError.value = data.error || 'Autentikasi gagal. Periksa username dan password.';
-
             }
-
           } catch (e) {
-
             loginError.value = 'Gagal menghubungi server: ' + e.message;
-
           } finally {
-
             loginLoading.value = false;
-
           }
-
         };
-
-
 
         const logoutCms = async () => {
-
           const confirmed = await showConfirmCard({
-
-            title: 'Kunci Portal CMS',
-
-            message: 'Apakah Anda yakin ingin mengunci dan keluar dari Portal Administrator CMS?',
-
-            icon: 'fa-solid fa-lock',
-
-            iconBg: 'bg-red-100 text-red-600',
-
-            confirmText: 'Ya, Kunci',
-
+            title: 'Kunci Portal Administrator',
+            message: 'Sesi administrator akan dikunci. Anda harus memasukkan password untuk masuk kembali.',
+            confirmText: 'Kunci Sekarang',
             confirmBtnClass: 'bg-red-600 hover:bg-red-700 text-white'
-
           });
-
           if (!confirmed) return;
-
-
-
+          stopAutoUpdate();
           try {
-
             await fetch('/api/admin/cms-logout', { method: 'POST' });
-
           } catch (e) {}
-
-
-
           sessionStorage.removeItem('cms_admin_token');
-
           sessionStorage.removeItem('cms_admin_user');
-
           cmsToken.value = '';
-
           adminUser.value = {};
-
           isCmsAuthenticated.value = false;
-
-          triggerToast('Terkunci', 'Sesi Administrator telah diakhiri dengan aman.', 'info');
-
+          triggerToast('Sesi Dikunci', 'Portal Administrator telah dikunci dengan aman.', 'info');
         };
 
-
-
-        // Pembersihan Database
-
+        // Module Methods: Cleanup
         const confirmClearTrays = async () => {
-
-          const answer = await showPromptCard({
-
-            title: 'Reset Tray & Pulihkan Stok',
-
-            message: 'PERINGATAN: Mengosongkan seluruh data tray dan mengembalikan stok part ke status Tersedia.\nKetik RESET untuk konfirmasi:',
-
-            icon: 'fa-solid fa-trash-can',
-
-            iconBg: 'bg-red-100 text-red-600',
-
-            inputLabel: 'Ketik RESET:',
-
-            inputPlaceholder: 'RESET',
-
-            confirmText: 'Proses Reset',
-
+          const confirmed = await showConfirmCard({
+            title: 'Reset Tray & Rakitan',
+            message: 'Tindakan ini akan mengosongkan seluruh data tray operasional. Data tidak dapat dikembalikan!',
+            confirmText: 'Hapus Semua Tray',
             confirmBtnClass: 'bg-red-600 hover:bg-red-700 text-white'
-
           });
-
-
-
-          if (answer !== 'RESET') {
-
-            if (answer !== null) triggerToast('Dibatalkan', 'Konfirmasi kata RESET tidak sesuai.', 'warn');
-
-            return;
-
-          }
-
-
-
-          loading.value = true;
-
+          if (!confirmed) return;
           try {
-
             const res = await fetch('/api/admin/cms/clear-trays', { method: 'POST', headers: { 'Accept': 'application/json' } });
-
             const data = await res.json();
-
-            triggerToast(data.ok ? 'Berhasil' : 'Gagal', data.message || "Pembersihan tray berhasil!", data.ok ? 'success' : 'error');
-
+            if (data.ok) triggerToast('Berhasil', 'Seluruh data tray berhasil dibersihkan.', 'success');
+            else triggerToast('Gagal', data.error || 'Gagal membersihkan data tray.', 'error');
           } catch (e) {
-
-            triggerToast('Gagal', e.message, 'error');
-
-          } finally {
-
-            loading.value = false;
-
+            triggerToast('Error', e.message, 'error');
           }
-
         };
-
-
 
         const confirmClearDowntimes = async () => {
-
           const confirmed = await showConfirmCard({
-
-            title: 'Hapus Riwayat Jeda',
-
-            message: 'Apakah Anda yakin ingin menghapus seluruh catatan riwayat waktu jeda workstation perakitan?',
-
-            icon: 'fa-solid fa-clock-rotate-left',
-
-            iconBg: 'bg-amber-100 text-amber-600',
-
-            confirmText: 'Ya, Bersihkan',
-
-            confirmBtnClass: 'bg-amber-500 hover:bg-amber-600 text-white'
-
+            title: 'Reset Catatan Downtime',
+            message: 'Apakah Anda yakin ingin menghapus seluruh catatan downtime lini perakitan?',
+            confirmText: 'Hapus Downtime',
+            confirmBtnClass: 'bg-slate-900 hover:bg-slate-800 text-white'
           });
-
           if (!confirmed) return;
-
-
-
-          loading.value = true;
-
           try {
-
             const res = await fetch('/api/admin/cms/clear-downtimes', { method: 'POST', headers: { 'Accept': 'application/json' } });
-
             const data = await res.json();
-
-            triggerToast('Berhasil', data.message || "Riwayat jeda berhasil dibersihkan!", 'success');
-
+            if (data.ok) triggerToast('Berhasil', 'Log downtime berhasil dibersihkan.', 'success');
+            else triggerToast('Gagal', data.error, 'error');
           } catch (e) {
-
-            triggerToast('Gagal', e.message, 'error');
-
-          } finally {
-
-            loading.value = false;
-
+            triggerToast('Error', e.message, 'error');
           }
-
         };
-
-
 
         const confirmClearAuditLogs = async () => {
-
           const confirmed = await showConfirmCard({
-
-            title: 'Hapus Riwayat Audit Log',
-
-            message: 'Apakah Anda yakin ingin menghapus seluruh catatan riwayat log audit pergantian part dan aktivitas?',
-
-            icon: 'fa-solid fa-eraser',
-
-            iconBg: 'bg-slate-100 text-slate-700',
-
-            confirmText: 'Ya, Bersihkan',
-
-            confirmBtnClass: 'bg-slate-800 hover:bg-slate-900 text-white'
-
+            title: 'Reset Audit Logs',
+            message: 'Hapus seluruh catatan log aktivitas pengguna?',
+            confirmText: 'Hapus Audit Log',
+            confirmBtnClass: 'bg-slate-900 hover:bg-slate-800 text-white'
           });
-
           if (!confirmed) return;
-
-
-
-          loading.value = true;
-
           try {
-
             const res = await fetch('/api/admin/cms/clear-audit-logs', { method: 'POST', headers: { 'Accept': 'application/json' } });
-
             const data = await res.json();
-
-            triggerToast('Berhasil', data.message || "Audit log berhasil dibersihkan!", 'success');
-
+            if (data.ok) triggerToast('Berhasil', 'Log audit berhasil dibersihkan.', 'success');
+            else triggerToast('Gagal', data.error, 'error');
           } catch (e) {
-
-            triggerToast('Gagal', e.message, 'error');
-
-          } finally {
-
-            loading.value = false;
-
+            triggerToast('Error', e.message, 'error');
           }
-
         };
 
-
-
-        // Diagnostik (Error Logs & Slow Queries)
-
+        // Module Methods: Errors & Slow Queries
         const fetchErrorLogs = async () => {
-
           try {
-
             const res = await fetch('/api/admin/error-logs?limit=500');
-
             const data = await res.json();
-
-            errorLogs.value = data.data || [];
-
-            errorPage.value = 1;
-
-          } catch (e) {
-
-            console.error(e);
-
-          }
-
+            if (data.ok && Array.isArray(data.data)) errorLogs.value = data.data;
+          } catch (e) {}
         };
-
-
 
         const clearErrorLogs = async () => {
-
           const confirmed = await showConfirmCard({
-
             title: 'Bersihkan Log Error',
-
-            message: 'Apakah Anda yakin ingin mengosongkan seluruh riwayat error log backend?',
-
-            icon: 'fa-solid fa-trash',
-
-            iconBg: 'bg-red-100 text-red-600',
-
-            confirmText: 'Ya, Bersihkan',
-
+            message: 'Hapus seluruh catatan log error backend?',
+            confirmText: 'Bersihkan',
             confirmBtnClass: 'bg-red-600 hover:bg-red-700 text-white'
-
           });
-
           if (!confirmed) return;
-
-
-
           try {
-
             await fetch('/api/admin/error-logs/clear', { method: 'POST', headers: { 'Accept': 'application/json' } });
-
             errorLogs.value = [];
-
-            errorPage.value = 1;
-
-            triggerToast('Berhasil', 'Log error backend berhasil dibersihkan.', 'success');
-
+            triggerToast('Berhasil', 'Log error telah dibersihkan.', 'success');
           } catch (e) {
-
-            triggerToast('Gagal', e.message, 'error');
-
+            triggerToast('Error', e.message, 'error');
           }
-
         };
-
-
 
         const fetchSlowQueries = async () => {
-
           try {
-
             const res = await fetch('/api/admin/slow-queries?limit=500');
-
             const data = await res.json();
-
-            slowQueries.value = data.data || [];
-
-            slowPage.value = 1;
-
-          } catch (e) {
-
-            console.error(e);
-
-          }
-
+            if (data.ok && Array.isArray(data.data)) slowQueries.value = data.data;
+          } catch (e) {}
         };
-
-
 
         const clearSlowQueries = async () => {
-
           const confirmed = await showConfirmCard({
-
             title: 'Bersihkan Slow Queries',
-
-            message: 'Apakah Anda yakin ingin mengosongkan seluruh riwayat slow query database?',
-
-            icon: 'fa-solid fa-trash',
-
-            iconBg: 'bg-amber-100 text-amber-700',
-
-            confirmText: 'Ya, Bersihkan',
-
-            confirmBtnClass: 'bg-amber-500 hover:bg-amber-600 text-white'
-
+            message: 'Hapus seluruh catatan pemantauan kueri lambat?',
+            confirmText: 'Bersihkan',
+            confirmBtnClass: 'bg-slate-900 hover:bg-slate-800 text-white'
           });
-
           if (!confirmed) return;
-
-
-
           try {
-
             await fetch('/api/admin/slow-queries/clear', { method: 'POST', headers: { 'Accept': 'application/json' } });
-
             slowQueries.value = [];
-
-            slowPage.value = 1;
-
-            triggerToast('Berhasil', 'Log slow query berhasil dibersihkan.', 'success');
-
+            triggerToast('Berhasil', 'Log slow queries telah dibersihkan.', 'success');
           } catch (e) {
-
-            triggerToast('Gagal', e.message, 'error');
-
+            triggerToast('Error', e.message, 'error');
           }
-
         };
 
-
-
-        // Pemindai Anomali
-
-        const scanAnomalies = async () => {
-
-          loading.value = true;
-
+        // Module Methods: Anomalies
+        const scanAnomalies = async (silent = false) => {
           try {
-
             const res = await fetch('/api/admin/anomalies/scan');
-
             const data = await res.json();
-
-            anomalySummary.value = data.data || { total_anomalies: 0 };
-
-            anomalyPage.value = 1;
-
-            triggerToast('Pemindaian Selesai', `Ditemukan ${anomalySummary.value.total_anomalies || 0} anomali data.`, anomalySummary.value.total_anomalies > 0 ? 'warn' : 'success');
-
+            if (data.ok && data.data) {
+              anomalySummary.value = data.data;
+              if (!silent) triggerToast('Pemindaian Selesai', `Ditemukan ${data.data.total_anomalies} anomali data.`, data.data.total_anomalies > 0 ? 'warn' : 'success');
+            }
           } catch (e) {
-
-            triggerToast('Gagal Memindai', e.message, 'error');
-
-          } finally {
-
-            loading.value = false;
-
+            if (!silent) triggerToast('Error', 'Gagal memindai anomali: ' + e.message, 'error');
           }
-
         };
-
-
 
         const repairAnomalies = async () => {
-
           const confirmed = await showConfirmCard({
-
-            title: '1-Click Auto Repair',
-
-            message: 'Jalankan 1-Click Auto Repair untuk memperbaiki seluruh anomali integritas data secara otomatis?',
-
-            icon: 'fa-solid fa-wrench',
-
-            iconBg: 'bg-emerald-100 text-emerald-600',
-
-            confirmText: 'Mulai Auto Repair',
-
-            confirmBtnClass: 'bg-emerald-600 hover:bg-emerald-700 text-white'
-
+            title: 'Perbaiki Anomali Otomatis',
+            message: 'Sistem akan membersihkan referensi part rusak dan memulihkan integritas data. Lanjutkan?',
+            confirmText: 'Perbaiki Sekarang',
+            confirmBtnClass: 'bg-red-600 hover:bg-red-700 text-white'
           });
-
           if (!confirmed) return;
-
-
-
-          loading.value = true;
-
           try {
-
             const res = await fetch('/api/admin/anomalies/repair', { method: 'POST', headers: { 'Accept': 'application/json' } });
-
             const data = await res.json();
-
-            triggerToast('Berhasil', data.message || "Auto repair selesai!", 'success');
-
-            scanAnomalies();
-
+            if (data.ok) {
+              triggerToast('Berhasil', 'Perbaikan anomali selesai.', 'success');
+              scanAnomalies(true);
+            } else {
+              triggerToast('Gagal', data.error, 'error');
+            }
           } catch (e) {
-
-            triggerToast('Gagal', e.message, 'error');
-
-          } finally {
-
-            loading.value = false;
-
+            triggerToast('Error', e.message, 'error');
           }
-
         };
 
-
-
-        // DO Settings
-
+        // Module Methods: DO & Cloudinary Settings
         const fetchDoSettings = async () => {
-
           try {
-
             const res = await fetch('/api/admin/cms/do-settings');
-
             const data = await res.json();
-
-            doSettings.value = data.data || {};
-
-          } catch (e) {
-
-            console.error(e);
-
-          }
-
-          await fetchCloudinarySettings();
-
+            if (data.ok && data.data) doSettings.value = data.data;
+          } catch (e) {}
         };
-
-
 
         const saveDoSettings = async () => {
-
-          loading.value = true;
-
           try {
-
             const res = await fetch('/api/admin/cms/do-settings', {
-
               method: 'POST',
-
               headers: { 'Content-Type': 'application/json' },
-
               body: JSON.stringify(doSettings.value)
-
             });
-
             const data = await res.json();
-
-            triggerToast('Berhasil', data.message || "Pengaturan berhasil disimpan!", 'success');
-
+            if (data.ok) triggerToast('Berhasil', 'Pengaturan DO berhasil disimpan.', 'success');
+            else triggerToast('Gagal', data.error, 'error');
           } catch (e) {
-
-            triggerToast('Gagal', e.message, 'error');
-
-          } finally {
-
-            loading.value = false;
-
+            triggerToast('Error', e.message, 'error');
           }
-
         };
-
-
-
-        // User & Permission Management
-
-        const fetchUsers = async () => {
-
-          loadingUsers.value = true;
-
-          try {
-
-            const res = await fetch('/api/admin/users');
-
-            const data = await res.json();
-
-            if (data.ok && Array.isArray(data.data)) {
-
-              usersList.value = data.data;
-
-            }
-
-          } catch (e) {
-
-            console.error('fetchUsers error:', e);
-
-          } finally {
-
-            loadingUsers.value = false;
-
-          }
-
-        };
-
-
-
-        const countCmsUsers = () => {
-
-          return (usersList.value || []).filter(u => u.id === 3 || Boolean(u.can_access_cms)).length;
-
-        };
-
-
-
-        const countRoleUsers = (roleKey) => {
-
-          return (usersList.value || []).filter(u => {
-
-            const r = (u.role || '').toLowerCase();
-
-            const d = (u.department || '').toLowerCase();
-
-            return r === roleKey || d === roleKey;
-
-          }).length;
-
-        };
-
-
-
-        const getDeptBadgeClass = (deptOrRole) => {
-
-          const s = String(deptOrRole || '').toLowerCase();
-
-          if (s.includes('admin')) return 'bg-purple-50 text-purple-700 border-purple-200';
-
-          if (s.includes('warehouse') || s.includes('gudang')) return 'bg-amber-50 text-amber-700 border-amber-200';
-
-          if (s.includes('assembly') || s.includes('perakitan')) return 'bg-blue-50 text-blue-700 border-blue-200';
-
-          if (s.includes('qc') || s.includes('quality')) return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-
-          return 'bg-slate-100 text-slate-700 border-slate-200';
-
-        };
-
-
-
-        const countUserWritePerms = (u) => {
-
-          if (String(u.role || '').toLowerCase() === 'admin' || String(u.role || '').toLowerCase() === 'super admin') return 20;
-
-          let count = 0;
-
-          if (u.permissions && typeof u.permissions === 'object') {
-
-            Object.values(u.permissions).forEach(val => {
-
-              if (val === 2 || val === '2' || val === 'full' || val === true) count++;
-
-            });
-
-          }
-
-          return count;
-
-        };
-
-
-
-        const countUserReadPerms = (u) => {
-
-          let count = 0;
-
-          if (u.permissions && typeof u.permissions === 'object') {
-
-            Object.values(u.permissions).forEach(val => {
-
-              if (val === 1 || val === '1' || val === 'read' || val === 'read-only') count++;
-
-            });
-
-          }
-
-          return count;
-
-        };
-
-
-
-        const setUserPermission = (menuKey, level) => {
-
-          if (!userForm.value.permissions) userForm.value.permissions = {};
-
-          userForm.value.permissions[menuKey] = level;
-
-        };
-
-
-
-        const applyUserPreset = (preset, silent = false) => {
-
-          if (!userForm.value.permissions) userForm.value.permissions = {};
-
-          const allMenus = cmsManagedMenuGroups.flatMap(g => g.menus).map(m => m.key);
-
-
-
-          if (preset === 'assembly') {
-
-            userForm.value.department = 'Assembly';
-
-            userForm.value.role = 'assembly';
-
-            allMenus.forEach(k => userForm.value.permissions[k] = 0);
-
-            userForm.value.permissions['warehouse'] = 1;
-
-            userForm.value.permissions['production_hold'] = 2;
-
-            userForm.value.permissions['traveler'] = 2;
-
-            userForm.value.permissions['assembly'] = 2;
-
-            userForm.value.permissions['assy_testing'] = 2;
-
-            userForm.value.permissions['master'] = 1;
-
-            userForm.value.permissions['report'] = 1;
-
-          } else if (preset === 'gudang') {
-
-            userForm.value.department = 'Warehouse';
-
-            userForm.value.role = 'gudang';
-
-            allMenus.forEach(k => userForm.value.permissions[k] = 0);
-
-            userForm.value.permissions['warehouse'] = 2;
-
-            userForm.value.permissions['production_hold'] = 2;
-
-            userForm.value.permissions['returns'] = 2;
-
-            userForm.value.permissions['warehouse_receipt'] = 2;
-
-            userForm.value.permissions['reassembly'] = 2;
-
-            userForm.value.permissions['traveler'] = 2;
-
-            userForm.value.permissions['master'] = 2;
-
-            userForm.value.permissions['report'] = 2;
-
-            userForm.value.permissions['delivery_order'] = 2;
-
-          } else if (preset === 'qc') {
-
-            userForm.value.department = 'Quality Control';
-
-            userForm.value.role = 'qc';
-
-            allMenus.forEach(k => userForm.value.permissions[k] = 0);
-
-            userForm.value.permissions['qc'] = 2;
-
-            userForm.value.permissions['production_hold'] = 1;
-
-            userForm.value.permissions['master'] = 1;
-
-            userForm.value.permissions['report'] = 1;
-
-          } else if (preset === 'admin') {
-
-            userForm.value.department = 'Administrator';
-
-            userForm.value.role = 'Admin';
-
-            userForm.value.can_access_cms = true;
-
-            allMenus.forEach(k => userForm.value.permissions[k] = 2);
-
-          } else if (preset === 'none') {
-
-            allMenus.forEach(k => userForm.value.permissions[k] = 0);
-
-            userForm.value.can_access_cms = false;
-
-          }
-
-
-
-          if (!silent) {
-
-            triggerToast('Preset Diterapkan', `Template izin ${preset.toUpperCase()} telah disetel.`, 'info');
-
-          }
-
-        };
-
-
-
-        const resetUserForm = () => {
-
-          editingUserId.value = null;
-
-          showUserPw.value = false;
-
-          setAllMenuGroups(false); // default tertutup
-
-          userForm.value = {
-
-            id: null,
-
-            nik: '',
-
-            full_name: '',
-
-            department: 'Assembly',
-
-            role: 'assembly',
-
-            username: '',
-
-            password: '',
-
-            can_access_cms: false,
-
-            permissions: {}
-
-          };
-
-          applyUserPreset('assembly', true); // silent agar tidak menimpa notifikasi simpan
-
-        };
-
-
-
-        const editUser = (u) => {
-
-          editingUserId.value = u.id;
-
-          showUserPw.value = false;
-
-          setAllMenuGroups(false); // default tertutup
-
-          let perms = {};
-
-          if (u.permissions) {
-
-            perms = typeof u.permissions === 'string' ? JSON.parse(u.permissions) : { ...u.permissions };
-
-          }
-
-          userForm.value = {
-
-            id: u.id,
-
-            nik: u.nik || '',
-
-            full_name: u.full_name || '',
-
-            department: u.department || 'Assembly',
-
-            role: u.role || 'assembly',
-
-            username: u.username || '',
-
-            password: '',
-
-            can_access_cms: (u.id === 3) ? true : Boolean(u.can_access_cms),
-
-            permissions: perms
-
-          };
-
-          const card = document.getElementById('user-form-card');
-
-          if (card) card.scrollIntoView({ behavior: 'smooth' });
-
-        };
-
-
-
-        const saveUser = async () => {
-
-          if (!userForm.value.username || !userForm.value.full_name) {
-
-            triggerToast('Validasi Gagal', 'Username dan Nama Lengkap wajib diisi.', 'warn');
-
-            return;
-
-          }
-
-          if (!editingUserId.value && !userForm.value.password) {
-
-            triggerToast('Validasi Gagal', 'Password wajib diisi untuk pengguna baru.', 'warn');
-
-            return;
-
-          }
-
-
-
-          isSavingUser.value = true;
-
-          try {
-
-            const isEdit = Boolean(editingUserId.value);
-
-            const targetUsername = userForm.value.username;
-
-            const targetFullName = userForm.value.full_name;
-
-
-
-            const payload = {
-
-              id: editingUserId.value || userForm.value.id || null,
-
-              nik: userForm.value.nik,
-
-              full_name: userForm.value.full_name,
-
-              department: userForm.value.department,
-
-              role: userForm.value.role,
-
-              username: userForm.value.username,
-
-              can_access_cms: (editingUserId.value === 3) ? 1 : (userForm.value.can_access_cms ? 1 : 0),
-
-              permissions: userForm.value.permissions
-
-            };
-
-            if (userForm.value.password) {
-
-              payload.password = userForm.value.password;
-
-            }
-
-
-
-            const res = await fetch('/api/admin/users/update', {
-
-              method: 'POST',
-
-              headers: { 'Content-Type': 'application/json' },
-
-              body: JSON.stringify(payload)
-
-            });
-
-            const data = await res.json();
-
-            if (data.ok) {
-
-              const successTitle = isEdit ? 'Pengguna Berhasil Diperbarui' : 'Pengguna Baru Berhasil Disimpan';
-
-              const successMsg = isEdit 
-
-                ? `Perubahan akun @${targetUsername} (${targetFullName}) berhasil disimpan.` 
-
-                : `Akun baru @${targetUsername} (${targetFullName}) berhasil dibuat.`;
-
-              resetUserForm();
-
-              await fetchUsers();
-
-              triggerToast(successTitle, data.message || successMsg, 'success');
-
-            } else {
-
-              triggerToast('Gagal', data.error || 'Gagal menyimpan pengguna.', 'error');
-
-            }
-
-          } catch (e) {
-
-            triggerToast('Gagal', e.message, 'error');
-
-          } finally {
-
-            isSavingUser.value = false;
-
-          }
-
-        };
-
-
-
-        const resetUserSession = async (u) => {
-
-          const confirmed = await showConfirmCard({
-
-            title: 'Reset Sesi Login',
-
-            message: `Putuskan sesi login aktif untuk akun "${u.username}"? Pengguna harus login ulang.`,
-
-            icon: 'fa-solid fa-key',
-
-            iconBg: 'bg-amber-100 text-amber-700',
-
-            confirmText: 'Ya, Reset Sesi',
-
-            confirmBtnClass: 'bg-amber-500 hover:bg-amber-600 text-white'
-
-          });
-
-          if (!confirmed) return;
-
-
-
-          try {
-
-            const res = await fetch('/api/admin/users/reset-session', {
-
-              method: 'POST',
-
-              headers: { 'Content-Type': 'application/json' },
-
-              body: JSON.stringify({ id: u.id })
-
-            });
-
-            const data = await res.json();
-
-            if (data.ok) {
-
-              triggerToast('Berhasil', `Sesi login untuk @${u.username} berhasil direset.`, 'success');
-
-            }
-
-          } catch (e) {
-
-            triggerToast('Gagal', e.message, 'error');
-
-          }
-
-        };
-
-
-
-        const deleteUser = async (u) => {
-
-          if (u.id === 3) {
-
-            triggerToast('Aksi Ditolak', 'Akun admin utama sistem dilindungi dan tidak dapat dihapus.', 'warn');
-
-            return;
-
-          }
-
-
-
-          const confirmed = await showConfirmCard({
-
-            title: 'Hapus Pengguna',
-
-            message: `Apakah Anda yakin ingin menghapus akun "${u.full_name}" (@${u.username})? Tindakan ini bersifat permanen.`,
-
-            icon: 'fa-solid fa-trash-can',
-
-            iconBg: 'bg-rose-100 text-rose-700',
-
-            confirmText: 'Ya, Hapus Akun',
-
-            confirmBtnClass: 'bg-rose-600 hover:bg-rose-700 text-white'
-
-          });
-
-          if (!confirmed) return;
-
-
-
-          try {
-
-            const res = await fetch('/api/admin/users/delete', {
-
-              method: 'POST',
-
-              headers: { 'Content-Type': 'application/json' },
-
-              body: JSON.stringify({ id: u.id })
-
-            });
-
-            const data = await res.json();
-
-            if (data.ok) {
-
-              triggerToast('Berhasil', data.message || 'Pengguna berhasil dihapus.', 'success');
-
-              if (editingUserId.value === u.id) resetUserForm();
-
-              await fetchUsers();
-
-            } else {
-
-              triggerToast('Gagal', data.error || 'Gagal menghapus pengguna.', 'error');
-
-            }
-
-          } catch (e) {
-
-            triggerToast('Gagal', e.message, 'error');
-
-          }
-
-        };
-
-
-
-        // Cloudinary
 
         const fetchCloudinarySettings = async () => {
-
           try {
-
             const res = await fetch('/api/admin/cloudinary/settings');
-
             const data = await res.json();
-
             if (data.ok && data.data) {
-
               cloudSettings.value = data.data;
-
-              if (data.data.cloud_name) cloudForm.value.cloud_name = data.data.cloud_name;
-
-              if (data.data.api_key) cloudForm.value.api_key = data.data.api_key;
-
+              cloudForm.value.cloud_name = data.data.cloud_name || '';
+              cloudForm.value.api_key = data.data.api_key || '';
+              cloudForm.value.api_secret = '';
             }
-
-          } catch (e) {
-
-            console.error('fetchCloudinarySettings error:', e);
-
-          }
-
+          } catch (e) {}
         };
-
-
 
         const saveCloudinarySettings = async () => {
-
-          if (!cloudForm.value.cloud_name && !cloudSettings.value.cloud_name) {
-
-            triggerToast('Validasi Gagal', 'Cloud Name wajib diisi.', 'warn');
-
-            return;
-
-          }
-
           isSavingCloud.value = true;
-
           try {
-
             const res = await fetch('/api/admin/cloudinary/settings', {
-
               method: 'POST',
-
               headers: { 'Content-Type': 'application/json' },
-
-              body: JSON.stringify({
-
-                cloud_name: cloudForm.value.cloud_name || cloudSettings.value.cloud_name,
-
-                api_key: cloudForm.value.api_key || cloudSettings.value.api_key,
-
-                api_secret: cloudForm.value.api_secret
-
-              })
-
+              body: JSON.stringify(cloudForm.value)
             });
-
             const data = await res.json();
-
             if (data.ok) {
-
-              cloudSettings.value = data.data;
-
-              cloudForm.value.api_secret = '';
-
               triggerToast('Berhasil', 'Kredensial Cloudinary berhasil disimpan.', 'success');
-
+              fetchCloudinarySettings();
             } else {
-
-              triggerToast('Gagal', data.error || 'Gagal menyimpan kredensial Cloudinary.', 'error');
-
+              triggerToast('Gagal', data.error, 'error');
             }
-
           } catch (e) {
-
-            triggerToast('Gagal', e.message, 'error');
-
+            triggerToast('Error', e.message, 'error');
           } finally {
-
             isSavingCloud.value = false;
-
           }
-
         };
-
-
 
         const testCloudinaryConnection = async () => {
-
           isTestingCloud.value = true;
-
-          cloudTestResult.value = null;
-
           try {
-
             const res = await fetch('/api/admin/cloudinary/test', {
-
               method: 'POST',
-
-              headers: { 'Content-Type': 'application/json' }
-
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(cloudForm.value)
             });
-
             const data = await res.json();
-
             const msg = data.data?.message || data.message || (data.ok ? 'Koneksi Cloudinary berhasil.' : 'Koneksi gagal.');
-
-            cloudTestResult.value = {
-
-              ok: data.ok,
-
-              message: msg
-
-            };
-
             triggerToast(data.ok ? 'Koneksi Berhasil' : 'Koneksi Gagal', msg, data.ok ? 'success' : 'error');
-
           } catch (e) {
-
-            const err = 'Gagal: ' + e.message;
-
-            cloudTestResult.value = { ok: false, message: err };
-
-            triggerToast('Koneksi Gagal', err, 'error');
-
+            triggerToast('Koneksi Gagal', 'Gagal: ' + e.message, 'error');
           } finally {
-
             isTestingCloud.value = false;
-
           }
-
         };
 
+        // Module Methods: Users
+        const fetchUsers = async () => {
+          loadingUsers.value = true;
+          try {
+            const res = await fetch('/api/admin/users');
+            const data = await res.json();
+            if (data.ok && Array.isArray(data.data)) usersList.value = data.data;
+          } catch (e) {}
+          finally { loadingUsers.value = false; }
+        };
 
+        const countCmsUsers = () => {
+          return usersList.value.filter(u => String(u.department || '').toLowerCase().includes('admin')).length;
+        };
+
+        const countRoleUsers = (roleKey) => {
+          return usersList.value.filter(u => (u.department || u.role || '').toLowerCase() === roleKey.toLowerCase()).length;
+        };
+
+        const getDeptBadgeClass = (d) => {
+          const s = String(d || '').toLowerCase();
+          if (s.includes('admin')) return 'bg-red-50 text-red-700 border border-red-200';
+          if (s.includes('qc')) return 'bg-purple-50 text-purple-700 border border-purple-200';
+          if (s.includes('ware') || s.includes('gudang')) return 'bg-blue-50 text-blue-700 border border-blue-200';
+          return 'bg-emerald-50 text-emerald-700 border border-emerald-200';
+        };
+
+        const countUserWritePerms = (u) => {
+          if (!u || !u.permissions) return 0;
+          const p = typeof u.permissions === 'string' ? JSON.parse(u.permissions || '{}') : u.permissions;
+          return Object.values(p).filter(v => v === 2 || v === '2' || v === 'full').length;
+        };
+
+        const countUserReadPerms = (u) => {
+          if (!u || !u.permissions) return 0;
+          const p = typeof u.permissions === 'string' ? JSON.parse(u.permissions || '{}') : u.permissions;
+          return Object.values(p).filter(v => v === 1 || v === '1' || v === 'read').length;
+        };
+
+        const setUserPermission = (k, lvl) => {
+          userForm.value.permissions[k] = lvl;
+        };
+
+        const applyUserPreset = (preset) => {
+          const allMenus = cmsManagedMenuGroups.flatMap(g => g.menus).map(m => m.key);
+          const perms = {};
+          if (preset === 'admin') {
+            allMenus.forEach(k => perms[k] = 2);
+            userForm.value.can_access_cms = true;
+            userForm.value.department = 'administrator';
+            userForm.value.role = 'admin';
+          } else if (preset === 'operator') {
+            allMenus.forEach(k => perms[k] = 0);
+            ['assembly', 'assy_testing', 'production_hold'].forEach(k => perms[k] = 2);
+            userForm.value.can_access_cms = false;
+            userForm.value.department = 'assembly';
+            userForm.value.role = 'assembly';
+          } else if (preset === 'readonly') {
+            allMenus.forEach(k => perms[k] = 1);
+            userForm.value.can_access_cms = false;
+          }
+          userForm.value.permissions = perms;
+        };
+
+        const resetUserForm = () => {
+          editingUserId.value = null;
+          userForm.value = {
+            username: '',
+            full_name: '',
+            password: '',
+            department: 'assembly',
+            role: 'assembly',
+            can_access_cms: false,
+            permissions: {}
+          };
+        };
+
+        const editUser = (u) => {
+          editingUserId.value = u.id;
+          let p = {};
+          try {
+            p = typeof u.permissions === 'string' ? JSON.parse(u.permissions || '{}') : (u.permissions || {});
+          } catch (e) {}
+          userForm.value = {
+            username: u.username,
+            full_name: u.full_name || u.username,
+            password: '',
+            department: u.department || u.role || 'assembly',
+            role: u.role || 'assembly',
+            can_access_cms: Boolean(u.id === 3 || u.can_access_cms),
+            permissions: p
+          };
+          openUserForm.value = true;
+        };
+
+        const saveUser = async () => {
+          isSavingUser.value = true;
+          try {
+            const isEdit = Boolean(editingUserId.value);
+            const payload = {
+              user_id: editingUserId.value,
+              username: userForm.value.username,
+              full_name: userForm.value.full_name,
+              department: userForm.value.department,
+              role: userForm.value.department === 'administrator' ? 'admin' : userForm.value.department,
+              can_access_cms: userForm.value.can_access_cms,
+              permissions: userForm.value.permissions
+            };
+            if (userForm.value.password) payload.password = userForm.value.password;
+
+            const res = await fetch('/api/admin/users/update', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (data.ok) {
+              triggerToast('Berhasil', isEdit ? 'Pengguna berhasil diperbarui.' : 'Pengguna baru berhasil dibuat.', 'success');
+              openUserForm.value = false;
+              resetUserForm();
+              fetchUsers();
+            } else {
+              triggerToast('Gagal', data.error || 'Gagal menyimpan pengguna.', 'error');
+            }
+          } catch (e) {
+            triggerToast('Error', e.message, 'error');
+          } finally {
+            isSavingUser.value = false;
+          }
+        };
+
+        const resetUserSession = async (u) => {
+          const confirmed = await showConfirmCard({
+            title: 'Reset Sesi Login',
+            message: `Putuskan sesi aktif untuk akun @${u.username}? Pengguna harus login ulang.`,
+            confirmText: 'Reset Sesi',
+            confirmBtnClass: 'bg-amber-600 hover:bg-amber-700 text-white'
+          });
+          if (!confirmed) return;
+          try {
+            const res = await fetch('/api/admin/users/reset-session', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ username: u.username })
+            });
+            const data = await res.json();
+            if (data.ok) {
+              triggerToast('Berhasil', `Sesi @${u.username} berhasil direset.`, 'success');
+              fetchUsers();
+            } else {
+              triggerToast('Gagal', data.error, 'error');
+            }
+          } catch (e) {
+            triggerToast('Error', e.message, 'error');
+          }
+        };
+
+        const deleteUser = async (u) => {
+          if (u.id === 3) {
+            triggerToast('Dilarang', 'Akun Administrator utama sistem tidak dapat dihapus.', 'error');
+            return;
+          }
+          const confirmed = await showConfirmCard({
+            title: 'Hapus Pengguna',
+            message: `Apakah Anda yakin ingin menghapus akun @${u.username}? Tindakan ini permanen.`,
+            confirmText: 'Hapus Akun',
+            confirmBtnClass: 'bg-red-600 hover:bg-red-700 text-white'
+          });
+          if (!confirmed) return;
+          try {
+            const res = await fetch('/api/admin/users/delete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ user_id: u.id })
+            });
+            const data = await res.json();
+            if (data.ok) {
+              triggerToast('Berhasil', 'Pengguna berhasil dihapus.', 'success');
+              fetchUsers();
+            } else {
+              triggerToast('Gagal', data.error, 'error');
+            }
+          } catch (e) {
+            triggerToast('Error', e.message, 'error');
+          }
+        };
 
         return {
-
           isCmsAuthenticated,
-
           adminUser,
-
           loginForm,
-
           showPassword,
-
           loginLoading,
-
           loginError,
-
           submitCmsLogin,
-
           logoutCms,
-
           activeTab,
-
+          switchTab,
+          fetchActiveTabData,
           loading,
+          statsVisible,
 
+          // Dashboard stats & Reporting
+          dashboardStats,
+          loadDashboardStats,
+          lastSyncTimeStr,
+          startAutoUpdate,
+          stopAutoUpdate,
+          reportPeriod,
+          setReportPeriod,
+          dailyKpi,
+          activePeriodDateRangeLabel,
+          activePeriodStats,
+          activePeriodTrays,
+          countDeptUsers,
+          formatDateTime,
+          renderTimeTrendsChart,
+          renderReportCharts,
+          reportPeriodEvaluationNote,
+          selectedReportDate,
+          selectedWeekOffset,
+          selectedReportMonth,
+          customStartDate,
+          customEndDate,
+          chartWindowMode,
+          latestProductionDate,
+          shiftReportDate,
+          setReportDateToday,
+          shiftReportWeek,
+          setReportWeekCurrent,
+          shiftReportMonth,
+          setReportMonthCurrent,
+          setQuickCustomRange,
+          setChartWindow,
+          updateChartDataFromRaw,
+          jumpToLatestDate,
+          formatShortDate,
+          todayIsoStr,
+
+          // Cleanup
           confirmClearTrays,
-
           confirmClearDowntimes,
-
           confirmClearAuditLogs,
 
+          // Errors
           errorLogs,
-
           errorPage,
-
           errorPerPage,
-
           totalErrorPages,
-
           pagedErrorLogs,
-
           fetchErrorLogs,
-
           clearErrorLogs,
 
+          // Slow Queries
           slowQueries,
-
           slowPage,
-
           slowPerPage,
-
           totalSlowPages,
-
           pagedSlowQueries,
-
           fetchSlowQueries,
-
           clearSlowQueries,
 
+          // Anomalies
           anomalySummary,
-
           anomalyCategoryFilter,
-
           anomalyPage,
-
           anomalyPerPage,
-
           allAnomalyItems,
-
           filteredAnomalyItems,
-
           totalAnomalyPages,
-
           pagedAnomalyItems,
-
           scanAnomalies,
-
           repairAnomalies,
 
+          // DO & Cloud Settings
           doSettings,
-
           fetchDoSettings,
-
           saveDoSettings,
-
           cloudSettings,
-
           cloudForm,
-
           isTestingCloud,
-
           isSavingCloud,
-
           cloudTestResult,
-
           fetchCloudinarySettings,
-
           saveCloudinarySettings,
-
           testCloudinaryConnection,
 
+          // Users Management
           usersList,
-
           loadingUsers,
-
           editingUserId,
-
-          showUserPw,
-
           isSavingUser,
-
           userSearchQuery,
-
           userDeptFilter,
-
           userPage,
-
           userPerPage,
-
           totalUserPages,
-
           pagedUsersList,
-
           userForm,
-
-          openMenuGroups,
-
-          toggleMenuGroup,
-
-          setAllMenuGroups,
-
+          openUserForm,
+          selectedUserIds,
+          isUserSelected,
+          isAllUsersSelected,
+          toggleSelectAllUsers,
+          bulkResetSessions,
           cmsManagedMenuGroups,
-
           fetchUsers,
-
           filteredUsersList,
-
           countCmsUsers,
-
           countRoleUsers,
-
           getDeptBadgeClass,
-
           countUserWritePerms,
-
           countUserReadPerms,
-
           setUserPermission,
-
           applyUserPreset,
-
           resetUserForm,
-
           editUser,
-
           saveUser,
-
           resetUserSession,
-
           deleteUser,
 
+          // Global UI
           isCmsSidebarOpen,
-
           toast,
-
           triggerToast,
-
           confirmModalState,
-
           showConfirmCard,
-
-          showPromptCard,
-
-          handleConfirmCard,
-
+          handleConfirmCard
         };
-
       }
-
     }).mount('#adminApp');
-
   </script>
-
 </body>
-
 </html>
