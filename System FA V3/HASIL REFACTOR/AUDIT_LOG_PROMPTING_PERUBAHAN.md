@@ -42,7 +42,7 @@ flowchart TD
 ## 3. Log Kronologis Lengkap Seluruh 176 Prompting & Perubahan Sistem
 
 
-### Log Kronologis Perubahan Sistem (Prompt #083)
+### Log Kronologis Perubahan Sistem (Prompt #084)
 
 | No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
 |:---:|:---:|---|---|---|
@@ -129,3 +129,4 @@ flowchart TD
 | **#081** | `2026-11-10 03:54:46` | **Print Layout & Kalibrasi** | sip ini sudah simetris jarak kiri kanan nya, gedein margin nya 1.5, terus margin atasnya tambahin 2.5 | Kalibrasi presisi tata letak cetak: margin kiri/kanan, warna batas abu-abu, posisi footer, dan margin simetris cetak dokumen. |
 | **#082** | `2026-11-10 04:01:52` | **Print Layout & Kalibrasi** | terapkan untuk seluruh dokumen yang di cetak dokumen sudah? | Kalibrasi presisi tata letak cetak: margin kiri/kanan, warna batas abu-abu, posisi footer, dan margin simetris cetak dokumen. |
 | **#083** | `2026-11-10 04:04:46` | **System Maintenance** | data ini diambil dari mana | Penyesuaian konfigurasi dan penanganan bug sesuai instruksi operasional. |
+| **#084** | `2026-11-10 04:21:05` | **Customer & History** | tidak bisa menyimpan template pelanggan foto kedua pada halaman history untuk perakitan kan saya minta untuk hasil perakitannya yang dimasukin, semua perubahan yang terjadi tidak mengubah statuss yang ada dalam menu history itu, yang berubah statusnya ketika da perubahan terhadap set itu menu bagian hasil perakitan. untuk data yang di ambil nanti diambil nya dari status di menu history perakitannya ngerti kan? kemudian untuk menu bagian PL dan SJ ada revisi. ketika membuka menu nya kemudian memilih jenis PL dan SJ (antara back date dan realtime). Untuk PL: - Selesaikan dulu form jenis kemasan dan parameter pengiriman. form alokasi masih di hide atau di tutup - setelah form jenis kemasan dan parameter pengiriman selesai, tutup form 1 dan buka form ke 2 untuk memasukan alokasi nomor, sediakan tombol back ketika di click form 1 kebuka dan form 2 otomatis tertutup dan datanya maish tersimpan Untuk PL: - selesaikan form data penerima/customer (form lainnya masih ketutup atau di hide) - ketika form customer sudah selesai tutup form 1 dan buka form 2, untuk kembali ke form 1 sediakan tombol back, ketika di click maka tutup form 2 buukan form 1. - ketika form 2 sudah selesai maka ketik selanjutnya form 3 kebuka form 2 dan 1 tertutup. tombol back tersedia masih untuk kembali ke form proses sebelum, begitupun form proses yang selanjut selanjutnya | Memperbaiki fitur simpan template customer dan merapikan tampilan riwayat perakitan. |
