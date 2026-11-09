@@ -42,7 +42,7 @@ flowchart TD
 ## 3. Log Kronologis Lengkap Seluruh 176 Prompting & Perubahan Sistem
 
 
-### Log Kronologis Perubahan Sistem (Prompt #062)
+### Log Kronologis Perubahan Sistem (Prompt #063)
 
 | No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
 |:---:|:---:|---|---|---|
@@ -108,3 +108,4 @@ flowchart TD
 | **#060** | `2026-11-09 10:11:09` | **UI/UX & Modal Backdrop** | ketika buka card kadang burem nya/blurnya itu tidak full dan masih ada kaya gitu seperti yang saya lampirkan di poto pertama foto kedua itu hapus saja yang berada di kanan nya kan udah ada side bar yang di kiri, pindah pindah menu nya dibagian itu saja jangan menggunakan button itu fto ketiga itu bisa tidak diubah jadi warna merah saja tanpa degradasi gitu? biar tidak terlihat ai slop untuk di bagian packing list dan surat jalan apakah bisa semua formnya itu ditutup terlebih dahulu ketika selesai milih jenisnya baru buka satu, setelah menyelsaikan input yang itu click lanjut maka buka dua dan yang sebelumnya tertutup dan pergerakannya smooth tidak kaku dan tiba tiba ada animasi tutup nya ngerti ga? | Memperbaiki backdrop blur agar menutupi seluruh layar modal tanpa terpotong. |
 | **#061** | `2026-11-09 11:50:38` | **Layout Restoration** | ini kenapa jadi gini astaga | Merestorasi fokus layout dan mengembalikan struktur form yang sempat mengalami pergeseran visual. |
 | **#062** | `2026-11-09 11:50:56` | **Layout Restoration** | ini kenapa jadi gini astaga | Merestorasi fokus layout dan mengembalikan struktur form yang sempat mengalami pergeseran visual. |
+| **#063** | `2026-11-09 12:23:56` | **Layout Restoration** | MALAH JADI BERANTAKAN ANJING, FOKUS SAMA CHAT TERAKHIR YANG SAYA MINTA BANGSAT KENAPA KE FOTO FOTO YANG SEBELUMNYA DIBAWA JUGA ANJING DONGO | Merestorasi fokus layout dan mengembalikan struktur form yang sempat mengalami pergeseran visual. |
