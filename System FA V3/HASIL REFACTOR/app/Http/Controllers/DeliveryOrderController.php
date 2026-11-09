@@ -22,6 +22,156 @@ class DeliveryOrderController extends Controller
     }
 
     /**
+     * Dashboard Stats DO: Total Rakit, Siap Kirim, Terkirim, Chart Good/Hold/Scrap
+     */
+    public function dashboardStats()
+    {
+        // a. Total keseluruhan set yang sudah dirakit (mencakup seluruh hasil riwayat fisik perakitan: Good, Hold, Scrap)
+        $totalAssembledSets = DB::table('assemblies')
+            ->where(function ($w) {
+                $w->whereNotNull('finished_at')
+                  ->orWhere(function ($sub) {
+                      $sub->whereNotNull('status')->where('status', '!=', '');
+                  });
+            })
+            ->count();
+        $totalAssembledParts = $totalAssembledSets * 3;
+
+        // b. Set yang sudah siap kirim (Good Receipts / lolos hingga gudang ACC)
+        $shippedSNs = DB::table('packing_list_items')->pluck('serial_number')->toArray();
+        $readyToShipQuery = DB::table('assemblies as a')
+            ->whereIn(DB::raw("UPPER(COALESCE(a.warehouse_receipt_status, ''))"), ['ACCEPTED', 'ACC'])
+            ->where(function ($w) {
+                $w->whereNull('a.is_declined')->orWhere('a.is_declined', 0);
+            });
+        if (!empty($shippedSNs)) {
+            $readyToShipQuery->whereNotIn('a.part15_sn', $shippedSNs);
+        }
+        $readyToShipSets = $readyToShipQuery->count();
+        $readyToShipParts = $readyToShipSets * 3;
+
+        // c. Sudah dikirim (sudah masuk packing list / surat jalan)
+        $shippedSets = count($shippedSNs);
+        $shippedParts = $shippedSets * 3;
+
+        // d. Chart barang Good, Hold, Scrap berdasarkan status murni di history perakitan
+        $goodCount = DB::table('assemblies')
+            ->where(function ($w) {
+                $w->where('original_assembly_status', 'Good')
+                  ->orWhere(function ($sub) {
+                      $sub->whereNull('original_assembly_status')
+                          ->where('status', 'Good');
+                  });
+            })->count();
+
+        $holdCount = DB::table('assemblies')
+            ->where(function ($w) {
+                $w->where('original_assembly_status', 'Hold')
+                  ->orWhere(function ($sub) {
+                      $sub->whereNull('original_assembly_status')
+                          ->where('status', 'Hold');
+                  });
+            })->count();
+
+        $scrapCount = DB::table('assemblies')
+            ->where(function ($w) {
+                $w->where('original_assembly_status', 'Scrap')
+                  ->orWhere(function ($sub) {
+                      $sub->whereNull('original_assembly_status')
+                          ->where('status', 'Scrap');
+                  });
+            })->count();
+
+        // Summary dokumen
+        $totalDO = DB::table('delivery_orders')->count();
+        $totalPL = DB::table('standalone_packing_labels')->count();
+        $totalCustomers = DB::table('customers')->count();
+
+        return response()->json([
+            'ok' => true,
+            'data' => [
+                'total_assembled_sets' => $totalAssembledSets,
+                'total_assembled_parts' => $totalAssembledParts,
+                'ready_to_ship_sets' => $readyToShipSets,
+                'ready_to_ship_parts' => $readyToShipParts,
+                'shipped_sets' => $shippedSets,
+                'shipped_parts' => $shippedParts,
+                'quality' => [
+                    'good_sets' => $goodCount,
+                    'good_parts' => $goodCount * 3,
+                    'hold_sets' => $holdCount,
+                    'hold_parts' => $holdCount * 3,
+                    'scrap_sets' => $scrapCount,
+                    'scrap_parts' => $scrapCount * 3,
+                ],
+                'summary' => [
+                    'total_do' => $totalDO,
+                    'total_pl' => $totalPL,
+                    'total_customers' => $totalCustomers
+                ]
+            ]
+        ]);
+    }
+
+    /**
+     * Cek keunikan nomor dokumen (SJ atau PL) secara instan
+     */
+    public function checkUniqueDocNumber(Request $request)
+    {
+        $type = strtolower(trim($request->input('type', 'sj')));
+        $number = trim($request->input('number', ''));
+
+        if (empty($number)) {
+            return response()->json(['ok' => true, 'is_unique' => true]);
+        }
+
+        if ($type === 'crate') {
+            $inPl = DB::table('packing_lists')->where('crate_id', $number)->exists();
+            $inSpl = DB::table('standalone_packing_labels')->where('crates_json', 'like', "%\"crate_id\":\"{$number}\"%")->exists();
+            $exists = $inPl || $inSpl;
+            return response()->json([
+                'ok' => true,
+                'type' => 'crate',
+                'number' => $number,
+                'is_unique' => !$exists,
+                'message' => $exists ? "ID Peti {$number} sudah pernah dibuat atau terdaftar! Silakan sesuaikan nomor batch atau nomor pengiriman." : "ID Peti tersedia."
+            ]);
+        } elseif ($type === 'box') {
+            $inBox = DB::table('packing_list_boxes')->where('box_id', $number)->exists();
+            $inSpl = DB::table('standalone_packing_labels')->where('crates_json', 'like', "%\"box_id\":\"{$number}\"%")->exists();
+            $exists = $inBox || $inSpl;
+            return response()->json([
+                'ok' => true,
+                'type' => 'box',
+                'number' => $number,
+                'is_unique' => !$exists,
+                'message' => $exists ? "ID Dus {$number} sudah pernah dibuat atau terdaftar! Silakan sesuaikan nomor batch atau nomor pengiriman." : "ID Dus tersedia."
+            ]);
+        } elseif ($type === 'pl') {
+            $inPl = DB::table('packing_lists')->where('pl_number', $number)->exists();
+            $inLbl = DB::table('standalone_packing_labels')->where('pl_number', $number)->exists();
+            $inDo = DB::table('delivery_orders')->where('pl_number', $number)->exists();
+            $exists = $inPl || $inLbl || $inDo;
+            return response()->json([
+                'ok' => true,
+                'type' => 'pl',
+                'number' => $number,
+                'is_unique' => !$exists,
+                'message' => $exists ? "Packing List dengan nomor {$number} sudah dibuat! Silakan cek terlebih dahulu." : "Nomor Packing List tersedia."
+            ]);
+        } else {
+            $inDo = DB::table('delivery_orders')->where('do_number', $number)->exists();
+            return response()->json([
+                'ok' => true,
+                'type' => 'sj',
+                'number' => $number,
+                'is_unique' => !$inDo,
+                'message' => $inDo ? "Surat Jalan dengan nomor {$number} sudah dibuat! Silakan cek terlebih dahulu." : "Nomor Surat Jalan tersedia."
+            ]);
+        }
+    }
+
+    /**
      * Mengambil daftar Delivery Orders
      */
     public function index(Request $request)
@@ -225,21 +375,34 @@ class DeliveryOrderController extends Controller
         }
 
         // Ambil unit yang telah melewati SEMUA proses hingga Penerimaan Fisik Gudang (ACC)
+        // Unit valid mencakup yang langsung Good maupun yang setelah Hold / Dirakit Ulang telah lolos verifikasi Admin hingga ACC Gudang
         $available = DB::table('assemblies as a')
             ->join('trays as t', 'a.tray_id', '=', 't.id')
             ->join('master_stocks as m15', function ($join) {
                 $join->on('a.part15_sn', '=', 'm15.sn')
                      ->where('m15.part_type', '=', '15');
             })
-            ->where('a.status', 'Good')
-            ->where('a.assy_test_status', 'Good')
-            ->where('a.qc_status', 'GOOD')
+            ->where(function ($w) {
+                $w->where('a.status', 'Good')
+                  ->orWhere('a.status', 'Dirakit Ulang')
+                  ->orWhere('a.status', 'Selesai')
+                  ->orWhereIn('a.verified_status', ['APPROVED', 'APPROVED_QC', 'APPROVED_REREG', 'APPROVED_REASSEMBLY', 'COMPLETED_PU', 'APPROVED_PROCEED_TF1', 'APPROVED_PROCEED_TF2', 'ACC']);
+            })
+            ->where(function ($w) {
+                $w->where('a.assy_test_status', 'Good')
+                  ->orWhere('a.assy_test_status', 'Pass')
+                  ->orWhere('a.assy_test_status', 'Lolos')
+                  ->orWhereIn('a.verified_status', ['APPROVED_QC', 'APPROVED_PROCEED_TF2', 'APPROVED_PROCEED_QC', 'ACC', 'APPROVED']);
+            })
+            ->where(function ($w) {
+                $w->whereIn(DB::raw("UPPER(COALESCE(a.qc_status, ''))"), ['GOOD', 'GOOD_QC', 'PASS', 'ACC'])
+                  ->orWhereIn('a.verified_status', ['APPROVED_QC', 'ACC', 'APPROVED']);
+            })
             ->where(function ($w) {
                 $w->whereNull('a.is_declined')->orWhere('a.is_declined', 0);
             })
             ->whereIn(DB::raw("UPPER(COALESCE(a.warehouse_receipt_status, ''))"), ['ACCEPTED', 'ACC'])
-            ->whereIn(DB::raw("UPPER(COALESCE(a.verified_status, ''))"), ['ACC', 'ACCEPTED'])
-            ->whereNotIn('m15.status', ['Tersedia', 'Scrap', 'Part Diganti', 'Hold', 'Declined', 'Decline'])
+            ->whereNotIn('m15.status', ['Scrap', 'Part Diganti', 'Declined', 'Decline'])
             ->whereNotIn('a.part15_sn', $usedSns)
             ->select([
                 'a.part15_sn as serial_number',
@@ -272,7 +435,19 @@ class DeliveryOrderController extends Controller
         $month = $date->format('m');
         $year = $date->format('Y');
 
-        // Cari nomor urut terakhir pada bulan & tahun ini
+        // Nomor batch aktif dikendalikan terpusat dari Admin CMS
+        $currentBatch = max(1, (int)($settings?->current_batch_number ?: 1));
+
+        // Auto count urutan pengiriman terpisah per batch:
+        // SJ Count:
+        $sjCount = DeliveryOrder::where('batch_number', $currentBatch)->count();
+        $nextSjSeq = $sjCount + 1;
+
+        // PL Count:
+        $plCount = DB::table('standalone_packing_labels')->where('batch_number', $currentBatch)->count();
+        $nextPlSeq = $plCount + 1;
+
+        // Cari nomor urut dokumen terakhir pada bulan & tahun ini
         $lastDo = DeliveryOrder::whereYear('do_date', $year)
             ->whereMonth('do_date', $month)
             ->latest('id')
@@ -287,23 +462,42 @@ class DeliveryOrderController extends Controller
         $nextDoNumber = "{$seqStr}{$prefix}{$month}/{$year}";
         $nextPlNumber = "{$seqStr}{$plPrefix}{$month}/{$year}";
 
-        $batchNum = (int)$request->input('batch_number', 1);
-        $batch2Digit = str_pad($batchNum, 2, '0', STR_PAD_LEFT);
-        $pp2Digit = str_pad($seq, 2, '0', STR_PAD_LEFT);
+        $batch2Digit = str_pad($currentBatch, 2, '0', STR_PAD_LEFT);
+        $pp2DigitSj = str_pad($nextSjSeq, 2, '0', STR_PAD_LEFT);
+        $pp2DigitPl = str_pad($nextPlSeq, 2, '0', STR_PAD_LEFT);
         $yymm = $date->format('y') . $month;
 
-        // Format Standar Baru: YYMM-BB-PPDD (Peti) & YYMM-BB-PPDD-SS (Dus)
-        $cratePrefix = "{$yymm}-{$batch2Digit}-{$pp2Digit}";
+        // Format Standar: YYMM-BB-PPDD (Peti) & YYMM-BB-PPDD-SS (Dus)
+        $cratePrefix = "{$yymm}-{$batch2Digit}-{$pp2DigitSj}";
+        $plCratePrefix = "{$yymm}-{$batch2Digit}-{$pp2DigitPl}";
         $nextBatchNumber = "{$yymm}-" . str_pad($seq, 3, '0', STR_PAD_LEFT);
 
         return $this->successResponse([
+            'do_number' => $nextDoNumber,
             'next_number' => $nextDoNumber,
             'next_pl_number' => $nextPlNumber,
             'next_batch' => $nextBatchNumber,
+            'current_batch' => $currentBatch,
+            'batch_number' => $currentBatch,
+            'next_sj_seq' => $nextSjSeq,
+            'next_pl_seq' => $nextPlSeq,
+            'delivery_seq' => $nextSjSeq,
             'sequence' => $seq,
-            'delivery_seq' => $seq,
-            'batch_number_formatted' => $batch2Digit,
+            'do_date_iso' => $date->format('Y-m-d'),
             'crate_prefix' => $cratePrefix,
+            'pl_crate_prefix' => $plCratePrefix,
+            'crate_sequence' => $nextSjSeq,
+            'box_sequence' => 1,
+            'customer_name' => $settings?->default_customer_name ?: 'KEMHAN RI',
+            'customer_address' => $settings?->default_customer_address ?: '',
+            'customer_phone' => $settings?->default_customer_phone ?: '',
+            'customer_fax' => $settings?->default_customer_fax ?: '',
+            'contract_number' => $settings?->default_contract_number ?: 'TRAK/2509/APBN/XI/2025/KEMHAN',
+            'program_name' => $settings?->default_program_name ?: 'PENGADAAN ALPALHANKAM MATSUSSUS',
+            'product_name' => $settings?->default_product_name ?: 'Nanggala P9',
+            'created_by_name' => $settings?->default_issuer_name ?: 'Rezka Rachdana',
+            'created_by_title' => $settings?->default_issuer_title ?: 'Kepala Departemen',
+            'created_by_department' => $settings?->default_issuer_department ?: 'Logistik & PPIC',
             'sample_crate_id' => "{$cratePrefix}01",
             'sample_box_id' => "{$cratePrefix}01-01",
             'crate_capacity' => $settings?->crate_capacity ?: 20,
@@ -317,8 +511,35 @@ class DeliveryOrderController extends Controller
      */
     public function store(Request $request)
     {
+        $doNum = trim($request->input('do_number', ''));
+        if (empty($doNum)) {
+            return response()->json(['ok' => false, 'error' => 'Nomor Surat Jalan (DO) wajib diisi!'], 400);
+        }
+
+        // 1. Cek Keunikan ID Surat Jalan (ID SJ)
+        if (DB::table('delivery_orders')->where('do_number', $doNum)->exists()) {
+            return response()->json([
+                'ok' => false,
+                'error' => "Surat Jalan dengan nomor {$doNum} sudah dibuat! Silakan cek terlebih dahulu."
+            ], 422);
+        }
+
+        // 2. Cek Keunikan ID Packing List (ID PL)
+        $plNum = trim($request->input('pl_number', ''));
+        if (!empty($plNum)) {
+            $inPl = DB::table('packing_lists')->where('pl_number', $plNum)->exists();
+            $inLbl = DB::table('standalone_packing_labels')->where('pl_number', $plNum)->exists();
+            $inDo = DB::table('delivery_orders')->where('pl_number', $plNum)->exists();
+            if ($inPl || $inLbl || $inDo) {
+                return response()->json([
+                    'ok' => false,
+                    'error' => "Packing List dengan nomor {$plNum} sudah dibuat! Silakan cek terlebih dahulu."
+                ], 422);
+            }
+        }
+
         $request->validate([
-            'do_number' => 'required|string|unique:delivery_orders,do_number',
+            'do_number' => 'required|string',
             'do_date' => 'required|date',
             'customer_name' => 'required|string',
             'crates' => 'required|array',
@@ -329,6 +550,63 @@ class DeliveryOrderController extends Controller
             $totalCrates = count($crates);
             $totalBoxes = 0;
             $totalUnits = 0;
+
+            $doDateStr = $request->input('do_date') ?: now()->toDateString();
+            $targetDt = \Carbon\Carbon::parse($doDateStr);
+            $sjMode = strtolower(trim((string)$request->input('sj_mode', '')));
+            $isBackdate = $request->boolean('is_backdate') || ($sjMode === 'backdate') || ($targetDt->toDateString() < now()->toDateString());
+            if (!$sjMode) {
+                $sjMode = $isBackdate ? 'backdate' : 'realtime';
+            }
+
+            $consumedPlIdsToMark = [];
+
+            // Periksa consumed PL dari input eksplisit
+            $explicitPlIds = (array) $request->input('consumed_pl_ids', []);
+            if ($request->filled('consumed_standalone_id')) {
+                $explicitPlIds[] = $request->input('consumed_standalone_id');
+            }
+            foreach ($crates as $c) {
+                if (!empty($c['consumed_pl_id'])) $explicitPlIds[] = $c['consumed_pl_id'];
+                foreach ($c['boxes'] ?? [] as $b) {
+                    if (!empty($b['consumed_pl_id'])) $explicitPlIds[] = $b['consumed_pl_id'];
+                }
+            }
+            $explicitPlIds = array_unique(array_filter($explicitPlIds));
+
+            if (!empty($explicitPlIds)) {
+                $checkPls = DB::table('standalone_packing_labels')->whereIn('id', $explicitPlIds)->get();
+                foreach ($checkPls as $cpl) {
+                    // Aturan 1: Hanya bisa di-consume 1 kali
+                    if ($cpl->is_consumed || $cpl->delivery_order_id) {
+                        return response()->json([
+                            'ok' => false,
+                            'error' => "Dokumen Packing List {$cpl->pl_number} sudah pernah digunakan (di-consume) pada Surat Jalan lain dan tidak dapat digunakan lagi!"
+                        ], 422);
+                    }
+                    // Aturan 2: Mode harus sama (backdate -> backdate, realtime -> realtime)
+                    $cplMode = $cpl->pl_mode ?: ($cpl->is_backdate ? 'backdate' : 'realtime');
+                    if ($cplMode !== $sjMode) {
+                        return response()->json([
+                            'ok' => false,
+                            'error' => "Ketidakcocokan Jenis Dokumen: Packing List {$cpl->pl_number} dibuat dengan mode '{$cplMode}', sehingga tidak dapat dikonsumsi oleh Surat Jalan yang dibuat dengan mode '{$sjMode}'. Syarat consume adalah jenis mode harus sama."
+                        ], 422);
+                    }
+                    $consumedPlIdsToMark[] = $cpl->id;
+                }
+            }
+
+            foreach ($crates as $c) {
+                foreach ($c['boxes'] ?? [] as $b) {
+                    $totalBoxes++;
+                    foreach ($b['items'] ?? [] as $it) {
+                        $sn = trim(is_array($it) ? ($it['serial_number'] ?? '') : (string)$it);
+                        if (!empty($sn)) {
+                            $totalUnits++;
+                        }
+                    }
+                }
+            }
 
             // VALIDASI KEPATUHAN ALUR & ANTI-DUPLIKASI SURAT JALAN
             $seenInPayload = [];
@@ -355,34 +633,87 @@ class DeliveryOrderController extends Controller
                                 ], 400);
                             }
 
-                            // Anti-duplikasi dengan Standalone Packing Label yang tersimpan
-                            $existingLabels = DB::table('standalone_packing_labels')->pluck('crates_json', 'pl_number');
-                            foreach ($existingLabels as $plNum => $cj) {
-                                $cratesJsonArr = json_decode($cj, true) ?: [];
+                            // Anti-duplikasi dengan Standalone Packing Label yang tersimpan (kecuali jika dikonsumsi ke DO ini)
+                            $existingLabels = DB::table('standalone_packing_labels')->get(['id', 'pl_number', 'label_batch_id', 'crates_json', 'is_consumed', 'delivery_order_id', 'pl_mode', 'is_backdate']);
+                            foreach ($existingLabels as $lblRow) {
+                                $plNum = $lblRow->pl_number;
+                                $cratesJsonArr = json_decode($lblRow->crates_json, true) ?: [];
                                 foreach ($cratesJsonArr as $cjCrate) {
                                     foreach ($cjCrate['boxes'] ?? [] as $cjBox) {
                                         foreach ($cjBox['items'] ?? [] as $cjItem) {
                                             $exSn = strtoupper(trim(is_array($cjItem) ? ($cjItem['serial_number'] ?? '') : (string)$cjItem));
                                             if ($exSn === strtoupper($sn)) {
-                                                return response()->json([
-                                                    'ok' => false,
-                                                    'error' => "Nomor seri {$sn} sudah pernah terdaftar pada Dokumen Packing List {$plNum}!"
-                                                ], 400);
+                                                // Jika part ini dikonsumsi secara sah dari Peti/Dus packing label tersebut, perbolehkan
+                                                $consumedPL = $c['consumed_from_pl'] ?? ($b['consumed_from_pl'] ?? ($request->input('consumed_from_pl') ?? null));
+                                                $consumedStandaloneId = $request->input('consumed_standalone_id');
+                                                $consumedCrateId = $c['consumed_source_crate_id'] ?? ($c['crate_id'] ?? null);
+                                                $consumedBoxId = $b['consumed_source_box_id'] ?? ($b['box_id'] ?? null);
+                                                $isLegitConsume = ($consumedPL && ($consumedPL === $plNum || $consumedPL === $lblRow->label_batch_id)) ||
+                                                                 ($consumedStandaloneId && $lblRow->id == $consumedStandaloneId) ||
+                                                                 ($consumedCrateId && isset($cjCrate['crate_id']) && $consumedCrateId === $cjCrate['crate_id']) ||
+                                                                 ($consumedBoxId && isset($cjBox['box_id']) && $consumedBoxId === $cjBox['box_id']) ||
+                                                                 ($consumedBoxId && isset($cjCrate['box_id']) && $consumedBoxId === $cjCrate['box_id']) ||
+                                                                 ($consumedBoxId && $consumedBoxId === $lblRow->label_batch_id) ||
+                                                                 ($consumedBoxId && $consumedBoxId === $plNum);
+                                                if (!$isLegitConsume) {
+                                                    return response()->json([
+                                                        'ok' => false,
+                                                        'error' => "Nomor seri {$sn} sudah pernah terdaftar pada Dokumen Packing List {$plNum}!"
+                                                    ], 400);
+                                                }
+
+                                                // Validasi Aturan 1: PL hanya bisa di-consume 1 kali
+                                                if ($lblRow->is_consumed || $lblRow->delivery_order_id) {
+                                                    return response()->json([
+                                                        'ok' => false,
+                                                        'error' => "Dokumen Packing List {$plNum} sudah pernah digunakan (di-consume) pada Surat Jalan lain dan tidak dapat digunakan lagi!"
+                                                    ], 422);
+                                                }
+
+                                                // Validasi Aturan 2: Jenis mode harus sama persis (backdate -> backdate, realtime -> realtime)
+                                                $lblMode = $lblRow->pl_mode ?: ($lblRow->is_backdate ? 'backdate' : 'realtime');
+                                                if ($lblMode !== $sjMode) {
+                                                    return response()->json([
+                                                        'ok' => false,
+                                                        'error' => "Ketidakcocokan Jenis Dokumen: Packing List {$plNum} dibuat dengan mode '{$lblMode}', sedangkan Surat Jalan dibuat dengan mode '{$sjMode}'. Syarat consume adalah jenis mode harus sama."
+                                                    ], 422);
+                                                }
+
+                                                $consumedPlIdsToMark[] = $lblRow->id;
                                             }
                                         }
                                     }
                                 }
                             }
 
-                            // 3. Validasi kepatuhan alur: Wajib lolos QC GOOD dan telah di-ACCEPT fisik oleh Gudang
+                            // 3. Validasi kepatuhan alur: Wajib telah melewati seluruh alur sampai Penerimaan Fisik Gudang (ACC)
+                            // Baik yang langsung Good maupun yang setelah Hold / Dirakit Ulang telah diverifikasi Admin hingga ACC Gudang
                             $validUnit = DB::table('assemblies as a')
                                 ->join('master_stocks as m15', function ($j) {
                                     $j->on('a.part15_sn', '=', 'm15.sn')->where('m15.part_type', '15');
                                 })
                                 ->where('a.part15_sn', $sn)
-                                ->where('a.qc_status', 'GOOD')
+                                ->where(function ($w) {
+                                    $w->where('a.status', 'Good')
+                                      ->orWhere('a.status', 'Dirakit Ulang')
+                                      ->orWhere('a.status', 'Selesai')
+                                      ->orWhereIn('a.verified_status', ['APPROVED', 'APPROVED_QC', 'APPROVED_REREG', 'APPROVED_REASSEMBLY', 'COMPLETED_PU', 'APPROVED_PROCEED_TF1', 'APPROVED_PROCEED_TF2', 'ACC']);
+                                })
+                                ->where(function ($w) {
+                                    $w->where('a.assy_test_status', 'Good')
+                                      ->orWhere('a.assy_test_status', 'Pass')
+                                      ->orWhere('a.assy_test_status', 'Lolos')
+                                      ->orWhereIn('a.verified_status', ['APPROVED_QC', 'APPROVED_PROCEED_TF2', 'APPROVED_PROCEED_QC', 'ACC', 'APPROVED']);
+                                })
+                                ->where(function ($w) {
+                                    $w->whereIn(DB::raw("UPPER(COALESCE(a.qc_status, ''))"), ['GOOD', 'GOOD_QC', 'PASS', 'ACC'])
+                                      ->orWhereIn('a.verified_status', ['APPROVED_QC', 'ACC', 'APPROVED']);
+                                })
+                                ->where(function ($w) {
+                                    $w->whereNull('a.is_declined')->orWhere('a.is_declined', 0);
+                                })
                                 ->whereIn(DB::raw("UPPER(COALESCE(a.warehouse_receipt_status, ''))"), ['ACCEPTED', 'ACC'])
-                                ->whereNotIn('m15.status', ['Tersedia', 'Scrap', 'Part Diganti', 'Hold', 'Declined', 'Decline'])
+                                ->whereNotIn('m15.status', ['Scrap', 'Part Diganti', 'Declined', 'Decline'])
                                 ->exists();
 
                             if (!$validUnit) {
@@ -396,22 +727,34 @@ class DeliveryOrderController extends Controller
                 }
             }
 
+            $settings = DoSetting::first();
+
             $do = DeliveryOrder::create([
                 'do_number' => trim($request->do_number),
                 'pl_number' => $request->input('pl_number') ?: str_replace('/SJ/', '/PL/', $request->do_number),
-                'do_date' => $request->do_date,
+                'do_date' => $targetDt->toDateString(),
+                'is_backdate' => $isBackdate ? 1 : 0,
+                'sj_mode' => $sjMode,
+                'contract_number' => trim((string)$request->input('contract_number')) ?: ($settings?->default_contract_number ?: 'TRAK/2509/APBN/XI/2025/KEMHAN'),
+                'program_name' => trim((string)$request->input('program_name')) ?: ($settings?->default_program_name ?: 'PENGADAAN ALPALHANKAM MATSUSSUS'),
+                'product_name' => trim((string)$request->input('product_name')) ?: ($settings?->default_product_name ?: 'Nanggala P9'),
+                'batch_number' => max(1, (int)($request->input('batch_number') ?: ($settings?->current_batch_number ?: 1))),
                 'customer_name' => trim($request->customer_name),
-                'customer_address' => $request->input('customer_address'),
-                'customer_phone' => $request->input('customer_phone'),
-                'customer_fax' => $request->input('customer_fax'),
+                'customer_address' => $request->input('customer_address') ?: ($settings?->default_customer_address ?: ''),
+                'customer_phone' => preg_replace('/\p{L}/u', '', (string)$request->input('customer_phone', '')) ?: ($settings?->default_customer_phone ?: ''),
+                'customer_fax' => preg_replace('/\p{L}/u', '', (string)$request->input('customer_fax', '')) ?: ($settings?->default_customer_fax ?: ''),
                 'package_type' => $request->input('package_type', 'peti'),
                 'total_crates' => $totalCrates,
                 'total_boxes' => $totalBoxes,
                 'total_units' => $totalUnits,
                 'status' => 'ISSUED',
                 'created_by' => auth()->user()?->username ?: 'PPIC',
-                'created_by_name' => auth()->user()?->full_name ?: 'PPIC Staff',
+                'created_by_name' => auth()->user()?->full_name ?: ($settings?->default_issuer_name ?: 'Rezka Rachdana'),
+                'created_by_title' => $request->input('created_by_title') ?: ($settings?->default_issuer_title ?: 'Staf PPIC'),
+                'created_by_department' => $request->input('created_by_department') ?: ($settings?->default_issuer_department ?: 'Logistik & PPIC'),
                 'notes' => $request->input('notes'),
+                'created_at' => $isBackdate ? $targetDt->toDateTimeString() : now(),
+                'updated_at' => now(),
             ]);
 
             foreach ($crates as $cIndex => $c) {
@@ -445,6 +788,18 @@ class DeliveryOrderController extends Controller
                 }
             }
 
+            // Tandai seluruh Dokumen Packing List (PL) yang dikonsumsi menjadi is_consumed = 1
+            if (!empty($consumedPlIdsToMark)) {
+                DB::table('standalone_packing_labels')
+                    ->whereIn('id', array_unique($consumedPlIdsToMark))
+                    ->update([
+                        'is_consumed' => 1,
+                        'delivery_order_id' => $do->id,
+                        'consumed_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+            }
+
             return $this->successResponse($do, "Delivery Order {$do->do_number} berhasil diterbitkan.", 201);
         });
     }
@@ -458,6 +813,17 @@ class DeliveryOrderController extends Controller
         $settings = DoSetting::first();
 
         $data = $do->toArray();
+        $data['total_quantity'] = $do->total_quantity;
+        $data['total_units'] = $do->total_quantity;
+        $data['total_boxes'] = $do->total_boxes;
+        $data['total_crates'] = $do->total_crates;
+        $data['contract_number'] = $do->contract_number ?: ($settings?->default_contract_number ?: 'TRAK/2509/APBN/XI/2025/KEMHAN');
+        $data['program_name'] = $do->program_name ?: ($settings?->default_program_name ?: 'PENGADAAN ALPALHANKAM MATSUSSUS');
+        $data['product_name'] = $do->product_name ?: ($settings?->default_product_name ?: 'Nanggala P9');
+        $data['customer_name'] = $do->customer_name ?: ($settings?->default_customer_name ?: 'KEMHAN RI');
+        $data['customer_address'] = $do->customer_address ?: ($settings?->default_customer_address ?: "BADAN LOGISTIK PERTAHANAN\nJL. TANAH ABANG TIMUR NO. 6 - 7\nJAKARTA, 10110");
+        $data['created_by_name'] = $do->created_by_name ?: ($settings?->default_issuer_name ?: 'Rezka Rachdana');
+        $data['created_by_title'] = $do->created_by_title ?: ($settings?->default_issuer_title ?: 'Staf PPIC');
         $data['crates'] = $do->packingLists->map(function ($pl) {
             return [
                 'id' => $pl->id,
@@ -590,6 +956,16 @@ class DeliveryOrderController extends Controller
             $this->cloudinary->deleteFile($do->cloud_public_id);
         }
 
+        // Lepaskan seluruh Standalone Packing Labels yang pernah dikonsumsi oleh DO ini
+        DB::table('standalone_packing_labels')
+            ->where('delivery_order_id', $doId)
+            ->update([
+                'is_consumed' => 0,
+                'delivery_order_id' => null,
+                'consumed_at' => null,
+                'updated_at' => now(),
+            ]);
+
         $do->delete(); // Cascade deletes packing_lists, boxes, items
         return $this->successResponse(null, 'Delivery Order berhasil dihapus.');
     }
@@ -647,18 +1023,43 @@ class DeliveryOrderController extends Controller
     }
 
     /**
-     * Tambah Customer Baru
+     * Tambah Customer Baru (atau update jika nama sudah ada)
      */
     public function createCustomer(Request $request)
     {
         $request->validate(['name' => 'required|string']);
+        $name = trim($request->input('name'));
+        $phone = preg_replace('/\p{L}/u', '', (string)$request->input('phone', ''));
+        $fax = preg_replace('/\p{L}/u', '', (string)$request->input('fax', ''));
+
+        $existing = Customer::where('name', $name)->first();
+        if ($existing) {
+            $existing->update([
+                'address' => trim($request->input('address', '')) ?: $existing->address,
+                'phone' => trim($phone) ?: $existing->phone,
+                'fax' => trim($fax) ?: $existing->fax,
+            ]);
+            return response()->json([
+                'ok' => true,
+                'customer' => $existing,
+                'data' => $existing,
+                'message' => 'Customer berhasil diperbarui.'
+            ]);
+        }
+
         $cust = Customer::create([
-            'name' => trim($request->input('name')),
+            'name' => $name,
             'address' => trim($request->input('address', '')),
-            'phone' => trim($request->input('phone', '')),
-            'fax' => trim($request->input('fax', '')),
+            'phone' => trim($phone),
+            'fax' => trim($fax),
         ]);
-        return $this->successResponse($cust, 'Customer berhasil ditambahkan.');
+
+        return response()->json([
+            'ok' => true,
+            'customer' => $cust,
+            'data' => $cust,
+            'message' => 'Customer berhasil ditambahkan.'
+        ]);
     }
 
     /**
@@ -668,23 +1069,33 @@ class DeliveryOrderController extends Controller
     {
         $id = $request->input('id');
         $cust = Customer::findOrFail($id);
+        $phoneInput = $request->has('phone') ? preg_replace('/\p{L}/u', '', (string)$request->input('phone', '')) : $cust->phone;
+        $faxInput = $request->has('fax') ? preg_replace('/\p{L}/u', '', (string)$request->input('fax', '')) : $cust->fax;
         $cust->update([
             'name' => trim($request->input('name', $cust->name)),
             'address' => trim($request->input('address', $cust->address)),
-            'phone' => trim($request->input('phone', $cust->phone)),
-            'fax' => trim($request->input('fax', $cust->fax)),
+            'phone' => trim($phoneInput),
+            'fax' => trim($faxInput),
         ]);
-        return $this->successResponse($cust, 'Customer berhasil diperbarui.');
+        return response()->json([
+            'ok' => true,
+            'customer' => $cust,
+            'data' => $cust,
+            'message' => 'Customer berhasil diperbarui.'
+        ]);
     }
 
     /**
      * Hapus Customer
      */
-    public function deleteCustomer(Request $request)
+    public function deleteCustomer(Request $request, $id = null)
     {
-        $id = $request->input('id');
-        Customer::where('id', $id)->delete();
-        return $this->successResponse(null, 'Customer berhasil dihapus.');
+        $targetId = $id ?: $request->input('id');
+        Customer::where('id', $targetId)->delete();
+        return response()->json([
+            'ok' => true,
+            'message' => 'Customer berhasil dihapus.'
+        ]);
     }
 
     /**
@@ -696,20 +1107,87 @@ class DeliveryOrderController extends Controller
             ->orderBy('id', 'desc')
             ->get();
 
-        $data = $rows->map(function ($r) {
+        $consumedCrates = DB::table('packing_lists')
+            ->join('delivery_orders', 'packing_lists.delivery_order_id', '=', 'delivery_orders.id')
+            ->select('packing_lists.crate_id', 'delivery_orders.do_number')
+            ->get()
+            ->keyBy('crate_id');
+
+        $consumedBoxes = DB::table('packing_list_boxes')
+            ->join('packing_lists', 'packing_list_boxes.packing_list_id', '=', 'packing_lists.id')
+            ->join('delivery_orders', 'packing_lists.delivery_order_id', '=', 'delivery_orders.id')
+            ->select('packing_list_boxes.box_id', 'delivery_orders.do_number')
+            ->get()
+            ->keyBy('box_id');
+
+        $data = $rows->map(function ($r) use ($consumedCrates, $consumedBoxes) {
             $rArray = (array) $r;
-            $rArray['crates'] = json_decode($r->crates_json ?? '[]', true) ?: [];
+            $crates = json_decode($r->crates_json ?? '[]', true) ?: [];
+            $rArray['crates'] = $crates;
+
+            $packagingIds = [];
+            $isConsumed = (bool) ($r->is_consumed ?? false);
+            $consumedByDo = null;
+
+            if (!empty($r->delivery_order_id)) {
+                $doNum = DB::table('delivery_orders')->where('id', $r->delivery_order_id)->value('do_number');
+                if ($doNum) {
+                    $isConsumed = true;
+                    $consumedByDo = $doNum;
+                }
+            }
+
+            if ($r->package_type === 'crate') {
+                foreach ($crates as $c) {
+                    if (!empty($c['crate_id'])) {
+                        $cId = trim($c['crate_id']);
+                        $packagingIds[] = $cId;
+                        if (!$isConsumed && isset($consumedCrates[$cId])) {
+                            $isConsumed = true;
+                            $consumedByDo = $consumedCrates[$cId]->do_number;
+                        }
+                    }
+                }
+            } else {
+                foreach ($crates as $c) {
+                    $bId = $c['box_id'] ?? ($c['boxes'][0]['box_id'] ?? null);
+                    if (!empty($bId)) {
+                        $bId = trim($bId);
+                        $packagingIds[] = $bId;
+                        if (!$isConsumed && isset($consumedBoxes[$bId])) {
+                            $isConsumed = true;
+                            $consumedByDo = $consumedBoxes[$bId]->do_number;
+                        }
+                    }
+                }
+            }
+
+            if (empty($packagingIds) && !empty($r->pl_number)) {
+                $packagingIds[] = $r->pl_number;
+            }
+
+            $rArray['packaging_ids'] = $packagingIds;
+            $rArray['is_consumed'] = $isConsumed;
+            $rArray['consumed_by_do'] = $consumedByDo;
+
             return $rArray;
         });
 
-        $maxBatch = DB::table('delivery_orders')->max('batch_number') ?? 0;
-        $maxStandalone = DB::table('standalone_packing_labels')->max('batch_number') ?? 0;
-        $nextBatch = max((int)$maxBatch, (int)$maxStandalone) + 1;
+        $settings = DoSetting::first();
+        $currentBatch = max(1, (int)($settings?->current_batch_number ?: 1));
+        $plCount = DB::table('standalone_packing_labels')->where('batch_number', $currentBatch)->count();
+        $nextPlSeq = $plCount + 1;
+        $sjCount = DeliveryOrder::where('batch_number', $currentBatch)->count();
+        $nextSjSeq = $sjCount + 1;
 
         return response()->json([
             'ok' => true,
             'data' => $data,
-            'next_batch' => $nextBatch,
+            'current_batch' => $currentBatch,
+            'batch_number' => $currentBatch,
+            'next_pl_seq' => $nextPlSeq,
+            'next_sj_seq' => $nextSjSeq,
+            'next_batch' => $currentBatch,
         ]);
     }
 
@@ -725,7 +1203,17 @@ class DeliveryOrderController extends Controller
         }
 
         $data = (array) $row;
+        $settings = DoSetting::first();
         $data['crates'] = json_decode($row->crates_json ?? '[]', true) ?: [];
+        $data['contract_number'] = $settings?->default_contract_number ?: 'TRAK/2509/APBN/XI/2025/KEMHAN';
+        $data['program_name'] = $settings?->default_program_name ?: 'PENGADAAN ALPALHANKAM MATSUSSUS';
+        $data['customer_name'] = $settings?->default_customer_name ?: 'KEMHAN RI';
+        $data['customer_address'] = $settings?->default_customer_address ?: "BADAN LOGISTIK PERTAHANAN\nJL. TANAH ABANG TIMUR NO. 6 - 7\nJAKARTA, 10110";
+        $data['do_date'] = $row->label_date;
+        $data['do_number'] = $row->pl_number;
+        $data['product_name'] = $row->product_name ?: ($settings?->default_product_name ?: 'Nanggala P9');
+        $data['created_by_name'] = $row->created_by ?: ($settings?->default_issuer_name ?: 'Rezka Rachdana');
+        $data['created_by_title'] = $settings?->default_issuer_title ?: 'Staf PPIC';
 
         return response()->json(['ok' => true, 'data' => $data]);
     }
@@ -736,7 +1224,11 @@ class DeliveryOrderController extends Controller
     public function createPackingLabel(Request $request)
     {
         $pkgType = trim($request->input('package_type', 'crate'));
-        $batchNum = (int) $request->input('batch_number', 1);
+        if (!in_array($pkgType, ['crate', 'box'])) {
+            $pkgType = 'crate';
+        }
+        $settings = DoSetting::first();
+        $batchNum = max(1, (int)($request->input('batch_number') ?: ($settings?->current_batch_number ?: 1)));
         $prodName = trim($request->input('product_name', 'Nanggala P9'));
         $notes = trim($request->input('notes', ''));
         $createdBy = trim($request->input('created_by', auth()->user()?->full_name ?? 'PPIC'));
@@ -747,40 +1239,58 @@ class DeliveryOrderController extends Controller
         $targetDayStr = $targetDt->format('Ymd');
         $mmYyyy = $targetDt->format('m/Y');
 
-        // Cari max label_batch_id pada tanggal target
-        $existingLabels = DB::table('standalone_packing_labels')
-            ->where('label_batch_id', 'like', "LBL-{$targetDayStr}-%")
-            ->pluck('label_batch_id');
-
-        $maxSeq = 0;
-        foreach ($existingLabels as $lid) {
-            if (preg_match('/LBL-\d+-(\d+)/', $lid, $m)) {
-                $maxSeq = max($maxSeq, (int)$m[1]);
+        // Kumpulkan ID Peti / ID Dus dari payload
+        $payloadPackagingIds = [];
+        foreach ($cratesData as $c) {
+            if ($pkgType === 'crate' && !empty($c['crate_id'])) {
+                $payloadPackagingIds[] = trim($c['crate_id']);
+            } elseif ($pkgType === 'box') {
+                $bId = $c['box_id'] ?? ($c['boxes'][0]['box_id'] ?? null);
+                if (!empty($bId)) {
+                    $payloadPackagingIds[] = trim($bId);
+                }
             }
         }
-        $nextLblSeq = $maxSeq + 1;
-        $labelBatchId = sprintf("LBL-%s-%03d", $targetDayStr, $nextLblSeq);
-        while (DB::table('standalone_packing_labels')->where('label_batch_id', $labelBatchId)->exists()) {
-            $nextLblSeq++;
-            $labelBatchId = sprintf("LBL-%s-%03d", $targetDayStr, $nextLblSeq);
-        }
 
-        // Cari nomor urut PL berikutnya
-        $rowsPl = DB::table('packing_lists')->where('pl_number', 'like', "%/PL/PPIC/{$mmYyyy}")->pluck('pl_number')->toArray();
-        $rowsLbl = DB::table('standalone_packing_labels')->where('pl_number', 'like', "%/PL/PPIC/{$mmYyyy}")->pluck('pl_number')->toArray();
-
-        $maxPlSeq = 0;
-        foreach (array_merge($rowsPl, $rowsLbl) as $pn) {
-            if (preg_match('/^(\d+)\//', $pn, $m)) {
-                $maxPlSeq = max($maxPlSeq, (int)$m[1]);
+        // Validasi Keunikan ID Peti / ID Dus di Surat Jalan (DO)
+        if ($pkgType === 'crate') {
+            foreach ($payloadPackagingIds as $pId) {
+                if (DB::table('packing_lists')->where('crate_id', $pId)->exists()) {
+                    return response()->json([
+                        'ok' => false,
+                        'error' => "ID Peti {$pId} sudah pernah terdaftar pada Surat Jalan lain!"
+                    ], 422);
+                }
+            }
+        } else {
+            foreach ($payloadPackagingIds as $pId) {
+                if (DB::table('packing_list_boxes')->where('box_id', $pId)->exists()) {
+                    return response()->json([
+                        'ok' => false,
+                        'error' => "ID Dus {$pId} sudah pernah terdaftar pada Surat Jalan lain!"
+                    ], 422);
+                }
             }
         }
-        $plSeq = $maxPlSeq + 1;
-        $plNumber = sprintf("%03d/PL/PPIC/%s", $plSeq, $mmYyyy);
-        while (DB::table('packing_lists')->where('pl_number', $plNumber)->exists() || DB::table('standalone_packing_labels')->where('pl_number', $plNumber)->exists()) {
-            $plSeq++;
-            $plNumber = sprintf("%03d/PL/PPIC/%s", $plSeq, $mmYyyy);
+
+        // Cek juga pada label kemasan yang sudah tersimpan
+        $existingLabels = DB::table('standalone_packing_labels')->get(['id', 'crates_json']);
+        foreach ($existingLabels as $ex) {
+            $exCrates = json_decode($ex->crates_json ?? '[]', true) ?: [];
+            foreach ($exCrates as $ec) {
+                $ecId = ($pkgType === 'crate') ? ($ec['crate_id'] ?? null) : ($ec['box_id'] ?? ($ec['boxes'][0]['box_id'] ?? null));
+                if ($ecId && in_array(trim($ecId), $payloadPackagingIds)) {
+                    return response()->json([
+                        'ok' => false,
+                        'error' => "ID Kemasan {$ecId} sudah pernah dibuat pada riwayat label lain! Silakan sesuaikan nomor batch atau pengiriman."
+                    ], 422);
+                }
+            }
         }
+
+        $primaryId = !empty($payloadPackagingIds) ? $payloadPackagingIds[0] : sprintf("PK-%s-%02d", $targetDayStr, $batchNum);
+        $plNumber = $primaryId;
+        $labelBatchId = $primaryId;
 
         // VALIDASI KETAT: Seluruh SN wajib lolos alur proses dan tidak boleh ada duplikasi
         $allSns = [];
@@ -847,15 +1357,31 @@ class DeliveryOrderController extends Controller
             }
         }
 
-        // 4. Validasi Kepatuhan Alur: Wajib lolos Meja Rakit -> TF 1 -> QC -> Penerimaan Fisik Gudang (ACC)
+        // 4. Validasi Kepatuhan Alur: Wajib telah melewati seluruh alur sampai Penerimaan Fisik Gudang (ACC)
+        // Baik yang langsung Good maupun yang setelah Hold / Dirakit Ulang telah diverifikasi Admin hingga ACC Gudang
         foreach ($allSns as $sn) {
             $valid = DB::table('assemblies as a')
                 ->where('a.part15_sn', $sn)
-                ->where('a.status', 'Good')
-                ->where('a.assy_test_status', 'Good')
-                ->where('a.qc_status', 'GOOD')
+                ->where(function ($w) {
+                    $w->where('a.status', 'Good')
+                      ->orWhere('a.status', 'Dirakit Ulang')
+                      ->orWhere('a.status', 'Selesai')
+                      ->orWhereIn('a.verified_status', ['APPROVED', 'APPROVED_QC', 'APPROVED_REREG', 'APPROVED_REASSEMBLY', 'COMPLETED_PU', 'APPROVED_PROCEED_TF1', 'APPROVED_PROCEED_TF2', 'ACC']);
+                })
+                ->where(function ($w) {
+                    $w->where('a.assy_test_status', 'Good')
+                      ->orWhere('a.assy_test_status', 'Pass')
+                      ->orWhere('a.assy_test_status', 'Lolos')
+                      ->orWhereIn('a.verified_status', ['APPROVED_QC', 'APPROVED_PROCEED_TF2', 'APPROVED_PROCEED_QC', 'ACC', 'APPROVED']);
+                })
+                ->where(function ($w) {
+                    $w->whereIn(DB::raw("UPPER(COALESCE(a.qc_status, ''))"), ['GOOD', 'GOOD_QC', 'PASS', 'ACC'])
+                      ->orWhereIn('a.verified_status', ['APPROVED_QC', 'ACC', 'APPROVED']);
+                })
+                ->where(function ($w) {
+                    $w->whereNull('a.is_declined')->orWhere('a.is_declined', 0);
+                })
                 ->whereIn(DB::raw("UPPER(COALESCE(a.warehouse_receipt_status, ''))"), ['ACCEPTED', 'ACC'])
-                ->whereIn(DB::raw("UPPER(COALESCE(a.verified_status, ''))"), ['ACC', 'ACCEPTED'])
                 ->exists();
 
             if (!$valid) {
@@ -891,10 +1417,18 @@ class DeliveryOrderController extends Controller
 
         $totalContainers = count($cratesData);
 
+        $plMode = strtolower(trim((string)$request->input('pl_mode', '')));
+        $isBackdate = $request->boolean('is_backdate') || ($plMode === 'backdate') || ($targetDt->toDateString() < now()->toDateString());
+        if (!$plMode) {
+            $plMode = $isBackdate ? 'backdate' : 'realtime';
+        }
+
         $id = DB::table('standalone_packing_labels')->insertGetId([
             'label_batch_id' => $labelBatchId,
             'pl_number' => $plNumber,
             'label_date' => $targetDt->toDateString(),
+            'is_backdate' => $isBackdate ? 1 : 0,
+            'pl_mode' => $plMode,
             'package_type' => $pkgType,
             'batch_number' => $batchNum,
             'product_name' => $prodName,
@@ -903,7 +1437,7 @@ class DeliveryOrderController extends Controller
             'crates_json' => json_encode($cratesData),
             'notes' => $notes,
             'created_by' => $createdBy,
-            'created_at' => $targetDt->toDateTimeString(),
+            'created_at' => $isBackdate ? $targetDt->toDateTimeString() : now(),
             'updated_at' => now(),
         ]);
 
@@ -918,7 +1452,8 @@ class DeliveryOrderController extends Controller
             'pl_number' => $plNumber,
             'crates' => $cratesData,
             'next_batch' => $nextBatch,
-            'message' => "Label Packing List {$labelBatchId} berhasil dibuat dan disimpan!"
+            'packaging_ids' => $payloadPackagingIds,
+            'message' => "Label kemasan " . ($pkgType === 'crate' ? 'Peti' : 'Dus') . " {$primaryId} berhasil disimpan!"
         ]);
     }
 
@@ -930,6 +1465,14 @@ class DeliveryOrderController extends Controller
         $id = $request->input('id');
         if (!$id) {
             return response()->json(['ok' => false, 'error' => 'ID label wajib diberikan'], 400);
+        }
+
+        $label = DB::table('standalone_packing_labels')->where('id', $id)->first();
+        if (!$label) {
+            return response()->json(['ok' => false, 'error' => 'Data label tidak ditemukan'], 404);
+        }
+        if ($label->is_consumed || $label->delivery_order_id) {
+            return response()->json(['ok' => false, 'error' => 'Dokumen Packing List ini sudah dikonsumsi oleh Surat Jalan dan tidak dapat dihapus!'], 422);
         }
 
         DB::table('standalone_packing_labels')->where('id', $id)->delete();
