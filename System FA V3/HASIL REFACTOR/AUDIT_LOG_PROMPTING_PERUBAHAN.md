@@ -42,7 +42,7 @@ flowchart TD
 ## 3. Log Kronologis Lengkap Seluruh 176 Prompting & Perubahan Sistem
 
 
-### Log Kronologis Perubahan Sistem (Prompt #106)
+### Log Kronologis Perubahan Sistem (Prompt #107)
 
 | No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
 |:---:|:---:|---|---|---|
@@ -152,3 +152,4 @@ flowchart TD
 | **#104** | `2026-11-11 02:44:22` | **Delivery Order (Badging)** | untuk membedakan yang back date yang realtime coba diujung nya tambahkan lingkaran kecil berwarna dengan judul kolom Jenis PL warna kuning untuk yang backdate dan warna hijau untuk yang realtime | Menambahkan indikator lingkaran warna mini (kuning = Backdate, hijau = Realtime) tanpa teks di riwayat PL & SJ. |
 | **#105** | `2026-11-11 02:54:00` | **Delivery Order (Badging)** | buatkan menu SJ juga seperti itu untuk tambahan membedakan yang backdate dan yang realtime | Menambahkan indikator lingkaran warna mini (kuning = Backdate, hijau = Realtime) tanpa teks di riwayat PL & SJ. |
 | **#106** | `2026-11-11 02:58:31` | **Delivery Order (Badging)** | tolong perbaiki: 1. tanpa tulisan hanya warna saja 2. informasinya terlalu over simpan saja id PL dus nya dan data SN yang didalamnya | Menambahkan indikator lingkaran warna mini (kuning = Backdate, hijau = Realtime) tanpa teks di riwayat PL & SJ. |
+| **#107** | `2026-11-11 02:59:16` | **Delivery Order UI** | didalam menu SJ dan PL hindari tombol back yang double seperti ini, buat satu saaja, standarisasikan! | Menghapus tombol 'Kembali' ganda pada form PL & SJ, menyisakan satu tombol navigasi tunggal. |
