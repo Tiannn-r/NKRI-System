@@ -42,7 +42,7 @@ flowchart TD
 ## 3. Log Kronologis Lengkap Seluruh 176 Prompting & Perubahan Sistem
 
 
-### Log Kronologis Perubahan Sistem (Prompt #092)
+### Log Kronologis Perubahan Sistem (Prompt #093)
 
 | No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
 |:---:|:---:|---|---|---|
@@ -138,3 +138,4 @@ flowchart TD
 | **#090** | `2026-11-10 06:16:10` | **Master Stock & Validation** | revisi untuk di bagian tambah part ketika memasukan data satu satu, ketika terdeteksi sama munculkan number yang samanya. dan untuk data bulk ketika memasukan 5 data dan terdapat salah satu data yang ternyata sudah ada didalam master stock ketika di submit itu tidak bisa meskipun 4 data yang lainnya itu belum tersedia(bisa dimasukan), dengan kata lain meskipun banyak memasukan data jika ada data yang sudah tersedia di master stock maka membatalkan transaksi nya. ngerti ga? buatkan dulu planningnya | Memberikan alert merah tegas saat mendeteksi duplikasi input part ganda. |
 | **#091** | `2026-11-10 06:26:12` | **System Maintenance** |  | Penyesuaian konfigurasi dan penanganan bug sesuai instruksi operasional. |
 | **#092** | `2026-11-10 06:43:06` | **Master Stock & Validation** | kalo notifikasi ada data double itu warna merah ya inget. untuk warna dalam perakitan seperti dalam foto yang saya lampirkan, tolong warnanya sesuaikan dengan status pada setnya, kalo good yaudah ijo, kalo ada perubahan bordernya tetep hijau untuk perubahan nya tinggal tambahin tanpa merubah bordernya ya, begitupun hold dengan warna kuning dan scrap dengan warna merah | Memberikan alert merah tegas saat mendeteksi duplikasi input part ganda. |
+| **#093** | `2026-11-10 07:06:48` | **Admin CMS & Chart** | chartnya kok gadaa | Mengaktifkan kembali grafik/chart doughnut pada dashboard admin. |
