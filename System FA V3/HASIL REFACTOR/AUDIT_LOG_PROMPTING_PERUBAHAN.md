@@ -42,7 +42,7 @@ flowchart TD
 ## 3. Log Kronologis Lengkap Seluruh 176 Prompting & Perubahan Sistem
 
 
-### Log Kronologis Perubahan Sistem (Prompt #108)
+### Log Kronologis Perubahan Sistem (Prompt #109)
 
 | No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
 |:---:|:---:|---|---|---|
@@ -154,3 +154,4 @@ flowchart TD
 | **#106** | `2026-11-11 02:58:31` | **Delivery Order (Badging)** | tolong perbaiki: 1. tanpa tulisan hanya warna saja 2. informasinya terlalu over simpan saja id PL dus nya dan data SN yang didalamnya | Menambahkan indikator lingkaran warna mini (kuning = Backdate, hijau = Realtime) tanpa teks di riwayat PL & SJ. |
 | **#107** | `2026-11-11 02:59:16` | **Delivery Order UI** | didalam menu SJ dan PL hindari tombol back yang double seperti ini, buat satu saaja, standarisasikan! | Menghapus tombol 'Kembali' ganda pada form PL & SJ, menyisakan satu tombol navigasi tunggal. |
 | **#108** | `2026-11-11 03:07:22` | **Delivery Order Logic** | kenapa seperti ini padahal ini consume dari id dus di PL yang sudah dibuat? | Memperbaiki sinkronisasi consume ID Dus dari PL ke SJ dan penanganan penghapusan SN. |
+| **#109** | `2026-11-11 03:11:37` | **Delivery Order Logic** | tolong perbaiki: = 1. ketika saya menghapus SN yang sudah di tulisnya malah jadi seperti tiba tiba ada yang terkunci, saya menghapus yang ke 4 yang 1 tiba tiba terkunci kenapa bisa gitu tolong perbaiki 2. tolong hapus saja yang ada difoto kedua | Memperbaiki sinkronisasi consume ID Dus dari PL ke SJ dan penanganan penghapusan SN. |
