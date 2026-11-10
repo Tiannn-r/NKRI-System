@@ -42,7 +42,7 @@ flowchart TD
 ## 3. Log Kronologis Lengkap Seluruh 176 Prompting & Perubahan Sistem
 
 
-### Log Kronologis Perubahan Sistem (Prompt #119)
+### Log Kronologis Perubahan Sistem (Prompt #120)
 
 | No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
 |:---:|:---:|---|---|---|
@@ -165,3 +165,4 @@ flowchart TD
 | **#117** | `2026-11-11 04:43:17` | **Print Format Resmi** | data nya ada yang ga masuk program dan no traknya tabel jika ngirim dus itu sesuaikan dengan dusnya dan itu id nya masih pake id yang buat peti tolong perbaiki pada dokumen surat jalan hapus kolom packing listnya pada gambar kedua yang saya lampirkan ganti tulisannya saja jadi peti 1 - dus 1 peti 1 - dus 2 (untuk opsi pengiriman perpeti), dus 1, dus 2 (untuk opsi pengiriman per dus foto ke 4 yang saya lampirkan pilih salah satu saja itu alertnya kebanyakan saya pilih yang dibawah catatan, alert yang dibawah input part hapus saja untuk pengerjaan tf 1 hapus saja saya lupa tidak ada waktu, hapus saja data pengerjaan tf 1 semuanya di bagian cms admin ya | Menyesuaikan tabel cetak dus dengan format fisik resmi (Nomor Kontrak TRAK & Program). |
 | **#118** | `2026-11-11 04:48:28` | **Architecture Refactoring** | tolong breakdown juga yang dellivery order menjadi beberapa file ada dashboard, database DO, PackingList, SuratJalan, jangan disatukan tidak sesaui dengan kemauan saya kan saya minta setiap emnu berbeda file tolong update ya | Refactoring modular Delivery Order menjadi 6 sub-file terpisah (dashboard, database, packing-list, surat-jalan, preview, detail). |
 | **#119** | `2026-11-11 05:21:02` | **Print Labels 100x150** | tuh label dus tuh gituuu ngerti kann, kalo misal milih opsi perpeti label dus nya gituu, kalo misal milih opsi perdus maka ilangin paknya no peti nya ganti no dus, id peti nya ganti id dus (kalo misal milih perdus bukan perpeti) jika misal perpeti mah label dusnya samain aja kaya file word itu kalo misaal perdus harus ada yang di rubah sesuai dengan yang saya inginkan | Penyesuaian tata letak label dus fisik (1 Peti = 2 Dus; 1 Dus = 10 SN). |
+| **#120** | `2026-11-11 06:14:43` | **Navigation Routing** | saya sudah di PL tapi kok urlnya masih delivery? | Memperbaiki routing internal tab PL agar tidak tertukar dengan Surat Jalan. |
