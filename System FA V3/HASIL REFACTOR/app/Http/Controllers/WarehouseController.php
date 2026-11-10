@@ -74,7 +74,16 @@ class WarehouseController extends Controller
 
 
 
-        $query = Tray::withCount(['parts', 'assemblies'])
+        $query = Tray::withCount([
+            'parts',
+            'assemblies' => function ($q) {
+                $q->where(function ($w) {
+                    $w->where('is_declined', 0)->orWhereNull('is_declined');
+                })->where(function ($w) {
+                    $w->whereNull('status')->orWhereNotIn('status', ['Decline', 'DECLINED']);
+                });
+            }
+        ])
 
 
 
@@ -138,19 +147,13 @@ class WarehouseController extends Controller
 
 
 
-                DB::raw('COUNT(CASE WHEN finished_at IS NOT NULL OR (status IS NOT NULL AND status != "") THEN 1 END) as finished_count'),
+                DB::raw('COUNT(CASE WHEN (status IS NULL OR status NOT IN ("Decline", "DECLINED")) AND (finished_at IS NOT NULL OR (status IS NOT NULL AND status != "" AND status NOT IN ("TERSUPPLY", "Dikembalikan ke Gudang", "RETURNED"))) THEN 1 END) as finished_count'),
 
+                DB::raw('COUNT(CASE WHEN COALESCE(original_assembly_status, status) = "Good" AND (is_reregistered IS NULL OR is_reregistered = 0) THEN 1 END) as good_count'),
 
+                DB::raw('COUNT(CASE WHEN COALESCE(original_assembly_status, status) = "Hold" THEN 1 END) as hold_count'),
 
-                DB::raw('COUNT(CASE WHEN status = "Good" THEN 1 END) as good_count'),
-
-
-
-                DB::raw('COUNT(CASE WHEN status = "Hold" THEN 1 END) as hold_count'),
-
-
-
-                DB::raw('COUNT(CASE WHEN status = "Scrap" THEN 1 END) as scrap_count'),
+                DB::raw('COUNT(CASE WHEN COALESCE(original_assembly_status, status) = "Scrap" THEN 1 END) as scrap_count'),
 
 
 
@@ -158,24 +161,24 @@ class WarehouseController extends Controller
 
 
 
-                DB::raw('COUNT(CASE WHEN status = "Good" AND (assy_doc_number IS NOT NULL OR (assy_test_status IS NOT NULL AND assy_test_status NOT IN ("PENDING", "")) OR qc_status IN ("HOLD_ASSY", "REWORK_ASSY", "PENDING_QC", "GOOD", "HOLD_QC")) THEN 1 END) as tested_count'),
+                DB::raw('COUNT(CASE WHEN (COALESCE(original_assembly_status, status) = "Good" OR status = "Good" OR assy_doc_number IS NOT NULL) AND (is_reregistered IS NULL OR is_reregistered = 0) AND (assy_doc_number IS NOT NULL OR (assy_test_status IS NOT NULL AND assy_test_status NOT IN ("PENDING", "")) OR qc_status IN ("HOLD_ASSY", "REWORK_ASSY", "PENDING_QC", "GOOD", "HOLD_QC")) THEN 1 END) as tested_count'),
 
 
 
-                DB::raw('COUNT(CASE WHEN status = "Good" AND assy_doc_number IS NOT NULL AND qc_status != "HOLD_ASSY" THEN 1 END) as good_assy_test_count'),
+                DB::raw('COUNT(CASE WHEN (COALESCE(original_assembly_status, status) = "Good" OR status = "Good" OR assy_doc_number IS NOT NULL) AND (is_reregistered IS NULL OR is_reregistered = 0) AND (assy_doc_number IS NOT NULL OR assy_test_status = "Good" OR qc_status IN ("GOOD", "PENDING_QC", "HOLD_QC")) AND (assy_test_status IS NULL OR assy_test_status NOT IN ("Hold", "Hold TF 1", "HOLD TF 1", "HOLD", "NOT_GOOD", "RU")) AND (qc_status IS NULL OR qc_status NOT IN ("HOLD_ASSY", "RU", "REWORK_ASSY")) AND (assy_failure_reasons IS NULL OR assy_failure_reasons = "") THEN 1 END) as good_assy_test_count'),
 
+                DB::raw('COUNT(CASE WHEN (COALESCE(original_assembly_status, status) = "Good" OR status = "Good" OR assy_doc_number IS NOT NULL) AND (is_reregistered IS NULL OR is_reregistered = 0) AND (assy_test_status IN ("Hold", "Hold TF 1", "HOLD TF 1", "HOLD", "NOT_GOOD", "Not Good") OR qc_status = "HOLD_ASSY" OR (assy_failure_reasons IS NOT NULL AND assy_failure_reasons != "")) AND (assy_test_status != "RU" AND (qc_status IS NULL OR qc_status != "RU")) THEN 1 END) as hold_assy_test_count'),
 
-
+                DB::raw('MAX(set_number) as max_set_number'),
                 DB::raw('COUNT(CASE WHEN is_reregistered = 1 OR status = "Dirakit Ulang" OR qc_status = "RU" OR rereg_wo_suffix IS NOT NULL THEN 1 END) as ru_count'),
                 DB::raw('COUNT(CASE WHEN assy_doc_number IS NOT NULL AND assy_doc_number != "" THEN 1 END) as assy_doc_count'),
                 DB::raw('COUNT(CASE WHEN qc_doc_number IS NOT NULL AND qc_doc_number != "" THEN 1 END) as qc_doc_count'),
                 DB::raw('COUNT(CASE WHEN qc_status = "GOOD" THEN 1 END) as good_qc_count'),
                 DB::raw('COUNT(CASE WHEN qc_status LIKE "%HOLD%" THEN 1 END) as hold_qc_count'),
                 DB::raw('COUNT(CASE WHEN (warehouse_doc_number IS NOT NULL AND warehouse_doc_number != "") OR warehouse_receipt_status IN ("ACCEPTED", "ACC", "DECLINED") THEN 1 END) as gr_doc_count'),
-                DB::raw('COUNT(CASE WHEN warehouse_receipt_status IN ("ACCEPTED", "ACC") THEN 1 END) as good_gr_count')
-
-
-
+                DB::raw('COUNT(CASE WHEN warehouse_receipt_status IN ("ACCEPTED", "ACC") THEN 1 END) as good_gr_count'),
+                DB::raw('MAX(COALESCE(finished_at, started_at, created_at)) as latest_assembly_at'),
+                DB::raw('MIN(COALESCE(started_at, finished_at, created_at)) as earliest_assembly_at')
             )
 
 
@@ -200,19 +203,13 @@ class WarehouseController extends Controller
 
 
 
-            $finishedCount = $stat ? (int)$stat->finished_count : 0;
-
-
-
             $goodCount = $stat ? (int)$stat->good_count : 0;
-
-
 
             $holdCount = $stat ? (int)$stat->hold_count : 0;
 
-
-
             $scrapCount = $stat ? (int)$stat->scrap_count : 0;
+
+            $finishedCount = $stat ? max((int)$stat->finished_count, $goodCount + $holdCount + $scrapCount) : 0;
 
 
 
@@ -225,62 +222,43 @@ class WarehouseController extends Controller
 
 
             $goodAssyTestCount = $stat ? (int)$stat->good_assy_test_count : 0;
+            $holdAssyTestCount = $stat ? (int)$stat->hold_assy_test_count : 0;
 
 
 
             $ruCount = $stat ? (int)$stat->ru_count : 0;
 
-
+            $partsCount = (int)($tray->parts_count ?: 0);
+            $partsTotalSets = (int)ceil($partsCount / 3);
+            $maxSet = $stat ? (int)$stat->max_set_number : 0;
+            $computedTotalSets = max($partsTotalSets, (int)$tray->assemblies_count, $maxSet, ($stat ? (int)$stat->finished_count : 0));
+            $isSessionCompleted = ($computedTotalSets > 0 && $finishedCount >= $computedTotalSets && !in_array($tray->session_status, ['COMPLETED_SHIFT', 'RETURNED_TO_WAREHOUSE']));
 
             return [
 
-
-
                 'id' => $tray->id,
-
-
 
                 'tray_code' => $tray->tray_code,
 
-
-
                 'pic_warehouse' => $tray->pic_warehouse,
-
-
 
                 'assigned_operator' => $tray->assigned_operator,
 
-
-
                 'source_document_mo' => $tray->source_document_mo,
-
-
 
                 'product_type' => $tray->product_type,
 
-
-
                 'status' => $tray->status,
 
-
-
-                'session_status' => ($finishedCount >= 22 && !in_array($tray->session_status, ['COMPLETED_SHIFT', 'RETURNED_TO_WAREHOUSE'])) ? 'COMPLETED' : $tray->session_status,
-
-
+                'session_status' => $isSessionCompleted ? 'COMPLETED' : $tray->session_status,
 
                 'verified_by_gudang' => (bool)$tray->verified_by_gudang,
 
-
-
                 'verified_at' => $tray->verified_at,
-
-
 
                 'verified_by_user' => $tray->verified_by_user,
 
-
-
-                'total_sets' => $tray->assemblies_count > 0 ? (int)$tray->assemblies_count : ($stat && $stat->finished_count > 0 ? (int)$stat->finished_count : (int)ceil(($tray->parts_count ?: 0) / 3)),
+                'total_sets' => $computedTotalSets > 0 ? $computedTotalSets : 22,
                 'assemblies_count' => (int)$tray->assemblies_count,
                 'parts_count' => (int)$tray->parts_count,
 
@@ -315,6 +293,7 @@ class WarehouseController extends Controller
 
 
                 'good_assy_test_count' => $goodAssyTestCount,
+                'hold_assy_test_count' => $holdAssyTestCount,
 
 
 
@@ -328,6 +307,9 @@ class WarehouseController extends Controller
 
 
 
+                'latest_assembly_at' => $stat ? $stat->latest_assembly_at : null,
+                'earliest_assembly_at' => $stat ? $stat->earliest_assembly_at : null,
+                'updated_at' => $tray->updated_at,
                 'created_at' => $tray->created_at,
 
 
@@ -382,115 +364,48 @@ class WarehouseController extends Controller
 
             if ($isPU) {
 
+                $allPuTrays = Tray::where(function ($q) {
+                    $q->where('tray_code', 'LIKE', '%-PU%')
+                      ->orWhere('tray_code', 'LIKE', '%/PU/%')
+                      ->orWhere('tray_code', 'LIKE', 'WH/ASSY-PU/%');
+                })->get(['tray_code']);
 
-
-                $lastPu = Tray::where(function ($q) {
-
-
-
-                    $q->where('tray_code', 'LIKE', 'WH/ASSY-PU/%')
-
-
-
-                      ->orWhere('tray_code', 'LIKE', 'WH/ASSY/PU/%');
-
-
-
-                })->orderBy('id', 'desc')->first();
-
-
-
-                $nextPuNum = 1;
-
-
-
-                if ($lastPu && preg_match('/(\d+)$/', $lastPu->tray_code, $m)) {
-
-
-
-                    $nextPuNum = (int)$m[1] + 1;
-
-
-
+                $maxPuNum = 0;
+                foreach ($allPuTrays as $pu) {
+                    if (preg_match('/(?:-PU|\/PU\/|WH\/ASSY-PU\/)(\d+)/i', $pu->tray_code, $m)) {
+                        $maxPuNum = max($maxPuNum, (int)$m[1]);
+                    }
                 }
 
+                $nextPuNum = $maxPuNum + 1;
+                $trayCode = 'WH/ASSY/PU/' . str_pad($nextPuNum, 6, '0', STR_PAD_LEFT);
 
-
-                $trayCode = 'WH/ASSY-PU/' . str_pad($nextPuNum, 6, '0', STR_PAD_LEFT);
-
-
-
-                while (Tray::where('tray_code', $trayCode)->exists()) {
-
-
-
+                while (Tray::where('tray_code', $trayCode)->orWhere('tray_code', 'WH/ASSY-PU/' . str_pad($nextPuNum, 6, '0', STR_PAD_LEFT))->exists()) {
                     $nextPuNum++;
-
-
-
-                    $trayCode = 'WH/ASSY-PU/' . str_pad($nextPuNum, 6, '0', STR_PAD_LEFT);
-
-
-
+                    $trayCode = 'WH/ASSY/PU/' . str_pad($nextPuNum, 6, '0', STR_PAD_LEFT);
                 }
-
-
 
             } else {
 
-
-
-                $lastTray = Tray::where('tray_code', 'LIKE', 'WH/ASSY/%')
-
-
-
+                $allTrays = Tray::where('tray_code', 'LIKE', 'WH/ASSY/%')
                     ->where('tray_code', 'NOT LIKE', '%PU%')
+                    ->get(['tray_code']);
 
-
-
-                    ->orderBy('id', 'desc')
-
-
-
-                    ->first();
-
-
-
-                $nextNum = 1;
-
-
-
-                if ($lastTray && preg_match('/(\d+)$/', $lastTray->tray_code, $m)) {
-
-
-
-                    $nextNum = (int)$m[1] + 1;
-
-
-
+                $maxNum = 0;
+                foreach ($allTrays as $t) {
+                    $cleanCode = preg_replace('/-S\d+$/i', '', $t->tray_code);
+                    if (preg_match('/WH\/ASSY\/(\d+)/i', $cleanCode, $m)) {
+                        $maxNum = max($maxNum, (int)$m[1]);
+                    }
                 }
 
-
-
+                $nextNum = $maxNum + 1;
                 $trayCode = 'WH/ASSY/' . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
 
-
-
                 while (Tray::where('tray_code', $trayCode)->exists()) {
-
-
-
                     $nextNum++;
-
-
-
                     $trayCode = 'WH/ASSY/' . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
-
-
-
                 }
-
-
 
             }
 
@@ -620,7 +535,8 @@ class WarehouseController extends Controller
 
 
 
-            $actor = auth()->user()?->username ?: $request->pic_warehouse;
+            $actorData = $this->resolveActor($request);
+            $actor = $actorData['full_name'];
 
 
 
@@ -886,72 +802,59 @@ class WarehouseController extends Controller
 
         $parts = $tray->parts()->orderBy('id', 'asc')->get();
 
+        // Filter parts: Jangan sertakan part yang sudah dikembalikan ke gudang (Tersedia) atau dialokasikan ke baki lain
+        $trayPartsSns = $parts->pluck('sn')->filter()->unique()->toArray();
+        if (!empty($trayPartsSns)) {
+            $validAllocatedSns = \App\Models\MasterStock::whereIn('sn', $trayPartsSns)
+                ->where('allocated_tray_id', $tray->id)
+                ->where('status', '!=', 'Tersedia')
+                ->pluck('sn')
+                ->toArray();
+            $parts = $parts->filter(function ($p) use ($validAllocatedSns) {
+                if ($p->status === 'Done') return true;
+                return in_array($p->sn, $validAllocatedSns);
+            })->values();
+        }
 
+        $assemblies = $tray->assemblies()->orderBy('set_number', 'asc')->get();
 
-        $assemblies = $tray->assemblies()->whereNotNull('finished_at')->orderBy('set_number', 'asc')->get();
+        // Filter assemblies: Jangan sertakan rakitan yang sudah di-restore/dipulihkan ke gudang tanpa pernah selesai dirakit
+        $assemblies = $assemblies->filter(function ($a) {
+            if (empty($a->finished_at) && in_array($a->verified_status, ['RESOLVED_RESTORED', 'RETURN_VERIFIED'])) {
+                return false;
+            }
+            if (empty($a->finished_at) && $a->status === 'Dipulihkan') {
+                return false;
+            }
+            return true;
+        })->values();
 
         // Active in-progress set
         $inProgress = \Illuminate\Support\Facades\DB::table('assembly_in_progress')
             ->where('tray_id', $tray->id)
             ->first();
 
-
-
         // Susun daftar set lengkap dari part yang dialokasikan atau assembly yang sudah tercatat
-
-
-
         $assyMap = [];
-
-
-
         foreach ($assemblies as $a) {
-
-
-
             $assyMap[$a->set_number] = $a;
-
-
-
         }
 
-
-
-        $p15List = $parts->where('part_type', '15')->values();
-
-
-
-        $p1List = $parts->where('part_type', '1')->values();
-
-
-
-        $p12List = $parts->where('part_type', '12')->values();
-
-
+        $p15List = $parts->where('part_type', '15')->sortBy('sn')->values();
+        $p1List = $parts->where('part_type', '1')->sortBy('sn')->values();
+        $p12List = $parts->where('part_type', '12')->sortBy('sn')->values();
 
         $totalSets = max($p15List->count(), $assemblies->count());
-
-
-
         $sets = [];
-
-
+        $isTrayReturned = ($tray->status === 'returned' || $tray->session_status === 'COMPLETED_SHIFT' || !empty($tray->return_verified));
 
         for ($i = 0; $i < $totalSets; $i++) {
-
-
-
             $setNum = $i + 1;
+            $a = $assyMap[$setNum] ?? null;
 
-
-
-            if (isset($assyMap[$setNum]) && !empty($assyMap[$setNum]->finished_at)) {
-
-
-
-                $a = $assyMap[$setNum];
-
-
+            if ($a && (!empty($a->finished_at) || $a->is_declined || in_array(strtoupper(trim((string)$a->status)), ['DECLINE', 'DECLINED']))) {
+                $isDeclined = ($a->is_declined || in_array(strtoupper(trim((string)$a->status)), ['DECLINE', 'DECLINED'])) && $a->verified_status !== 'RESOLVED_RESTORED';
+                $itemStatus = $isDeclined ? 'Declined' : ($a->status ?: 'Good');
 
                 $sets[] = array_merge($a->toArray(), [
                     'id' => $a->id,
@@ -959,9 +862,12 @@ class WarehouseController extends Controller
                     'part15_sn' => (!empty($a->part15_sn) && $a->part15_sn !== '-') ? $a->part15_sn : ($p15List->get($i)?->sn ?? '-'),
                     'part1_sn' => (!empty($a->part1_sn) && $a->part1_sn !== '-') ? $a->part1_sn : ($p1List->get($i)?->sn ?? '-'),
                     'part12_sn' => (!empty($a->part12_sn) && $a->part12_sn !== '-') ? $a->part12_sn : ($p12List->get($i)?->sn ?? '-'),
-                    'status' => $a->status ?: 'Good',
-                    'reason' => $a->reason,
-                    'original_assembly_status' => $a->original_assembly_status,
+                    'status' => $itemStatus,
+                    'is_declined' => $isDeclined,
+                    'declined_reason' => $a->declined_reason,
+                    'reason' => $a->reason ?: ($isDeclined ? $a->declined_reason : null),
+                    'original_assembly_status' => $a->original_assembly_status ?: ($itemStatus === 'Dirakit Ulang' ? 'Good' : $itemStatus),
+                    'assembly_status' => $a->original_assembly_status ?: ($itemStatus === 'Dirakit Ulang' ? 'Good' : $itemStatus),
                     'defective_parts' => $a->defective_parts,
                     'started_at' => $a->started_at,
                     'finished_at' => $a->finished_at,
@@ -981,65 +887,31 @@ class WarehouseController extends Controller
                     'warehouse_receipt_status' => $a->warehouse_receipt_status,
                     'warehouse_doc_number' => $a->warehouse_doc_number,
                 ]);
-
-
-
             } else {
+                $p15Val = $p15List->get($i)?->sn;
+                $p1Val = $p1List->get($i)?->sn;
+                $p12Val = $p12List->get($i)?->sn;
 
-
+                $st15 = $p15Val ? \App\Models\MasterStock::where('sn', $p15Val)->value('status') : null;
+                $isPartDeclined = ($st15 === 'Declined');
+                $isPartReturned = $isTrayReturned || ($st15 === 'Tersedia');
+                $defaultStatus = $isPartDeclined ? 'Declined' : ($isPartReturned ? 'Dikembalikan ke Gudang' : 'TERSUPPLY');
 
                 $sets[] = [
-
-
-
                     'set_number' => $setNum,
-
-
-
-                    'part15_sn' => $p15List->get($i)?->sn,
-
-
-
-                    'part1_sn' => $p1List->get($i)?->sn,
-
-
-
-                    'part12_sn' => $p12List->get($i)?->sn,
-
-
-
-                    'status' => null,
-
-
-
-                    'reason' => null,
-
-
-
+                    'part15_sn' => $p15Val,
+                    'part1_sn' => $p1Val,
+                    'part12_sn' => $p12Val,
+                    'status' => $defaultStatus,
+                    'reason' => $isPartReturned ? 'Dikembalikan ke gudang oleh operator assembly' : 'Tray Tersupply ke Perakitan',
+                    'is_declined' => $isPartDeclined,
+                    'is_returned' => $isPartReturned,
                     'started_at' => ($inProgress && $inProgress->current_set == $setNum) ? $inProgress->started_at : null,
-
-
-
                     'finished_at' => null,
-
-
-
                     'pic_assembly' => null,
-
-
-
                     'assy_doc_number' => null,
-
-
-
                 ];
-
-
-
             }
-
-
-
         }
 
 
@@ -1204,7 +1076,7 @@ class WarehouseController extends Controller
 
 
 
-            'verified_by_user' => auth()->user()?->username ?: 'Gudang',
+            'verified_by_user' => $this->resolveActor($request)['full_name'],
 
 
 
@@ -1332,7 +1204,8 @@ class WarehouseController extends Controller
 
 
 
-            $user = $request->input('operator') ?: ($request->input('username') ?: (auth()->user()?->full_name ?: (auth()->user()?->username ?: 'Administrator NKRI')));
+            $actorData = $this->resolveActor($request);
+            $user = $actorData['full_name'];
 
 
 
@@ -1736,7 +1609,12 @@ class WarehouseController extends Controller
 
 
 
-            $finishedCount = $assemblies->whereNotNull('finished_at')->whereNotNull('status')->count();
+            $finishedCount = $assemblies->filter(function ($a) {
+                if ($a->is_declined || in_array(strtoupper(trim((string)$a->status)), ['DECLINE', 'DECLINED']) || $a->verified_status === 'DECLINED') {
+                    return false;
+                }
+                return !empty($a->finished_at) && !empty($a->status);
+            })->count();
 
 
 
@@ -1940,15 +1818,15 @@ class WarehouseController extends Controller
 
 
 
-        $p15List = $parts->where('part_type', '15')->values();
+        $p15List = $parts->where('part_type', '15')->sortBy('sn')->values();
 
 
 
-        $p1List = $parts->where('part_type', '1')->values();
+        $p1List = $parts->where('part_type', '1')->sortBy('sn')->values();
 
 
 
-        $p12List = $parts->where('part_type', '12')->values();
+        $p12List = $parts->where('part_type', '12')->sortBy('sn')->values();
 
 
 
@@ -1981,13 +1859,10 @@ class WarehouseController extends Controller
 
 
         $finishedAssemblies = $assemblies->filter(function ($a) {
-
-
-
+            if ($a->is_declined || in_array(strtoupper(trim((string)($a->status ?? ''))), ['DECLINE', 'DECLINED']) || $a->verified_status === 'DECLINED') {
+                return false;
+            }
             return !empty($a->finished_at) || in_array(strtoupper(trim((string)($a->status ?? ''))), ['GOOD', 'HOLD', 'SCRAP', 'REWORK']);
-
-
-
         });
 
 
@@ -2002,62 +1877,24 @@ class WarehouseController extends Controller
 
         $sets = [];
 
-
-
         for ($i = 0; $i < $numSets; $i++) {
-
-
-
             $setNum = $i + 1;
-
-
-
-            // JIKA SET SUDAH SELESAI TERAKIT: JANGAN masukkan ke daftar pengembalian gudang!
-
-
-
-            if (in_array($setNum, $finishedSetNums)) {
-
-
-
-                continue;
-
-
-
-            }
-
-
-
             $assy = $assemblies->firstWhere('set_number', $setNum);
 
-
-
             $p15 = $assy?->part15_sn ?: ($p15List->get($i)?->sn ?? '-');
-
-
-
             $p1 = $assy?->part1_sn ?: ($p1List->get($i)?->sn ?? '-');
-
-
-
             $p12 = $assy?->part12_sn ?: ($p12List->get($i)?->sn ?? '-');
 
-
-
             $st15 = MasterStock::where('sn', $p15)->value('status');
-
-
-
             $st1 = MasterStock::where('sn', $p1)->value('status');
-
-
-
             $st12 = MasterStock::where('sn', $p12)->value('status');
 
+            $isFinished = in_array($setNum, $finishedSetNums);
+            $isDeclined = ($assy && ($assy->is_declined || in_array(strtoupper(trim((string)$assy->status)), ['DECLINE', 'DECLINED']) || $assy->verified_status === 'DECLINED')) || $st15 === 'Declined' || $st1 === 'Declined' || $st12 === 'Declined';
+            $isVerified = !$isDeclined && ($st15 === 'Tersedia' || ($assy && in_array($assy->verified_status, ['ACC', 'RETURN_VERIFIED'])) || ($tray->return_verified && $st15 !== 'Supplied') || $isFinished);
 
+            $statusText = $isDeclined ? 'Declined' : ($isVerified ? 'ACC' : 'Menunggu Verifikasi');
 
-            $isDeclined = ($assy && $assy->is_declined) || $st15 === 'Declined' || $st1 === 'Declined' || $st12 === 'Declined';
-            $isVerified = !$isDeclined && ($st15 === 'Tersedia' || ($assy && in_array($assy->verified_status, ['ACC', 'RETURN_VERIFIED'])) || ($tray->return_verified && $st15 !== 'Supplied'));
             $sets[] = [
                 'set_number' => $setNum,
                 'p15_sn' => $p15,
@@ -2066,29 +1903,12 @@ class WarehouseController extends Controller
                 'p15_status' => $st15,
                 'p1_status' => $st1,
                 'p12_status' => $st12,
-                'status' => $isDeclined ? 'Declined' : ($isVerified ? 'Tersedia' : ($assy?->status ?: 'Dikembalikan')),
-
-
-
+                'status' => $statusText,
                 'is_verified' => $isVerified,
-
-
-
                 'is_declined' => $isDeclined,
-
-
-
                 'declined_reason' => $assy?->declined_reason,
-
-
-
             ];
-
-
-
         }
-
-
 
         // Auto-heal / auto-complete: jika seluruh set pengembalian sudah diproses (semuanya is_verified atau is_declined)
 
@@ -2108,40 +1928,60 @@ class WarehouseController extends Controller
 
         if ($isAllSetsResolved && !$tray->return_verified) {
 
-
-
-            $user = $request->input('operator') ?: ($request->input('username') ?: (auth()->user()?->full_name ?: (auth()->user()?->username ?: 'Administrator NKRI')));
-
-
+            $actorData = $this->resolveActor($request);
+            $user = $actorData['full_name'];
 
             $tray->update([
-
-
-
                 'return_verified' => true,
-
-
-
                 'return_verified_by' => $user,
-
-
-
                 'return_verified_at' => now(),
-
-
-
                 'status' => 'returned',
-
-
-
             ]);
 
-
-
             $tray->refresh();
+        }
 
+        if ($tray->return_verified) {
+            // Auto-heal part stok pada tray yang telah diverifikasi kembali menjadi Tersedia
+            $allTraySns = collect($sets)->flatMap(function ($s) {
+                return array_filter([$s['p15_sn'], $s['p1_sn'], $s['p12_sn']]);
+            })->filter(fn($sn) => $sn && $sn !== '-')->unique()->toArray();
 
+            $declinedTraySns = collect($sets)->filter(fn($s) => !empty($s['is_declined']))->flatMap(function ($s) {
+                return array_filter([$s['p15_sn'], $s['p1_sn'], $s['p12_sn']]);
+            })->filter(fn($sn) => $sn && $sn !== '-')->unique()->toArray();
 
+            $accTraySns = array_values(array_diff($allTraySns, $declinedTraySns));
+
+            if (!empty($accTraySns)) {
+                MasterStock::whereIn('sn', $accTraySns)
+                    ->where('status', '!=', 'Declined')
+                    ->where(function ($w) use ($tray) {
+                        $w->where('allocated_tray_id', $tray->id)
+                          ->orWhere('status', '!=', 'Tersedia');
+                    })
+                    ->update([
+                        'status' => 'Tersedia',
+                        'allocated_tray_id' => null,
+                        'allocated_at' => null,
+                        'used_at' => null,
+                        'last_tray_id' => null,
+                        'is_replaced_from_assy' => 0,
+                        'last_reason' => "Pengembalian tray {$tray->tray_code} diverifikasi Gudang (Tersedia)",
+                    ]);
+
+                DB::table('parts')->where('tray_id', $tray->id)
+                    ->whereIn('sn', $accTraySns)
+                    ->update(['status' => 'Returned', 'updated_at' => now()]);
+
+                // Perbarui status pada array sets agar langsung menampilkan Tersedia
+                foreach ($sets as &$s) {
+                    if (in_array($s['p15_sn'], $accTraySns)) $s['p15_status'] = 'Tersedia';
+                    if (in_array($s['p1_sn'], $accTraySns)) $s['p1_status'] = 'Tersedia';
+                    if (in_array($s['p12_sn'], $accTraySns)) $s['p12_status'] = 'Tersedia';
+                }
+                unset($s);
+            }
         }
 
 
@@ -2218,7 +2058,8 @@ class WarehouseController extends Controller
 
 
 
-        $user = auth()->user()?->username ?: 'Gudang';
+        $actorData = $this->resolveActor($request);
+        $user = $actorData['full_name'];
 
 
 
@@ -2252,264 +2093,100 @@ class WarehouseController extends Controller
 
         return DB::transaction(function () use ($tray, $user) {
 
-
-
-            // 1. Dapatkan serial number dari SEMUA set yang SUDAH SELESAI DIRAKIT
-
-
-
-            // Set yang sudah selesai terakit APAPUN KONDISINYA tidak boleh disentuh atau dikembalikan ke gudang!
-
-
-
-            $finishedAssemblies = Assembly::where('tray_id', $tray->id)
-
-
-
-                ->where(function ($w) {
-
-
-
-                    $w->whereNotNull('finished_at')
-
-
-
-                      ->orWhereIn('status', ['Good', 'Hold', 'Scrap', 'REWORK']);
-
-
-
-                })
-
-
-
-                ->get();
-
-
-
-            $finishedSns = $finishedAssemblies->flatMap(function ($a) {
-
-
-
-                return array_filter([$a->part15_sn, $a->part1_sn, $a->part12_sn]);
-
-
-
-            })->unique()->filter()->toArray();
-
-
-
-            // 2. Dapatkan seluruh serial number parts pada tray ini
-
-
-
+            // 1. Dapatkan serial number parts dari SEMUA sumber terkait tray ini (parts, master_stocks, assemblies)
             $parts = DB::table('parts')->where('tray_id', $tray->id)->get();
-
-
-
             $sns = $parts->pluck('sn')->filter()->unique()->toArray();
-
-
-
             $msSns = DB::table('master_stocks')
-
-
-
                 ->where('allocated_tray_id', $tray->id)
-
-
-
                 ->pluck('sn')
-
-
-
                 ->filter()
-
-
-
                 ->unique()
-
-
-
                 ->toArray();
-
-
-
-            $allSns = array_unique(array_merge($sns, $msSns));
-
-
-
-            // 3. Saring HANYA serial number yang BELUM DIRAKIT (exclude $finishedSns)
-
-
-
-            $unreturnedSns = array_values(array_diff($allSns, $finishedSns));
-
-
-
-            if (!empty($unreturnedSns)) {
-
-
-
-                MasterStock::whereIn('sn', $unreturnedSns)->update([
-
-
-
-                    'status' => 'Tersedia',
-
-
-
-                    'allocated_tray_id' => null,
-
-
-
-                    'allocated_at' => null,
-
-
-
-                    'used_at' => null,
-
-
-
-                    'last_tray_id' => null,
-
-
-
-                    'is_replaced_from_assy' => 0,
-
-
-
-                    'last_reason' => 'Pengembalian tray diverifikasi Gudang (part belum dirakit kembali Tersedia)',
-
-
-
-                ]);
-
-
-
-                foreach ($unreturnedSns as $sn) {
-
-
-
-                    $p = DB::table('master_stocks')->where('sn', $sn)->first();
-
-
-
-                    PartAuditLog::create([
-
-
-
-                        'part_type' => $p?->part_type ?: '15',
-
-
-
-                        'sn' => $sn,
-
-
-
-                        'old_status' => 'Supplied/Return',
-
-
-
-                        'new_status' => 'Tersedia',
-
-
-
-                        'action_type' => 'RETURN_VERIFY_TRAY_ALL',
-
-
-
-                        'actor_username' => $user,
-
-
-
-                        'actor_role' => 'gudang',
-
-
-
-                        'reason' => "Verifikasi pengembalian part sisa belum dirakit untuk tray {$tray->tray_code}",
-
-
-
+            $assySns = DB::table('assemblies')
+                ->where('tray_id', $tray->id)
+                ->get()
+                ->flatMap(function ($a) {
+                    return array_filter([$a->part15_sn, $a->part1_sn, $a->part12_sn]);
+                })
+                ->filter()
+                ->unique()
+                ->toArray();
+            $allSns = array_unique(array_merge($sns, $msSns, $assySns));
+
+            // Dapatkan serial number yang declined (tidak dikembalikan ke Tersedia)
+            $declinedSns = Assembly::where('tray_id', $tray->id)
+                ->where(function ($w) {
+                    $w->where('is_declined', true)
+                      ->orWhereIn('status', ['Decline', 'DECLINED'])
+                      ->orWhere('verified_status', 'DECLINED');
+                })
+                ->get()
+                ->flatMap(function ($a) {
+                    return array_filter([$a->part15_sn, $a->part1_sn, $a->part12_sn]);
+                })->unique()->filter()->toArray();
+
+            $declinedMsSns = DB::table('master_stocks')
+                ->where(function ($w) use ($tray, $allSns) {
+                    $w->where('allocated_tray_id', $tray->id)
+                      ->orWhereIn('sn', $allSns);
+                })
+                ->where('status', 'Declined')
+                ->pluck('sn')->filter()->unique()->toArray();
+
+            $allDeclinedSns = array_unique(array_merge($declinedSns, $declinedMsSns));
+
+            // Saring serial number yang dikembalikan ke stok gudang: SEMUA part pada tray ini KECUALI yang di-decline
+            $returnedSns = array_values(array_diff($allSns, $allDeclinedSns));
+
+            if (!empty($returnedSns)) {
+                MasterStock::whereIn('sn', $returnedSns)
+                    ->where('status', '!=', 'Declined')
+                    ->update([
+                        'status' => 'Tersedia',
+                        'allocated_tray_id' => null,
+                        'allocated_at' => null,
+                        'used_at' => null,
+                        'last_tray_id' => null,
+                        'is_replaced_from_assy' => 0,
+                        'last_reason' => "Pengembalian tray {$tray->tray_code} diverifikasi Gudang (Tersedia)",
                     ]);
 
-
-
+                foreach ($returnedSns as $sn) {
+                    $p = DB::table('master_stocks')->where('sn', $sn)->first();
+                    PartAuditLog::create([
+                        'part_type' => $p?->part_type ?: '15',
+                        'sn' => $sn,
+                        'old_status' => 'Supplied/Return',
+                        'new_status' => 'Tersedia',
+                        'action_type' => 'RETURN_VERIFY_TRAY_ALL',
+                        'actor_username' => $user,
+                        'actor_role' => 'gudang',
+                        'reason' => "Verifikasi pengembalian part untuk tray {$tray->tray_code}",
+                    ]);
                 }
-
-
-
             }
 
+            // Update status parts yang dikembalikan ke gudang di tabel parts menjadi Returned (jangan dihapus agar riwayat dan SN tetap utuh)
+            if (!empty($returnedSns)) {
+                DB::table('parts')->where('tray_id', $tray->id)
+                    ->whereIn('sn', $returnedSns)
+                    ->update(['status' => 'Returned', 'updated_at' => now()]);
+            }
 
-
-            // Update verified_status HANYA untuk row assembly yang belum selesai dirakit
-
-
-
+            // Update assembly pada baki ini menjadi ACC / terverifikasi
             Assembly::where('tray_id', $tray->id)
-
-
-
-                ->where(function ($w) {
-
-
-
-                    $w->whereNull('finished_at')
-
-
-
-                      ->where(function ($q) {
-
-
-
-                          $q->whereNull('status')
-
-
-
-                            ->orWhereNotIn('status', ['Good', 'Hold', 'Scrap', 'REWORK']);
-
-
-
-                      });
-
-
-
-                })
-
-
-
+                ->where('is_declined', false)
+                ->whereNotIn('status', ['Decline', 'DECLINED'])
                 ->update([
-
-
-
-                    'verified_status' => 'RETURN_VERIFIED'
-
-
-
+                    'verified_status' => 'ACC',
+                    'warehouse_receipt_status' => 'ACCEPTED',
                 ]);
 
-
-
             $tray->update([
-
-
-
                 'return_verified' => true,
-
-
-
                 'return_verified_by' => $user,
-
-
-
                 'return_verified_at' => now(),
-
-
-
                 'status' => 'returned',
-
-
-
             ]);
 
 
@@ -2581,7 +2258,8 @@ class WarehouseController extends Controller
 
 
 
-        $user = auth()->user()?->username ?: 'Gudang';
+        $actorData = $this->resolveActor($request);
+        $user = $actorData['full_name'];
 
 
 
@@ -2893,39 +2571,14 @@ class WarehouseController extends Controller
 
 
 
-        $user = auth()->user()?->username ?: 'Gudang';
+        $actorData = $this->resolveActor($request);
+        $user = $actorData['full_name'];
 
 
 
         $assembly = Assembly::where('tray_id', $trayId)->where('set_number', $setNum)->first();
 
-
-
-        if ($assembly && (!empty($assembly->finished_at) || in_array(strtoupper(trim((string)$assembly->status)), ['GOOD', 'HOLD', 'SCRAP', 'REWORK']))) {
-
-
-
-            return response()->json([
-
-
-
-                'ok' => false,
-
-
-
-                'error' => "Set #{$setNum} telah selesai dirakit ({$assembly->status}) dan tidak dapat dikembalikan ke stok gudang."
-
-
-
-            ], 400);
-
-
-
-        }
-
-
-
-        return DB::transaction(function () use ($trayId, $setNum, $p15Sn, $p1Sn, $p12Sn, $user) {
+        return DB::transaction(function () use ($trayId, $setNum, $p15Sn, $p1Sn, $p12Sn, $user, $assembly) {
 
 
 
@@ -3041,81 +2694,23 @@ class WarehouseController extends Controller
 
 
 
-            Assembly::where('tray_id', $trayId)
+            // Perbarui status part di tabel parts menjadi Returned (JANGAN DIHAPUS agar history dan data SN tidak hilang)
+            DB::table('parts')->where('tray_id', $trayId)
+                ->whereIn('sn', array_filter([$p15Sn, $p1Sn, $p12Sn]))
+                ->update(['status' => 'Returned', 'updated_at' => now()]);
 
-
-
-                ->where('set_number', $setNum)
-
-
-
-                ->whereNull('finished_at')
-
-
-
-                ->update([
-
-
-
-                    'verified_status' => 'RETURN_VERIFIED'
-
-
-
+            // Update status verifikasi assembly pada baki ini jika ada
+            if ($assembly) {
+                $assembly->update([
+                    'verified_status' => 'ACC',
+                    'warehouse_receipt_status' => 'ACCEPTED',
                 ]);
-
-
+            }
 
             $tray = Tray::find($trayId);
-
-
-
-            $finishedAssemblies = Assembly::where('tray_id', $trayId)
-
-
-
-                ->where(function ($w) {
-
-
-
-                    $w->whereNotNull('finished_at')
-
-
-
-                      ->orWhereIn('status', ['Good', 'Hold', 'Scrap', 'REWORK']);
-
-
-
-                })->get();
-
-
-
-            $finishedSns = $finishedAssemblies->flatMap(function ($a) {
-
-
-
-                return array_filter([$a->part15_sn, $a->part1_sn, $a->part12_sn]);
-
-
-
-            })->unique()->filter()->toArray();
-
-
-
             $unreturnedCount = MasterStock::where('allocated_tray_id', $trayId)
-
-
-
-                ->whereNotIn('sn', $finishedSns)
-
-
-
-                ->whereIn('status', ['Supplied', 'HOLD_SUPPLIED'])
-
-
-
+                ->where('status', '!=', 'Declined')
                 ->count();
-
-
 
             $isFullyVerified = ($unreturnedCount === 0);
 
@@ -3233,7 +2828,8 @@ class WarehouseController extends Controller
 
 
 
-        $user = auth()->user()?->username ?: 'Gudang';
+        $actorData = $this->resolveActor($request);
+        $user = $actorData['full_name'];
 
 
 
@@ -3241,7 +2837,7 @@ class WarehouseController extends Controller
 
 
 
-        if ($assembly && (!empty($assembly->finished_at) || in_array(strtoupper(trim((string)$assembly->status)), ['GOOD', 'HOLD', 'SCRAP', 'REWORK']))) {
+        if ($assembly && !$assembly->is_declined && !in_array(strtoupper(trim((string)$assembly->status)), ['DECLINE', 'DECLINED']) && (!empty($assembly->finished_at) || in_array(strtoupper(trim((string)$assembly->status)), ['GOOD', 'HOLD', 'SCRAP', 'REWORK']))) {
 
 
 
@@ -3277,6 +2873,7 @@ class WarehouseController extends Controller
                     'declined_reason' => $reason,
                     'status' => 'Decline',
                     'verified_status' => 'DECLINED',
+                    'finished_at' => null,
                     'part15_sn' => ($p15Sn && $p15Sn !== '-') ? $p15Sn : $assembly->part15_sn,
                     'part1_sn' => ($p1Sn && $p1Sn !== '-') ? $p1Sn : $assembly->part1_sn,
                     'part12_sn' => ($p12Sn && $p12Sn !== '-') ? $p12Sn : $assembly->part12_sn,
@@ -3294,8 +2891,8 @@ class WarehouseController extends Controller
                     'status' => 'Decline',
                     'verified_status' => 'DECLINED',
                     'pic_assembly' => $tray ? ($tray->pic_assembly ?: ($user->username ?? null)) : ($user->username ?? null),
-                    'started_at' => now(),
-                    'finished_at' => now(),
+                    'started_at' => null,
+                    'finished_at' => null,
                 ]);
             }
 
@@ -3418,6 +3015,16 @@ class WarehouseController extends Controller
 
 
             }
+
+
+
+            // Update status part di tabel parts menjadi Declined (jangan dihapus)
+
+            DB::table('parts')->where('tray_id', $trayId)
+
+                ->whereIn('sn', array_filter([$p15Sn, $p1Sn, $p12Sn]))
+
+                ->update(['status' => 'Declined', 'updated_at' => now()]);
 
 
 
