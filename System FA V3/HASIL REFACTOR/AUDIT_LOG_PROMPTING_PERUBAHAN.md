@@ -42,7 +42,7 @@ flowchart TD
 ## 3. Log Kronologis Lengkap Seluruh 176 Prompting & Perubahan Sistem
 
 
-### Log Kronologis Perubahan Sistem (Prompt #101)
+### Log Kronologis Perubahan Sistem (Prompt #102)
 
 | No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
 |:---:|:---:|---|---|---|
@@ -147,3 +147,4 @@ flowchart TD
 | **#099** | `2026-11-10 11:44:11` | **UI/UX Components** | dropdownya mana | Menampilkan kembali dropdown seleksi yang sempat tertutup. |
 | **#100** | `2026-11-10 12:12:19` | **UI/UX Components** | kenapa | Menampilkan kembali dropdown seleksi yang sempat tertutup. |
 | **#101** | `2026-11-11 00:46:30` | **Delivery Order (Packing List)** | saya lupa kalo packing list itu hanya bisa bikin per peti dan perdus saja tidak bisa persatuan kalo misal SJ itu bisa satuan. kemudian untuk generate ID PL kayanya gausah anjir buat apa, kalo misal bikin dus yauda generate nya ID dus, kalo peti berarti generate nya ID peti, ditabel itu nya benerin kok jadi ada id id aneh gitu buat apa kan nanti consume nya itu berdasarkan id peti dan id dus nya. ngerti ga? | Membatasi struktur Packing List hanya pada opsi Per Peti (20 unit) dan Per Dus (10 unit). |
+| **#102** | `2026-11-11 01:22:28` | **Prints & Labels** | fix the bug | Fix bug pembersihan tombol berlebih pada halaman cetak label. |
