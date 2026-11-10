@@ -42,7 +42,7 @@ flowchart TD
 ## 3. Log Kronologis Lengkap Seluruh 176 Prompting & Perubahan Sistem
 
 
-### Log Kronologis Perubahan Sistem (Prompt #096)
+### Log Kronologis Perubahan Sistem (Prompt #097)
 
 | No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
 |:---:|:---:|---|---|---|
@@ -142,3 +142,4 @@ flowchart TD
 | **#094** | `2026-11-10 08:07:54` | **Reassembly Logic** | ini kenapa yang di daftar ulangin udah dapet wh assy pu1 padahal saya belum meneruskan set yang didaftar ulang ke siapa siapa. jadi tolong fix untuk set yang ada di menu perakitan ulang dan memang beum di alokasikan ke oeperator itu dia belum mendapatkan no PU kalo mau ada keterangan di situ nya yauda PU atau RU aja jangan di tambahin no dokumen, kalo memang sudah di alokasikan ke siapa baru boleh di tempel untuk di card, ngerti kan? | Mencegah pemberian kode PU (Perakitan Ulang) sebelum set secara resmi diteruskan. |
 | **#095** | `2026-11-10 08:55:56` | **KPI & Count Accuracy** | ini kenapa 6 yang good bukannya 7? | Memperbaiki kalkulasi kuantitas Good yang sempat tercatat 6 menjadi 7. |
 | **#096** | `2026-11-10 09:39:09` | **Input Validation** | buat inputan yang saya lampirkan di atas hanya bisa input angka dan simbol | Membatasi input field hanya menerima karakter numerik dan simbol yang diizinkan. |
+| **#097** | `2026-11-10 09:58:21` | **Admin CMS & Chart** | ini juga cartnya gada | Mengaktifkan kembali grafik/chart doughnut pada dashboard admin. |
