@@ -42,7 +42,7 @@ flowchart TD
 ## 3. Log Kronologis Lengkap Seluruh 176 Prompting & Perubahan Sistem
 
 
-### Log Kronologis Perubahan Sistem (Prompt #121)
+### Log Kronologis Perubahan Sistem (Prompt #122)
 
 | No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
 |:---:|:---:|---|---|---|
@@ -167,3 +167,4 @@ flowchart TD
 | **#119** | `2026-11-11 05:21:02` | **Print Labels 100x150** | tuh label dus tuh gituuu ngerti kann, kalo misal milih opsi perpeti label dus nya gituu, kalo misal milih opsi perdus maka ilangin paknya no peti nya ganti no dus, id peti nya ganti id dus (kalo misal milih perdus bukan perpeti) jika misal perpeti mah label dusnya samain aja kaya file word itu kalo misaal perdus harus ada yang di rubah sesuai dengan yang saya inginkan | Penyesuaian tata letak label dus fisik (1 Peti = 2 Dus; 1 Dus = 10 SN). |
 | **#120** | `2026-11-11 06:14:43` | **Navigation Routing** | saya sudah di PL tapi kok urlnya masih delivery? | Memperbaiki routing internal tab PL agar tidak tertukar dengan Surat Jalan. |
 | **#121** | `2026-11-11 06:44:42` | **Delivery Order Counter** | jumlahnya kok 400? | Memperbaiki kalkulasi kuantitas dokumen agar menghitung riil dokumen tersimpan. |
+| **#122** | `2026-11-11 06:56:54` | **Delivery Order Counter** | kok ini 3 dokumen? harusnya 2 ga sih? tapi mending hitungnya dari berapa banyak dokumen surat jalan yang sudah dibuat | Memperbaiki kalkulasi kuantitas dokumen agar menghitung riil dokumen tersimpan. |
