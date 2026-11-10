@@ -42,7 +42,7 @@ flowchart TD
 ## 3. Log Kronologis Lengkap Seluruh 176 Prompting & Perubahan Sistem
 
 
-### Log Kronologis Perubahan Sistem (Prompt #094)
+### Log Kronologis Perubahan Sistem (Prompt #095)
 
 | No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
 |:---:|:---:|---|---|---|
@@ -140,3 +140,4 @@ flowchart TD
 | **#092** | `2026-11-10 06:43:06` | **Master Stock & Validation** | kalo notifikasi ada data double itu warna merah ya inget. untuk warna dalam perakitan seperti dalam foto yang saya lampirkan, tolong warnanya sesuaikan dengan status pada setnya, kalo good yaudah ijo, kalo ada perubahan bordernya tetep hijau untuk perubahan nya tinggal tambahin tanpa merubah bordernya ya, begitupun hold dengan warna kuning dan scrap dengan warna merah | Memberikan alert merah tegas saat mendeteksi duplikasi input part ganda. |
 | **#093** | `2026-11-10 07:06:48` | **Admin CMS & Chart** | chartnya kok gadaa | Mengaktifkan kembali grafik/chart doughnut pada dashboard admin. |
 | **#094** | `2026-11-10 08:07:54` | **Reassembly Logic** | ini kenapa yang di daftar ulangin udah dapet wh assy pu1 padahal saya belum meneruskan set yang didaftar ulang ke siapa siapa. jadi tolong fix untuk set yang ada di menu perakitan ulang dan memang beum di alokasikan ke oeperator itu dia belum mendapatkan no PU kalo mau ada keterangan di situ nya yauda PU atau RU aja jangan di tambahin no dokumen, kalo memang sudah di alokasikan ke siapa baru boleh di tempel untuk di card, ngerti kan? | Mencegah pemberian kode PU (Perakitan Ulang) sebelum set secara resmi diteruskan. |
+| **#095** | `2026-11-10 08:55:56` | **KPI & Count Accuracy** | ini kenapa 6 yang good bukannya 7? | Memperbaiki kalkulasi kuantitas Good yang sempat tercatat 6 menjadi 7. |
