@@ -42,7 +42,7 @@ flowchart TD
 ## 3. Log Kronologis Lengkap Seluruh 176 Prompting & Perubahan Sistem
 
 
-### Log Kronologis Perubahan Sistem (Prompt #130)
+### Log Kronologis Perubahan Sistem (Prompt #131)
 
 | No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
 |:---:|:---:|---|---|---|
@@ -176,3 +176,4 @@ flowchart TD
 | **#128** | `2026-11-11 08:34:35` | **UI/UX Backdrop** | itu apa kok ada jarak blurnya ke atas? | Menghilangkan celah kosong (white gap) di atas backdrop blur. |
 | **#129** | `2026-11-11 08:53:33` | **Performance Optimization** | ngeload terus nampilin datanya jadi ngelag tidak cepat | Optimasi performa query database dan reaktivitas rendering data besar. |
 | **#130** | `2026-11-11 08:57:46` | **Performance Optimization** | ngeload terus nampilin datanya jadi ngelag tidak cepat | Optimasi performa query database dan reaktivitas rendering data besar. |
+| **#131** | `2026-11-11 09:10:54` | **Workstation Assembly** | setnya kok ilang astaga | Memperbaiki state visibility agar set aktif tidak menghilang dari tampilan. |
