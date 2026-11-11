@@ -105,7 +105,6 @@
       }
     };
 
-    const suggestionCache = new Map();
     let fetchDebounceTimer = null;
 
     const fetchInputSuggestions = (idx, field, delay = 0, openDropdown = true) => {
@@ -116,7 +115,7 @@
         const pType = field === 'p1' ? '1' : (field === 'p12' ? '12' : '15');
         const queryVal = (row[field] || '').trim();
 
-        // Used in other rows
+        // Used in other rows of the CURRENT tray form
         const usedInForm = new Set();
         gudangRows.value.forEach((r, i) => {
           if (i !== idx && r[field] && r[field].trim()) {
@@ -125,36 +124,10 @@
           }
         });
 
-        const cacheKey = `${pType}:${queryVal}`;
-        if (suggestionCache.has(cacheKey)) {
-          const cachedData = suggestionCache.get(cacheKey);
-          if (openDropdown) {
-            const filtered = cachedData.filter(item => {
-              const snClean = item.sn.toUpperCase();
-              const snNoDot = item.sn.replace(/[.,\s]/g, '');
-              return !usedInForm.has(snClean) && !usedInForm.has(snNoDot);
-            }).slice(0, 40);
-
-            inputDropdown.value = {
-              isOpen: filtered.length > 0,
-              idx,
-              field,
-              list: filtered,
-              hasSearched: true
-            };
-          }
-          return;
-        }
-
         try {
+          // Selalu panggil endpoint live real-time agar part yang sudah dipakai/disimpan ke tray langsung hilang tanpa perlu refresh
           const json = await fetchAPI(`/master/available?type=${pType}&q=${encodeURIComponent(queryVal)}&limit=60`);
           if (json.ok && Array.isArray(json.data)) {
-            suggestionCache.set(cacheKey, json.data);
-            if (suggestionCache.size > 80) {
-              const firstK = suggestionCache.keys().next().value;
-              suggestionCache.delete(firstK);
-            }
-
             if (openDropdown) {
               const filtered = json.data.filter(item => {
                 const snClean = item.sn.toUpperCase();
@@ -350,16 +323,8 @@
 
       if (stage > prevStage) {
         try {
-          history.pushState({ type: 'gudang_stage', stage }, '', '#warehouse/stage-' + stage);
-          gudangStageHistoryDepth.value++;
+          history.replaceState({ type: 'gudang_stage', stage }, '', window.location.pathname);
         } catch (_) { }
-      } else if (stage < prevStage && !isNavigatingBack) {
-        const diff = prevStage - stage;
-        if (gudangStageHistoryDepth.value >= diff) {
-          gudangStageHistoryDepth.value -= diff;
-          programmaticBackCount += diff;
-          try { window.history.go(-diff); } catch (_) { }
-        }
       }
     };
 
@@ -588,16 +553,29 @@
           newTrayResult.value = json.data;
           showTrayResultPopup.value = true;
           selectedTrayCode.value = json.data.tray_code;
+
+          // 1. Reset seluruh state reactive form WO ke kondisi awal
           gudangRows.value = [{ p1: '', p12: '', p15: '' }];
           gudangColStage.value = 1;
-          if (gudangStageHistoryDepth.value > 0) {
-            const cleanCount = gudangStageHistoryDepth.value;
-            gudangStageHistoryDepth.value = 0;
-            programmaticBackCount += cleanCount;
-            try { window.history.go(-cleanCount); } catch (_) { }
-          }
+          gudangAssignedOperator.value = '';
           gudangSourceMO.value = '';
           gudangSourceMOSuffix.value = '';
+          gudangStageHistoryDepth.value = 0;
+          inputDropdown.value = { isOpen: false, idx: null, field: '', list: [], hasSearched: false };
+
+          // 2. Bersihkan URL dan history entry stage tanpa trigger history.go (agar browser tidak merestorasi data lama dari cache)
+          try {
+            if (window.history && window.history.replaceState) {
+              window.history.replaceState({ type: 'tab', key: 'warehouse', tab: 'warehouse' }, '', '/gudang');
+            }
+          } catch (_) { }
+
+          // 3. Pastikan seluruh elemen input di DOM benar-benar kosong
+          nextTick(() => {
+            const inputs = document.querySelectorAll('input[id^="g-p1-"], input[id^="g-p12-"], input[id^="g-p15-"]');
+            inputs.forEach(inp => { if (inp) inp.value = ''; });
+          });
+
           await loadTrays();
           await loadAssemblyTray();
         } else {
@@ -610,6 +588,17 @@
 
     const closeTrayResultPopup = () => {
       showTrayResultPopup.value = false;
+      // Pastikan form benar-benar bersih saat popup ditutup dan siap untuk input WO baru
+      gudangRows.value = [{ p1: '', p12: '', p15: '' }];
+      gudangColStage.value = 1;
+      gudangAssignedOperator.value = '';
+      gudangSourceMO.value = '';
+      gudangSourceMOSuffix.value = '';
+      inputDropdown.value = { isOpen: false, idx: null, field: '', list: [], hasSearched: false };
+      nextTick(() => {
+        const inputs = document.querySelectorAll('input[id^="g-p1-"], input[id^="g-p12-"], input[id^="g-p15-"]');
+        inputs.forEach(inp => { if (inp) inp.value = ''; });
+      });
     };
 
     const startAssemblyFromPopup = () => {
@@ -1038,6 +1027,7 @@
     const showReturnDetailModal = ref(false);
     const activeReturnTray = ref(null);
     const activeReturnSets = ref([]);
+    const isLoadingReturnDetail = ref(false);
     const isVerifyingReturn = ref(false);
     const verifyingSetIndex = ref(null);
 
@@ -1046,8 +1036,8 @@
     });
 
     const isAllActiveReturnSetsVerified = computed(() => {
-      if (!activeReturnSets.value || activeReturnSets.value.length === 0) return false;
-      return activeReturnSets.value.every(s => s.is_verified || s.status === 'Tersedia');
+      if (!activeReturnSets.value || activeReturnSets.value.length === 0) return true;
+      return activeReturnSets.value.every(s => s.is_verified || s.is_declined || s.status === 'ACC' || s.status === 'Tersedia' || s.status === 'Declined');
     });
 
     const filteredReturnsList = computed(() => {
@@ -1122,6 +1112,7 @@
     const openReturnDetailModal = async (tray) => {
       activeReturnTray.value = tray;
       activeReturnSets.value = [];
+      isLoadingReturnDetail.value = true;
       showReturnDetailModal.value = true;
       try {
         const tId = tray.id || '';
@@ -1135,6 +1126,8 @@
         }
       } catch (e) {
         triggerToast('Error', e.message, 'error');
+      } finally {
+        isLoadingReturnDetail.value = false;
       }
     };
 
@@ -1268,8 +1261,10 @@
             activeReturnTray.value.return_verified_at = getNowLocalDateTimeStr();
             if (activeReturnSets.value && activeReturnSets.value.length) {
               activeReturnSets.value.forEach(s => {
-                s.is_verified = true;
-                s.status = 'Tersedia';
+                if (!s.is_declined && s.status !== 'Declined') {
+                  s.is_verified = true;
+                  s.status = 'Tersedia';
+                }
               });
             }
           }
@@ -1661,6 +1656,7 @@
       showReturnDetailModal,
       activeReturnTray,
       activeReturnSets,
+      isLoadingReturnDetail,
       isVerifyingReturn,
       verifyingSetIndex,
       pendingReturnsCount,

@@ -6,6 +6,9 @@
  */
 
 (function (root, factory) {
+  if (typeof window !== 'undefined') {
+    window.createAssemblyModule = factory();
+  }
   if (typeof define === 'function' && define.amd) {
     define([], factory);
   } else if (typeof module === 'object' && module.exports) {
@@ -148,10 +151,10 @@
     // ===================================================================
     const currentTraySetsCount = computed(() => {
       const assyCount = (currentTrayAssemblies.value || []).length;
-      const maxAssySet = (currentTrayAssemblies.value || []).reduce((max, a) => Math.max(max, Number(a.set_number) || 0), 0);
-      if (currentTray.value && currentTray.value.session_status === 'COMPLETED_SHIFT') {
-        return Math.max(assyCount, maxAssySet, 0);
+      if (currentTray.value && (currentTray.value.session_status === 'COMPLETED_SHIFT' || currentTray.value.session_status === 'RETURNED_TO_WAREHOUSE')) {
+        return assyCount;
       }
+      const maxAssySet = (currentTrayAssemblies.value || []).reduce((max, a) => Math.max(max, Number(a.set_number) || 0), 0);
       const p15Count = (currentTrayParts.value || []).filter(p => p.part_type === '15').length;
       const p1Count = (currentTrayParts.value || []).filter(p => p.part_type === '1').length;
       const p12Count = (currentTrayParts.value || []).filter(p => p.part_type === '12').length;
@@ -160,7 +163,10 @@
     });
 
     const finishedSlotsCount = computed(() => {
-      return (currentTrayAssemblies.value || []).length;
+      if (!traySlots.value || traySlots.value.length === 0) {
+        return (currentTrayAssemblies.value || []).length;
+      }
+      return traySlots.value.filter(s => s && (s.finished_at || (s.status && !['TERSUPPLY', 'Dikembalikan ke Gudang', 'RETURNED'].includes(s.status)))).length;
     });
 
     const isTrayFullyFinished = computed(() => {
@@ -219,20 +225,48 @@
       const availP1 = (currentTrayParts.value || []).filter(p => p.part_type === '1' && !usedP1.has(p.sn));
       const availP12 = (currentTrayParts.value || []).filter(p => p.part_type === '12' && !usedP12.has(p.sn));
 
-      let uncompletedIdx = 0;
+      let idxP15 = 0;
+      let idxP1 = 0;
+      let idxP12 = 0;
+
       for (let i = 0; i < count; i++) {
         const setNum = i + 1;
         const assy = assyMap[setNum];
         if (assy) {
           slots.push(assy);
         } else {
+          if (currentTray.value && (currentTray.value.session_status === 'COMPLETED_SHIFT' || currentTray.value.session_status === 'RETURNED_TO_WAREHOUSE')) {
+            continue;
+          }
           const prog = inProgressMap.value[setNum];
-          const p15Val = prog ? prog.part15 : (availP15[uncompletedIdx] ? availP15[uncompletedIdx].sn : '');
-          const p1Val = prog ? prog.part1 : (availP1[uncompletedIdx] ? availP1[uncompletedIdx].sn : '');
-          const p12Val = prog ? prog.part12 : (availP12[uncompletedIdx] ? availP12[uncompletedIdx].sn : '');
 
-          const isReturned = (currentTray.value && currentTray.value.session_status === 'RETURNED_TO_WAREHOUSE') ||
-            (availP15[uncompletedIdx] && availP15[uncompletedIdx].status === 'RETURNED');
+          let p15Val = '';
+          let isReturned15 = false;
+          if (prog && prog.part15) {
+            p15Val = prog.part15;
+          } else if (idxP15 < availP15.length) {
+            p15Val = availP15[idxP15].sn;
+            isReturned15 = availP15[idxP15].status === 'RETURNED';
+            idxP15++;
+          }
+
+          let p1Val = '';
+          if (prog && prog.part1) {
+            p1Val = prog.part1;
+          } else if (idxP1 < availP1.length) {
+            p1Val = availP1[idxP1].sn;
+            idxP1++;
+          }
+
+          let p12Val = '';
+          if (prog && prog.part12) {
+            p12Val = prog.part12;
+          } else if (idxP12 < availP12.length) {
+            p12Val = availP12[idxP12].sn;
+            idxP12++;
+          }
+
+          const isReturned = (currentTray.value && currentTray.value.session_status === 'RETURNED_TO_WAREHOUSE') || isReturned15;
 
           slots.push({
             set_number: setNum,
@@ -243,7 +277,6 @@
             finished_at: null,
             status: isReturned ? 'RETURNED' : null
           });
-          uncompletedIdx++;
         }
       }
       return slots;
@@ -546,14 +579,19 @@
           reason: prog.reason || ''
         };
       } else {
+        const slot = traySlots.value[index];
         const avail15 = availablePartsByType('15');
         const avail1 = availablePartsByType('1');
         const avail12 = availablePartsByType('12');
 
+        const defaultP15 = (slot && slot.part15_sn && slot.part15_sn !== '-') ? slot.part15_sn : (avail15.length ? avail15[0].sn : '');
+        const defaultP1 = (slot && slot.part1_sn && slot.part1_sn !== '-') ? slot.part1_sn : (avail1.length ? avail1[0].sn : '');
+        const defaultP12 = (slot && slot.part12_sn && slot.part12_sn !== '-') ? slot.part12_sn : (avail12.length ? avail12[0].sn : '');
+
         assyForm.value = {
-          part15: avail15.length ? avail15[0].sn : '',
-          part1: avail1.length ? avail1[0].sn : '',
-          part12: avail12.length ? avail12[0].sn : '',
+          part15: defaultP15,
+          part1: defaultP1,
+          part12: defaultP12,
           startTime: nowStr,
           endTime: nowStr,
           started_at: null,
@@ -641,7 +679,24 @@
           triggerToast('Berhasil', `Set #${setNum} berhasil disimpan (Status: ${assyForm.value.status})!`, 'success');
           const savedSN = { ...assyForm.value, set_number: setNum, pic_assembly: userFullName.value || operatorName.value, finished_at: new Date() };
           const activeAssemblyCode = selectedTrayCode.value;
+          
+          // Reset modal index & started_at before closeModal agar tidak tersimpan ulang ke inProgressMap
+          activeModalIndex.value = null;
+          assyForm.value.started_at = null;
           closeModal();
+
+          // Reset assyForm ke kondisi bersih
+          assyForm.value = {
+            part15: '',
+            part1: '',
+            part12: '',
+            startTime: '',
+            endTime: '',
+            started_at: null,
+            status: '',
+            defective_parts: [],
+            reason: ''
+          };
 
           if (json.data) {
             const updatedAssy = json.data;
@@ -657,7 +712,8 @@
           if (currentTrayItem) {
             const totalFin = (currentTrayAssemblies.value || []).filter(a => a.finished_at || a.status).length;
             currentTrayItem.finished_count = totalFin;
-            if (totalFin >= (currentTrayItem.total_sets || 22)) {
+            currentTrayItem.total_sets = currentTraySetsCount.value || currentTrayItem.total_sets;
+            if (totalFin >= (currentTrayItem.total_sets || currentTraySetsCount.value || 1)) {
               currentTrayItem.session_status = 'COMPLETED';
               if (currentTray.value) currentTray.value.session_status = 'COMPLETED';
             }
@@ -838,7 +894,8 @@
           if (currentTrayItem) {
             const totalFin = (currentTrayAssemblies.value || []).filter(a => a.finished_at || a.status).length;
             currentTrayItem.finished_count = totalFin;
-            if (totalFin >= (currentTrayItem.total_sets || 22)) {
+            currentTrayItem.total_sets = currentTraySetsCount.value || currentTrayItem.total_sets;
+            if (totalFin >= (currentTrayItem.total_sets || currentTraySetsCount.value || 1)) {
               currentTrayItem.session_status = 'COMPLETED';
               if (currentTray.value) currentTray.value.session_status = 'COMPLETED';
             }
