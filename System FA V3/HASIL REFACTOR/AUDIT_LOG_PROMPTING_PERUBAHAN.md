@@ -42,7 +42,7 @@ flowchart TD
 ## 3. Log Kronologis Lengkap Seluruh 176 Prompting & Perubahan Sistem
 
 
-### Log Kronologis Perubahan Sistem (Prompt #126)
+### Log Kronologis Perubahan Sistem (Prompt #127)
 
 | No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
 |:---:|:---:|---|---|---|
@@ -172,3 +172,4 @@ flowchart TD
 | **#124** | `2026-11-11 08:00:19` | **Data Integrity** | saya ingin tanya kenapa di histry itu totalnya 22 namun di perakitan itu totalnya 20? bisa dijelaskan kepada saya? | Sinkronisasi selisih kuantitas antara tabel riwayat dan counter aktif. |
 | **#125** | `2026-11-11 08:08:34` | **Form State Reset** | saya menemukan keanehan ketika saya input kemudian selesaikan terus saya mau input lagi data yang sudah di input masih ada harus direfresh dulu baru ilang apakah memang gitu konsepnya? | Pembersihan total form state setelah submit agar tidak ada data lama yang tersisa/nyangkut saat input baru. |
 | **#126** | `2026-11-11 08:10:16` | **Form State Reset** | saya mendemukan keanehan ketika saya input dibagian WO kemudian selesaikan terus saya mau input lagi data yang sudah di input masih ada harus direfresh dulu baru ilang apakah memang gitu konsepnya? | Pembersihan total form state setelah submit agar tidak ada data lama yang tersisa/nyangkut saat input baru. |
+| **#127** | `2026-11-11 08:21:43` | **Form State Reset** | bukan bersih gitu maksudnya datanya masih nyangkut misal saya input 001 satu kemudian diselesaikan dan sudah tereset ketika ssaya memasukan lagi 001 itu masih ada kan harusnya udah gada gitu | Pembersihan total form state setelah submit agar tidak ada data lama yang tersisa/nyangkut saat input baru. |
