@@ -42,7 +42,7 @@ flowchart TD
 ## 3. Log Kronologis Lengkap Seluruh 176 Prompting & Perubahan Sistem
 
 
-### Log Kronologis Perubahan Sistem (Prompt #145)
+### Log Kronologis Perubahan Sistem (Prompt #146)
 
 | No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
 |:---:|:---:|---|---|---|
@@ -191,3 +191,4 @@ flowchart TD
 | **#143** | `2026-11-11 11:46:14` | **DO SN Integration** | ini udah good receipts anjing gada dongo goblok | Memastikan seluruh part yang lolos Good Receipts langsung tersedia untuk dialokasikan ke Delivery Order. |
 | **#144** | `2026-11-11 11:53:26` | **Declined Status** | satu aja status saja declined aja | Menyederhanakan status barang rusak menjadi satu status tunggal: 'Declined'. |
 | **#145** | `2026-11-11 11:58:44` | **UI Polish** | centang nya hilangkan | Menghilangkan ikon centang pada opsi yang tidak relevan. |
+| **#146** | `2026-11-11 12:06:06` | **UI/UX & Modal Z-Index** | card nya muncul dibelakang | Memperbaiki z-index modal ganti part agar muncul di atas modal utama (tidak tertimpa di belakang). |
