@@ -42,7 +42,7 @@ flowchart TD
 ## 3. Log Kronologis Lengkap Seluruh 176 Prompting & Perubahan Sistem
 
 
-### Log Kronologis Perubahan Sistem (Prompt #159)
+### Log Kronologis Perubahan Sistem (Prompt #160)
 
 | No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
 |:---:|:---:|---|---|---|
@@ -205,3 +205,4 @@ flowchart TD
 | **#157** | `2026-11-12 06:27:58` | **Clean UI & Standarisasi** | tidak usah menggunakan @ mengganggu | Standarisasi anti-simbol: Menghapus simbol @ dan # dari seluruh teks, badge, placeholder, dan display data. |
 | **#158** | `2026-11-12 06:35:44` | **UI Simplification** | hilangkan saja kan sudah ada dropdown status pengujian | Menghapus dropdown duplikat pengujian yang fungsinya sudah diwakili oleh selector utama. |
 | **#159** | `2026-11-12 06:41:29` | **Notification Filter** | filtering semua proses, perakitan, TF1, TF2 itu banyak notifnya sesuaikan dengan filtering status verifikasinya kalo misal menunggu verif dari perakitan berapa, TF1 berapa, TF2 berapa.begitu juga dengan yang diterima (disetujui), dari perkitan berapa yang sudah di setujui, TF1 berapa, dan T 2 berapa. begitupun dengan yabg ditolak. tolong perbaiki ya | Merapikan notifikasi filter proses sesuai tahapan (Perakitan, TF1, TF2). |
+| **#160** | `2026-11-12 06:56:07` | **Part Re-registration** | saya ingin mendaftarkan ulang part yang sudah diganti, ketika statusnya sudah menjadi menunggu verifikasi, seharusnya button daftar ulang itu ikut ulang, casenya ketika saya daftar ulang dan statusnya sudah menjadi menunggu verifikasi, button daftar ulangnya masih ada. tolong perbaiki (hanya perbaiki eror ini jangan merembet ke yang lain) | Alur pendaftaran ulang part: Part pengganti yang telah ACC langsung dapat didaftarkan ulang ke set asalnya. |
