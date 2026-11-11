@@ -42,7 +42,7 @@ flowchart TD
 ## 3. Log Kronologis Lengkap Seluruh 176 Prompting & Perubahan Sistem
 
 
-### Log Kronologis Perubahan Sistem (Prompt #155)
+### Log Kronologis Perubahan Sistem (Prompt #156)
 
 | No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
 |:---:|:---:|---|---|---|
@@ -201,3 +201,4 @@ flowchart TD
 | **#153** | `2026-11-12 01:32:40` | **UI Simplification** | tahap prosesnya hilangkan saja, atau kalo mau diadakan tahap prosesnya itu mendeteksi kenapa set itu berada di declined apakah gara gara ketika menerimaan itu dideclined atau ketika pngembalian di declined, kalo mau mendeteksi itu, jadi ada Good receipts atau pengembalian gudang disingkat saja jadi GR dan PG | Penyederhanaan badge tahap proses agar mendeteksi tahap secara otomatis. |
 | **#154** | `2026-11-12 03:10:40` | **Declined Approval** | barang declined kok banyak banget, padahal saya cek yang ada dii menu verif declined itu cuman 2 set. tolong perbaiki | Filter sinkronisasi kuantitas barang declined agar tabel verifikasi hanya menampilkan item pending approval. |
 | **#155** | `2026-11-12 04:46:17` | **UI Cleanliness** | hapus saja tulisannya | Menghapus teks keterangan berlebih pada badge status. |
+| **#156** | `2026-11-12 04:47:43` | **History Persistence** | tolong perbaiki: historynya ilang, harusnya tetap ada | Memperbaiki persistence data riwayat agar tidak terhapus saat filter direset. |
