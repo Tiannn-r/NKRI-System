@@ -42,7 +42,7 @@ flowchart TD
 ## 3. Log Kronologis Lengkap Seluruh 176 Prompting & Perubahan Sistem
 
 
-### Log Kronologis Perubahan Sistem (Prompt #158)
+### Log Kronologis Perubahan Sistem (Prompt #159)
 
 | No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
 |:---:|:---:|---|---|---|
@@ -204,3 +204,4 @@ flowchart TD
 | **#156** | `2026-11-12 04:47:43` | **History Persistence** | tolong perbaiki: historynya ilang, harusnya tetap ada | Memperbaiki persistence data riwayat agar tidak terhapus saat filter direset. |
 | **#157** | `2026-11-12 06:27:58` | **Clean UI & Standarisasi** | tidak usah menggunakan @ mengganggu | Standarisasi anti-simbol: Menghapus simbol @ dan # dari seluruh teks, badge, placeholder, dan display data. |
 | **#158** | `2026-11-12 06:35:44` | **UI Simplification** | hilangkan saja kan sudah ada dropdown status pengujian | Menghapus dropdown duplikat pengujian yang fungsinya sudah diwakili oleh selector utama. |
+| **#159** | `2026-11-12 06:41:29` | **Notification Filter** | filtering semua proses, perakitan, TF1, TF2 itu banyak notifnya sesuaikan dengan filtering status verifikasinya kalo misal menunggu verif dari perakitan berapa, TF1 berapa, TF2 berapa.begitu juga dengan yang diterima (disetujui), dari perkitan berapa yang sudah di setujui, TF1 berapa, dan T 2 berapa. begitupun dengan yabg ditolak. tolong perbaiki ya | Merapikan notifikasi filter proses sesuai tahapan (Perakitan, TF1, TF2). |
