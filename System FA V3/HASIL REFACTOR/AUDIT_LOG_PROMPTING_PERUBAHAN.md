@@ -42,7 +42,7 @@ flowchart TD
 ## 3. Log Kronologis Lengkap Seluruh 176 Prompting & Perubahan Sistem
 
 
-### Log Kronologis Perubahan Sistem (Prompt #163)
+### Log Kronologis Perubahan Sistem (Prompt #164)
 
 | No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
 |:---:|:---:|---|---|---|
@@ -209,3 +209,4 @@ flowchart TD
 | **#161** | `2026-11-12 08:37:58` | **Bug Fix Re-registration** | tolong perbaiki | Perbaikan komprehensif pada bug alur pendaftaran ulang part. |
 | **#162** | `2026-11-12 09:28:12` | **Delivery Order Form** | tolong perbaiki di bagian delivery order (hanya delivery order tidak boleh ke yang lain): 1. ketika saya menyelesaikan pembuatan PL dan SJ form nya tidak tereset dari awal lagi, form nya masih menyimpan datanya bahkan sampai saya buka history data nya masih kesimpan. harusnya setelah menyelesaikan form nya tereset kembali dari pemilihan jenis nya backdate atau realtime. 2. kemudian dokumen PL yang sudah terpakai harusnya hanya bisa di consume satu kali saja tidak bisa lebih dari satu. ketika sudah di consume maka tidak bisa di consume lagi. 3. kemudian hak consume PL untuk SJ. jika PL dibuat dengan jenis backdate maka hanya bisa diconsume oleh SJ yang dibuat dengan jenis backdate juga. jika PL yang dibuat memilih realtime maka hanya bisa di consume oleh SJ yang dibuat dengan jenis realtime juga. jadi syarat SJ bisa consume PL adalah jenisnya sama. 4. kemudian jelaskan kepada saya format untuk surat jalan, peti dan dus | Pemisahan strict nomor batch dan nomor urut pengiriman pada Packing List dan Surat Jalan. |
 | **#163** | `2026-11-12 10:34:59` | **Admin Centralized Batch** | ada revisi kembali untuk bagian delivery order: 1. Untuk batch pengiriman di atur dibagian admin cms jadi di form tidka lagi menginput batch. 2. untuk data pengiriman itu auto count otomatis ya jika misal belom ada dokumen yang terbuat (pisahkan count SJ dan PL jangan disamakan) maka pengirimannya otomatis ke 01, jika sudah ada 1 berarti 02 jika sudah ada 2 berarti 03 begitu terus count nya sampai dimana ketika batch nya diubah maka pengiriman harus disetting kembali ke 1. 3. masih ada symbol @ hilangkan saja | Sentralisasi pengaturan Nomor Batch Pengiriman di Portal Admin CMS (`do_settings`) + Reset counter saat batch berganti. |
+| **#164** | `2026-11-12 13:18:50` | **Admin CMS Live Sync** | perbaiki untuk halaman cms admin: 1. ketika data perakitan baru itu tidak otomatis masuk kedalam laporan kenapa ya? harus nya udah auto uodate ga sih? | Realtime refresh data perakitan baru di CMS Admin tanpa perlu reload manual halaman. |
