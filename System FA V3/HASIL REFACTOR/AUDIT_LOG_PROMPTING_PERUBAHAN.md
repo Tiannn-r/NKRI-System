@@ -42,7 +42,7 @@ flowchart TD
 ## 3. Log Kronologis Lengkap Seluruh 176 Prompting & Perubahan Sistem
 
 
-### Log Kronologis Perubahan Sistem (Prompt #161)
+### Log Kronologis Perubahan Sistem (Prompt #162)
 
 | No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
 |:---:|:---:|---|---|---|
@@ -207,3 +207,4 @@ flowchart TD
 | **#159** | `2026-11-12 06:41:29` | **Notification Filter** | filtering semua proses, perakitan, TF1, TF2 itu banyak notifnya sesuaikan dengan filtering status verifikasinya kalo misal menunggu verif dari perakitan berapa, TF1 berapa, TF2 berapa.begitu juga dengan yang diterima (disetujui), dari perkitan berapa yang sudah di setujui, TF1 berapa, dan T 2 berapa. begitupun dengan yabg ditolak. tolong perbaiki ya | Merapikan notifikasi filter proses sesuai tahapan (Perakitan, TF1, TF2). |
 | **#160** | `2026-11-12 06:56:07` | **Part Re-registration** | saya ingin mendaftarkan ulang part yang sudah diganti, ketika statusnya sudah menjadi menunggu verifikasi, seharusnya button daftar ulang itu ikut ulang, casenya ketika saya daftar ulang dan statusnya sudah menjadi menunggu verifikasi, button daftar ulangnya masih ada. tolong perbaiki (hanya perbaiki eror ini jangan merembet ke yang lain) | Alur pendaftaran ulang part: Part pengganti yang telah ACC langsung dapat didaftarkan ulang ke set asalnya. |
 | **#161** | `2026-11-12 08:37:58` | **Bug Fix Re-registration** | tolong perbaiki | Perbaikan komprehensif pada bug alur pendaftaran ulang part. |
+| **#162** | `2026-11-12 09:28:12` | **Delivery Order Form** | tolong perbaiki di bagian delivery order (hanya delivery order tidak boleh ke yang lain): 1. ketika saya menyelesaikan pembuatan PL dan SJ form nya tidak tereset dari awal lagi, form nya masih menyimpan datanya bahkan sampai saya buka history data nya masih kesimpan. harusnya setelah menyelesaikan form nya tereset kembali dari pemilihan jenis nya backdate atau realtime. 2. kemudian dokumen PL yang sudah terpakai harusnya hanya bisa di consume satu kali saja tidak bisa lebih dari satu. ketika sudah di consume maka tidak bisa di consume lagi. 3. kemudian hak consume PL untuk SJ. jika PL dibuat dengan jenis backdate maka hanya bisa diconsume oleh SJ yang dibuat dengan jenis backdate juga. jika PL yang dibuat memilih realtime maka hanya bisa di consume oleh SJ yang dibuat dengan jenis realtime juga. jadi syarat SJ bisa consume PL adalah jenisnya sama. 4. kemudian jelaskan kepada saya format untuk surat jalan, peti dan dus | Pemisahan strict nomor batch dan nomor urut pengiriman pada Packing List dan Surat Jalan. |
