@@ -24,6 +24,7 @@ class DoSetting extends Model
         'default_contract_number',
         'default_program_name',
         'default_product_name',
+        'current_batch_number',
         'default_issuer_name',
         'default_issuer_title',
         'default_issuer_department',

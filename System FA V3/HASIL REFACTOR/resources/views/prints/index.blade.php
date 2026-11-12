@@ -114,16 +114,19 @@
                       style="border-right: 1.5px solid #000000; width: 6%; text-align: center; font-weight: 700; padding: 2px 4px;">
                       No</th>
                     <th
-                      style="border-right: 1.5px solid #000000; width: 34%; text-align: center; font-weight: 700; padding: 2px 4px;">
+                      :style="{ width: activePrintDO.package_type === 'unit' ? '34%' : '52%', borderRight: '1.5px solid #000000' }"
+                      style="text-align: center; font-weight: 700; padding: 2px 4px;">
                       Produk</th>
                     <th
-                      style="border-right: 1.5px solid #000000; width: 18%; text-align: center; font-weight: 700; padding: 2px 4px;">
+                      :style="{ width: activePrintDO.package_type === 'unit' ? '18%' : '21%', borderRight: '1.5px solid #000000' }"
+                      style="text-align: center; font-weight: 700; padding: 2px 4px;">
                       Jumlah</th>
                     <th
-                      style="border-right: 1.5px solid #000000; width: 18%; text-align: center; font-weight: 700; padding: 2px 4px;">
+                      :style="{ width: activePrintDO.package_type === 'unit' ? '18%' : '21%', borderRight: activePrintDO.package_type === 'unit' ? '1.5px solid #000000' : 'none' }"
+                      style="text-align: center; font-weight: 700; padding: 2px 4px;">
                       Satuan</th>
-                    <th style="width: 24%; text-align: center; font-weight: 700; padding: 2px 4px;">
-                      {{ activePrintDO.package_type === 'unit' ? 'Serial Number' : 'Packing List' }}
+                    <th v-if="activePrintDO.package_type === 'unit'" style="width: 24%; text-align: center; font-weight: 700; padding: 2px 4px;">
+                      Serial Number
                     </th>
                   </tr>
                 </thead>
@@ -153,7 +156,7 @@
                         <div>{{ activePrintDO.product_name || 'Nanggala P9' }}</div>
                       </td>
                       <td style="border-right: 1px solid #000000; text-align: center; padding: 2px 4px;">
-                        <div style="font-weight: 600;">{{ activePrintDO.total_quantity || 400 }}</div>
+                        <div style="font-weight: 600;">{{ getDOTotalQuantity(activePrintDO) }}</div>
                         <div v-if="activePrintDO.package_type === 'crate'"
                           style="font-size: 8.5px; font-weight: 500; color: #1e293b; margin-top: 1px; line-height: 1.2;">
                           ({{ getDOCrateCount(activePrintDO) }} Peti / {{ getDOBoxCount(activePrintDO) }} Dus)
@@ -163,14 +166,7 @@
                           ({{ getDOBoxCount(activePrintDO) }} Dus)
                         </div>
                       </td>
-                      <td style="border-right: 1px solid #000000; text-align: center; padding: 2px 4px;">UNIT</td>
-                      <td style="text-align: center; padding: 2px 4px; vertical-align: middle;">
-                        <div class="flex items-center justify-center">
-                          <div id="do-sj-qr-print" class="flex items-center justify-center mx-auto qr-crisp"
-                            style="width: 50px; height: 50px; min-width: 50px; max-width: 50px; min-height: 50px; max-height: 50px; aspect-ratio: 1 / 1; overflow: hidden; background: #ffffff; padding: 1px; box-sizing: border-box;">
-                          </div>
-                        </div>
-                      </td>
+                      <td style="text-align: center; padding: 2px 4px;">UNIT</td>
                     </tr>
                   </template>
                 </tbody>
@@ -206,7 +202,7 @@
         </div>
       </div>
 
-      <!-- ================= 2. PRINT: PACKING LIST (4 TABEL: 2 PETI @ 2 DUS PER LEMBAR A4) ================= -->
+      <!-- ================= 2. PRINT: PACKING LIST (4 TABEL: 2 PETI DENGAN 2 DUS PER LEMBAR A4) ================= -->
       <div v-if="(activePrintType === 'packing_list' || activePrintType === 'all') && activePrintDO">
         <div v-for="(sheet, sIdx) in printPackingListSheets" :key="'print_pl_sheet_'+sIdx"
           class="w-[210mm] h-[297mm] min-h-[297mm] max-h-[297mm] p-0 mx-auto text-black font-sans bg-white do-page-break do-a4-doc flex flex-col justify-between overflow-hidden"
@@ -257,13 +253,13 @@
                     <tr>
                       <td style="font-weight: 700; padding: 2.5px 0; vertical-align: top; font-size: 13px;">Tanggal</td>
                       <td style="font-weight: 400; padding: 2.5px 0; vertical-align: top; font-size: 13px;">: {{
-                        activePrintDO.do_date }}</td>
+                        formatDocDate(activePrintDO.do_date) }}</td>
                     </tr>
                     <tr>
-                      <td style="font-weight: 700; padding: 2.5px 0; vertical-align: top; font-size: 13px;">ID Peti</td>
+                      <td style="font-weight: 700; padding: 2.5px 0; vertical-align: top; font-size: 13px;">{{ sheet.containerLabel || (activePrintDO.package_type === 'box' ? 'ID Dus' : 'ID Peti') }}</td>
                       <td style="font-weight: 700; padding: 2.5px 0; vertical-align: top; font-size: 13px;"
                         class="font-sans text-slate-900">
-                        : {{ [sheet.crate1?.crate_id || sheet.crate1?.crate_number, sheet.crate2?.crate_id ||
+                        : {{ sheet.containerId || [sheet.crate1?.crate_id || sheet.crate1?.crate_number, sheet.crate2?.crate_id ||
                         sheet.crate2?.crate_number].filter(Boolean).join(' & ') || defaultCrateIdForNow }}
                       </td>
                     </tr>
@@ -276,13 +272,13 @@
                     <tr>
                       <td style="font-weight: 700; padding: 2.5px 0; vertical-align: top; font-size: 13px;">Nomor</td>
                       <td style="font-weight: 400; padding: 2.5px 0; vertical-align: top; font-size: 13px;">: {{
-                        activePrintDO.contract_number }}</td>
+                        activePrintDO.contract_number || doSettings?.default_contract_number || 'TRAK/2509/APBN/XI/2025/KEMHAN' }}</td>
                     </tr>
                     <tr>
                       <td style="font-weight: 700; padding: 2.5px 0; vertical-align: top; font-size: 13px;">Program</td>
                       <td
                         style="font-weight: 400; padding: 2.5px 0; vertical-align: top; max-width: 440px; line-height: 1.4; font-size: 13px;">
-                        : {{ activePrintDO.program_name }}
+                        : {{ activePrintDO.program_name || doSettings?.default_program_name || 'PENGADAAN ALPALHANKAM MATSUSSUS' }}
                       </td>
                     </tr>
                   </tbody>
@@ -299,16 +295,11 @@
                 </div>
               </div>
 
-              <!-- 3. TABEL ISI SERIAL NUMBER (4 TABEL: 2 PETI DENGAN MASING-MASING 2 DUS @ 10 SN = MAKS 20 SN PER PETI, FONT DIGEDEIN) -->
+              <!-- 3. TABEL ISI SERIAL NUMBER (DINAMIS MENYESUAIKAN JUMLAH DUS / PETI) -->
               <div class="grid grid-cols-2 gap-x-5 gap-y-3.5 my-2" style="font-family: 'Roboto', Arial, sans-serif;">
-                <!-- BARIS 1: PETI 1 (Dus 1 & Dus 2) -->
-                <!-- Tabel 1: Peti 1 - Pak 1 -->
-                <div>
-                  <div class="mb-1 font-bold" style="font-size: 12.5px;">
-                    No. Pak : <span class="font-bold">{{ sheet.crate1?.boxes?.[0]?.box_id || (sheet.crate1?.crate_id ?
-                      sheet.crate1.crate_id + '-01' : defaultCrateIdForNow + '-01') }}</span>
-                    <span class="text-[11px] text-slate-500 font-normal ml-1">(Peti {{ sheet.crate1?.crate_id ||
-                      sheet.crate1?.crate_number || '1' }})</span>
+                <div v-for="(tbl, tIdx) in (sheet.tables || [])" :key="'print_pl_tbl_' + tIdx">
+                  <div class="mb-1 font-bold text-slate-900" style="font-size: 12.5px;">
+                    {{ tbl.title }}
                   </div>
                   <table
                     style="border-collapse: collapse; border: 1.5px solid #000000; width: 100%; font-size: 11.5px; font-family: 'Roboto', Arial, sans-serif;">
@@ -321,114 +312,14 @@
                       </tr>
                     </thead>
                     <tbody>
-                      <tr v-for="s in 10" :key="'print_pl_c1b1_'+s"
+                      <tr v-for="s in 10" :key="'print_pl_row_' + tIdx + '_' + s"
                         style="border-bottom: 1px solid #000000; height: 18.5px;">
                         <td
                           style="border-right: 1.5px solid #000000; padding: 1.5px 6px; text-align: center; font-weight: 700; font-size: 11.5px;">
                           {{ s }}</td>
                         <td
                           style="padding: 1.5px 8px; font-family: 'Roboto', Arial, sans-serif; font-weight: 700; letter-spacing: 0.3px; font-size: 12px;">
-                          {{ sheet.crate1?.boxes?.[0]?.items?.[s - 1]?.serial_number || '' }}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-
-                <!-- Tabel 2: Peti 1 - Pak 2 -->
-                <div>
-                  <div class="mb-1 font-bold" style="font-size: 12.5px;">
-                    No. Pak : <span class="font-bold">{{ sheet.crate1?.boxes?.[1]?.box_id || (sheet.crate1?.crate_id ?
-                      sheet.crate1.crate_id + '-02' : defaultCrateIdForNow + '-02') }}</span>
-                    <span class="text-[11px] text-slate-500 font-normal ml-1">(Peti {{ sheet.crate1?.crate_id ||
-                      sheet.crate1?.crate_number || '1' }})</span>
-                  </div>
-                  <table
-                    style="border-collapse: collapse; border: 1.5px solid #000000; width: 100%; font-size: 11.5px; font-family: 'Roboto', Arial, sans-serif;">
-                    <thead>
-                      <tr style="border-bottom: 1.5px solid #000000; font-weight: 700;">
-                        <th
-                          style="border-right: 1.5px solid #000000; padding: 3px 6px; text-align: center; width: 42px; font-size: 12px;">
-                          No</th>
-                        <th style="padding: 3px 8px; text-align: left; font-size: 12px;">Serial Number</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="s in 10" :key="'print_pl_c1b2_'+s"
-                        style="border-bottom: 1px solid #000000; height: 18.5px;">
-                        <td
-                          style="border-right: 1.5px solid #000000; padding: 1.5px 6px; text-align: center; font-weight: 700; font-size: 11.5px;">
-                          {{ s }}</td>
-                        <td
-                          style="padding: 1.5px 8px; font-family: 'Roboto', Arial, sans-serif; font-weight: 700; letter-spacing: 0.3px; font-size: 12px;">
-                          {{ sheet.crate1?.boxes?.[1]?.items?.[s - 1]?.serial_number || '' }}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-
-                <!-- BARIS 2: PETI 2 (Dus 1 & Dus 2) -->
-                <!-- Tabel 3: Peti 2 - Pak 1 -->
-                <div>
-                  <div class="mb-1 font-bold" style="font-size: 12.5px;">
-                    No. Pak : <span class="font-bold">{{ sheet.crate2 ? (sheet.crate2.boxes?.[0]?.box_id ||
-                      (sheet.crate2.crate_id ? sheet.crate2.crate_id + '-01' : '')) : '-' }}</span>
-                    <span v-if="sheet.crate2" class="text-[11px] text-slate-500 font-normal ml-1">(Peti {{
-                      sheet.crate2.crate_id || sheet.crate2.crate_number }})</span>
-                  </div>
-                  <table
-                    style="border-collapse: collapse; border: 1.5px solid #000000; width: 100%; font-size: 11.5px; font-family: 'Roboto', Arial, sans-serif;">
-                    <thead>
-                      <tr style="border-bottom: 1.5px solid #000000; font-weight: 700;">
-                        <th
-                          style="border-right: 1.5px solid #000000; padding: 3px 6px; text-align: center; width: 42px; font-size: 12px;">
-                          No</th>
-                        <th style="padding: 3px 8px; text-align: left; font-size: 12px;">Serial Number</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="s in 10" :key="'print_pl_c2b1_'+s"
-                        style="border-bottom: 1px solid #000000; height: 18.5px;">
-                        <td
-                          style="border-right: 1.5px solid #000000; padding: 1.5px 6px; text-align: center; font-weight: 700; font-size: 11.5px;">
-                          {{ s }}</td>
-                        <td
-                          style="padding: 1.5px 8px; font-family: 'Roboto', Arial, sans-serif; font-weight: 700; letter-spacing: 0.3px; font-size: 12px;">
-                          {{ sheet.crate2?.boxes?.[0]?.items?.[s - 1]?.serial_number || '' }}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-
-                <!-- Tabel 4: Peti 2 - Pak 2 -->
-                <div>
-                  <div class="mb-1 font-bold" style="font-size: 12.5px;">
-                    No. Pak : <span class="font-bold">{{ sheet.crate2 ? (sheet.crate2.boxes?.[1]?.box_id ||
-                      (sheet.crate2.crate_id ? sheet.crate2.crate_id + '-02' : '')) : '-' }}</span>
-                    <span v-if="sheet.crate2" class="text-[11px] text-slate-500 font-normal ml-1">(Peti {{
-                      sheet.crate2.crate_id || sheet.crate2.crate_number }})</span>
-                  </div>
-                  <table
-                    style="border-collapse: collapse; border: 1.5px solid #000000; width: 100%; font-size: 11.5px; font-family: 'Roboto', Arial, sans-serif;">
-                    <thead>
-                      <tr style="border-bottom: 1.5px solid #000000; font-weight: 700;">
-                        <th
-                          style="border-right: 1.5px solid #000000; padding: 3px 6px; text-align: center; width: 42px; font-size: 12px;">
-                          No</th>
-                        <th style="padding: 3px 8px; text-align: left; font-size: 12px;">Serial Number</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="s in 10" :key="'print_pl_c2b2_'+s"
-                        style="border-bottom: 1px solid #000000; height: 18.5px;">
-                        <td
-                          style="border-right: 1.5px solid #000000; padding: 1.5px 6px; text-align: center; font-weight: 700; font-size: 11.5px;">
-                          {{ s }}</td>
-                        <td
-                          style="padding: 1.5px 8px; font-family: 'Roboto', Arial, sans-serif; font-weight: 700; letter-spacing: 0.3px; font-size: 12px;">
-                          {{ sheet.crate2?.boxes?.[1]?.items?.[s - 1]?.serial_number || '' }}
+                          {{ (tbl.items && tbl.items[s - 1]) ? (typeof tbl.items[s - 1] === 'string' ? tbl.items[s - 1] : (tbl.items[s - 1].serial_number || '')) : '' }}
                         </td>
                       </tr>
                     </tbody>
@@ -481,140 +372,12 @@
 
       <!-- ================= 3. PRINT: LABEL PETI (1:1 DENGAN PDF 3) ================= -->
       <div
-        v-if="(activePrintType === 'label_peti' || activePrintType === 'label_parent' || activePrintType === 'all') && activePrintDO">
+        v-if="(activePrintType === 'label_peti' || activePrintType === 'label_parent' || activePrintType === 'all') && activePrintDO && activePrintDO.package_type === 'crate'">
         <div v-for="(crate, cIdx) in activePrintDO.crates" :key="'print_lp_'+cIdx"
-          class="mx-auto text-black bg-white border-[3px] border-black do-page-break do-label-100x150 flex flex-col"
-          style="font-family: 'Roboto', Arial, sans-serif; width: 100mm; min-width: 100mm; max-width: 100mm; height: 150mm; min-height: 150mm; max-height: 150mm; box-sizing: border-box; overflow: hidden; margin: 0 auto;">
-          <!-- Header Label: Logo Kiri, Nama PT Kanan, Judul PACKING LIST -->
-          <div class="px-3 pt-2.5 pb-2 border-b-[2.5px] border-black shrink-0">
-            <div class="flex items-center justify-between gap-2">
-              <div class="flex items-center shrink-0">
-                <img :src="nkriLabelLogoBase64" alt="NKRI" style="height: 18px; width: auto;" class="object-contain">
-              </div>
-              <div class="text-right font-black text-[9.5px] text-black uppercase whitespace-nowrap tracking-tight">
-                PT NANGGALA KENCANA REKATAMA INDONESIA
-              </div>
-            </div>
-            <div class="text-center mt-2">
-              <div class="font-black text-[25px] text-black tracking-[3px] uppercase leading-none">
-                PACKING LIST
-              </div>
-            </div>
-          </div>
-
-          <!-- Metadata List Sesuai PDF 3 (Garis Menyatu Penuh ke Pinggir) -->
-          <div class="px-3 py-1.5 border-b-[2.5px] border-black text-xs space-y-1 leading-snug shrink-0">
-            <div class="grid grid-cols-12 gap-1">
-              <span class="col-span-3 font-bold">PROGRAM</span>
-              <span class="col-span-1 font-bold">:</span>
-              <span class="col-span-8 font-normal">{{ activePrintDO.program_name }}</span>
-            </div>
-            <div class="grid grid-cols-12 gap-1">
-              <span class="col-span-3 font-bold">NOMOR</span>
-              <span class="col-span-1 font-bold">:</span>
-              <span class="col-span-8 font-normal">{{ activePrintDO.contract_number }}</span>
-            </div>
-            <div class="grid grid-cols-12 gap-1">
-              <span class="col-span-3 font-bold">PRODUK</span>
-              <span class="col-span-1 font-bold">:</span>
-              <span class="col-span-8 font-normal">{{ activePrintDO.product_name || 'Nanggala P9' }}</span>
-            </div>
-            <div class="grid grid-cols-12 gap-1">
-              <span class="col-span-3 font-bold">ID. PETI</span>
-              <span class="col-span-1 font-bold">:</span>
-              <span class="col-span-8 font-normal">{{ crate.crate_id || crate.crate_number || '2609-1001' }}</span>
-            </div>
-            <div class="grid grid-cols-12 gap-1 pt-0.5">
-              <span class="col-span-3 font-bold">PENERIMA</span>
-              <span class="col-span-1 font-bold">:</span>
-              <div class="col-span-8 font-normal space-y-0.5 leading-tight">
-                <div>{{ activePrintDO.customer_name }}</div>
-                <div>BADAN LOGISTIK PERTAHANAN</div>
-                <div>{{ activePrintDO.customer_address }}</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Serial Number 2 Kolom: Garis Vertikal Tengah Menyambung Penuh ke Bawah (Tanpa Terputus) -->
-          <div class="flex-1 min-h-0 border-b-[2.5px] border-black text-xs flex">
-            <!-- Pak 1 (Kiri 50%) -->
-            <div class="w-1/2 border-r-[2.5px] border-black flex flex-col justify-between">
-              <!-- Baris Judul Pak 1: Garis menyatu penuh sampe ujung -->
-              <div class="px-3 py-1 border-b-[2.5px] border-black font-black uppercase text-left text-[11px] shrink-0">
-                PAK 1 DARI 2
-              </div>
-              <!-- Baris Kolom Header: Garis menyatu penuh sampe ujung -->
-              <div class="px-3 py-0.5 border-b-[2.5px] border-black flex text-[10px] font-black shrink-0">
-                <span class="w-6">NO.</span>
-                <span>SERIAL NUMBER</span>
-              </div>
-              <!-- Daftar 10 Serial Number -->
-              <div class="flex-1 flex flex-col justify-between text-xs px-3 py-1">
-                <div v-for="s in 10" :key="'print_lp1_'+s" class="flex items-center leading-tight">
-                  <span class="w-6 font-bold">{{ s }}.</span>
-                  <span class="font-black">{{ crate.boxes?.[0]?.items?.[s - 1]?.serial_number || '' }}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Pak 2 (Kanan 50%) -->
-            <div class="w-1/2 flex flex-col justify-between">
-              <!-- Baris Judul Pak 2: Garis menyatu penuh sampe ujung -->
-              <div class="px-3 py-1 border-b-[2.5px] border-black font-black uppercase text-left text-[11px] shrink-0">
-                PAK 2 DARI 2
-              </div>
-              <!-- Baris Kolom Header: Garis menyatu penuh sampe ujung -->
-              <div class="px-3 py-0.5 border-b-[2.5px] border-black flex text-[10px] font-black shrink-0">
-                <span class="w-6">NO.</span>
-                <span>SERIAL NUMBER</span>
-              </div>
-              <!-- Daftar 10 Serial Number -->
-              <div class="flex-1 flex flex-col justify-between text-xs px-3 py-1">
-                <div v-for="s in 10" :key="'print_lp2_'+s" class="flex items-center leading-tight">
-                  <span class="w-6 font-bold">{{ s }}.</span>
-                  <span class="font-black">{{ crate.boxes?.[1]?.items?.[s - 1]?.serial_number || '' }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Bottom Row: Garis Kotak Menyatu Utuh & Garis Vertikal Menyambung Lurus 50/50 Langsung Menempel -->
-          <div class="flex text-black text-xs shrink-0">
-            <!-- Kolom Kiri 50%: TANGGAL & JUMLAH -->
-            <div class="w-1/2 border-r-[2.5px] border-black flex flex-col justify-between">
-              <div class="border-b-[2.5px] border-black px-3 py-1.5 flex items-center">
-                <span class="font-black text-xs w-[64px] shrink-0">TANGGAL</span>
-                <span class="font-black mr-1.5">:</span>
-                <span class="font-black text-sm tracking-wide">{{ formatNumericDate(activePrintDO.do_date) }}</span>
-              </div>
-              <div class="px-3 py-1.5 flex items-center">
-                <span class="font-black text-xs w-[64px] shrink-0">JUMLAH</span>
-                <span class="font-black mr-1.5">:</span>
-                <span class="font-black text-sm tracking-wide">{{ crate.total_quantity || 20 }} UNIT</span>
-              </div>
-            </div>
-
-            <!-- Kolom Kanan 50%: NO. PETI & Angka Disatukan Utuh Tanpa Garis Pemisah -->
-            <div class="w-1/2 px-3 py-1.5 flex flex-col items-center justify-center">
-              <div class="font-black uppercase tracking-wider text-[11px] mb-1">
-                NO. PETI :
-              </div>
-              <div class="text-xl font-black tracking-wider leading-none">
-                {{ cIdx + 1 }} DARI {{ activePrintDO.crates?.length || activePrintDO.total_crates || 20 }}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div
-        v-if="(activePrintType === 'label_dus' || activePrintType === 'label_child' || activePrintType === 'all') && activePrintDO">
-        <template v-for="(crate, cIdx) in activePrintDO.crates" :key="'print_dus_'+cIdx">
-          <!-- Dus 1 (Pak 1 dari 2) Sesuai Ukuran Pasti W x H = 100mm x 150mm (Garis Kotak Penuh Menyatu) -->
-          <div
-            class="mx-auto text-black bg-white border-[3px] border-black do-page-break do-label-100x150 flex flex-col"
-            style="font-family: 'Roboto', Arial, sans-serif; width: 100mm; min-width: 100mm; max-width: 100mm; height: 150mm; min-height: 150mm; max-height: 150mm; box-sizing: border-box; overflow: hidden; margin: 0 auto;">
-            <!-- Header Label Sesuai Permintaan User -->
+          class="mx-auto bg-white do-page-break do-label-100x150"
+          style="font-family: 'Roboto', Arial, sans-serif; width: 100mm; min-width: 100mm; max-width: 100mm; height: 150mm; min-height: 150mm; max-height: 150mm; padding: 4.5mm; box-sizing: border-box; overflow: hidden; margin: 0 auto;">
+          <div class="w-full h-full text-black bg-white border-[2.5px] border-black flex flex-col" style="box-sizing: border-box; overflow: hidden;">
+            <!-- Header Label: Logo Kiri, Nama PT Kanan, Judul PACKING LIST -->
             <div class="px-3 pt-2.5 pb-2 border-b-[2.5px] border-black shrink-0">
               <div class="flex items-center justify-between gap-2">
                 <div class="flex items-center shrink-0">
@@ -630,110 +393,8 @@
                 </div>
               </div>
             </div>
-            <!-- Metadata List Sesuai PDF 4 (Garis Menyatu Penuh ke Pinggir) -->
-            <div class="px-3 py-1.5 border-b-[2.5px] border-black text-xs space-y-1 leading-snug shrink-0">
-              <div class="grid grid-cols-12 gap-1">
-                <span class="col-span-3 font-bold">PROGRAM</span>
-                <span class="col-span-1 font-bold">:</span>
-                <span class="col-span-8 font-normal">{{ activePrintDO.program_name }}</span>
-              </div>
-              <div class="grid grid-cols-12 gap-1">
-                <span class="col-span-3 font-bold">NOMOR</span>
-                <span class="col-span-1 font-bold">:</span>
-                <span class="col-span-8 font-normal">{{ activePrintDO.contract_number }}</span>
-              </div>
-              <div class="grid grid-cols-12 gap-1">
-                <span class="col-span-3 font-bold">PRODUK</span>
-                <span class="col-span-1 font-bold">:</span>
-                <span class="col-span-8 font-normal">{{ activePrintDO.product_name || 'Nanggala P9' }}</span>
-              </div>
-              <div class="grid grid-cols-12 gap-1">
-                <span class="col-span-3 font-bold">{{ (crate.boxes && crate.boxes.length > 1) ? 'ID. PETI' : 'ID. DUS'
-                  }}</span>
-                <span class="col-span-1 font-bold">:</span>
-                <span class="col-span-8 font-normal">{{ (crate.boxes && crate.boxes.length > 1) ? ((crate.crate_id ||
-                  crate.crate_number || '2609-1001') + '-01') : (crate.box_id || crate.boxes?.[0]?.box_id ||
-                  (crate.crate_id ? crate.crate_id + '-01' : 'BOX')) }}</span>
-              </div>
-              <div class="grid grid-cols-12 gap-1 pt-0.5">
-                <span class="col-span-3 font-bold">PENERIMA</span>
-                <span class="col-span-1 font-bold">:</span>
-                <div class="col-span-8 font-normal space-y-0.5 leading-tight">
-                  <div>{{ activePrintDO.customer_name }}</div>
-                  <div>BADAN LOGISTIK PERTAHANAN</div>
-                  <div>{{ activePrintDO.customer_address }}</div>
-                </div>
-              </div>
-            </div>
-            <!-- Serial Number 1 Kolom Sesuai Dus 1 (Garis Menyatu Penuh Langsung ke Baris Bawah) -->
-            <div class="flex-1 min-h-0 border-b-[2.5px] border-black flex flex-col justify-between text-xs">
-              <!-- Baris Judul Pak 1: Garis menyatu penuh sampe ujung -->
-              <div class="px-3 py-1 border-b-[2.5px] border-black font-black uppercase text-left text-[11px] shrink-0">
-                {{ (crate.boxes && crate.boxes.length > 1) ? 'PAK 1 DARI 2' : ('DUS ' + (cIdx + 1) + ' DARI ' +
-                (activePrintDO.crates?.length || 10)) }}
-              </div>
-              <!-- Baris Kolom Header: Garis menyatu penuh sampe ujung -->
-              <div class="px-3 py-0.5 border-b-[2.5px] border-black flex text-[10px] font-black shrink-0">
-                <span class="w-6">NO.</span>
-                <span>SERIAL NUMBER</span>
-              </div>
-              <!-- Daftar 10 Serial Number -->
-              <div class="flex-1 flex flex-col justify-between text-xs px-3 py-1">
-                <div v-for="s in 10" :key="'print_dus1_'+s" class="flex items-center leading-tight">
-                  <span class="w-6 font-bold">{{ s }}.</span>
-                  <span class="font-black">{{ crate.boxes?.[0]?.items?.[s - 1]?.serial_number || '' }}</span>
-                </div>
-              </div>
-            </div>
-            <!-- Bottom Row: Garis Kotak Menyatu Utuh & Garis Vertikal Menyambung Lurus 50/50 Langsung Menempel -->
-            <div class="flex text-black text-xs shrink-0">
-              <!-- Kolom Kiri 50%: TANGGAL & JUMLAH -->
-              <div class="w-1/2 border-r-[2.5px] border-black flex flex-col justify-between">
-                <div class="border-b-[2.5px] border-black px-3 py-1.5 flex items-center">
-                  <span class="font-black text-xs w-[64px] shrink-0">TANGGAL</span>
-                  <span class="font-black mr-1.5">:</span>
-                  <span class="font-black text-sm tracking-wide">{{ formatNumericDate(activePrintDO.do_date) }}</span>
-                </div>
-                <div class="px-3 py-1.5 flex items-center">
-                  <span class="font-black text-xs w-[64px] shrink-0">JUMLAH</span>
-                  <span class="font-black mr-1.5">:</span>
-                  <span class="font-black text-sm tracking-wide">10 UNIT</span>
-                </div>
-              </div>
 
-              <!-- Kolom Kanan 50%: NO. PETI / NO. DUS & Angka Disatukan Utuh Tanpa Garis Pemisah -->
-              <div class="w-1/2 px-3 py-1.5 flex flex-col items-center justify-center">
-                <div class="font-black uppercase tracking-wider text-[11px] mb-1">
-                  {{ (crate.boxes && crate.boxes.length > 1) ? 'NO. PETI :' : 'NO. DUS :' }}
-                </div>
-                <div class="text-xl font-black tracking-wider leading-none">
-                  {{ cIdx + 1 }} DARI {{ activePrintDO.crates?.length || 20 }}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Dus 2 (Pak 2 dari 2) Sesuai Ukuran Pasti W x H = 100mm x 150mm (Garis Kotak Penuh Menyatu) -->
-          <div v-if="crate.boxes && crate.boxes.length > 1"
-            class="mx-auto text-black bg-white border-[3px] border-black do-page-break do-label-100x150 flex flex-col"
-            style="font-family: 'Roboto', Arial, sans-serif; width: 100mm; min-width: 100mm; max-width: 100mm; height: 150mm; min-height: 150mm; max-height: 150mm; box-sizing: border-box; overflow: hidden; margin: 0 auto;">
-            <!-- Header Label Sesuai Permintaan User -->
-            <div class="px-3 pt-2.5 pb-2 border-b-[2.5px] border-black shrink-0">
-              <div class="flex items-center justify-between gap-2">
-                <div class="flex items-center shrink-0">
-                  <img :src="nkriLabelLogoBase64" alt="NKRI" style="height: 18px; width: auto;" class="object-contain">
-                </div>
-                <div class="text-right font-black text-[9.5px] text-black uppercase whitespace-nowrap tracking-tight">
-                  PT NANGGALA KENCANA REKATAMA INDONESIA
-                </div>
-              </div>
-              <div class="text-center mt-2">
-                <div class="font-black text-[25px] text-black tracking-[3px] uppercase leading-none">
-                  PACKING LIST
-                </div>
-              </div>
-            </div>
-            <!-- Metadata List Sesuai PDF 4 (Garis Menyatu Penuh ke Pinggir) -->
+            <!-- Metadata List Sesuai PDF 3 (Garis Menyatu Penuh ke Pinggir) -->
             <div class="px-3 py-1.5 border-b-[2.5px] border-black text-xs space-y-1 leading-snug shrink-0">
               <div class="grid grid-cols-12 gap-1">
                 <span class="col-span-3 font-bold">PROGRAM</span>
@@ -753,8 +414,7 @@
               <div class="grid grid-cols-12 gap-1">
                 <span class="col-span-3 font-bold">ID. PETI</span>
                 <span class="col-span-1 font-bold">:</span>
-                <span class="col-span-8 font-normal">{{ (crate.crate_id || crate.crate_number || '2609-1001')
-                  }}-02</span>
+                <span class="col-span-8 font-normal">{{ crate.crate_id || crate.crate_number || '2609-1001' }}</span>
               </div>
               <div class="grid grid-cols-12 gap-1 pt-0.5">
                 <span class="col-span-3 font-bold">PENERIMA</span>
@@ -766,25 +426,50 @@
                 </div>
               </div>
             </div>
-            <!-- Serial Number 1 Kolom Sesuai Dus 2 (Garis Menyatu Penuh Langsung ke Baris Bawah) -->
-            <div class="flex-1 min-h-0 border-b-[2.5px] border-black flex flex-col justify-between text-xs">
-              <!-- Baris Judul Pak 2: Garis menyatu penuh sampe ujung -->
-              <div class="px-3 py-1 border-b-[2.5px] border-black font-black uppercase text-left text-[11px] shrink-0">
-                PAK 2 DARI 2
+
+            <!-- Serial Number 2 Kolom: Garis Vertikal Tengah Menyambung Penuh ke Bawah (Tanpa Terputus) -->
+            <div class="flex-1 min-h-0 border-b-[2.5px] border-black text-xs flex">
+              <!-- Pak 1 (Kiri 50%) -->
+              <div class="w-1/2 border-r-[2.5px] border-black flex flex-col justify-between">
+                <!-- Baris Judul Pak 1: Garis menyatu penuh sampe ujung -->
+                <div class="px-3 py-1 border-b-[2.5px] border-black font-black uppercase text-left text-[11px] shrink-0">
+                  PAK 1 DARI 2
+                </div>
+                <!-- Baris Kolom Header: Garis menyatu penuh sampe ujung -->
+                <div class="px-3 py-0.5 border-b-[2.5px] border-black flex text-[10px] font-black shrink-0">
+                  <span class="w-6">NO.</span>
+                  <span>SERIAL NUMBER</span>
+                </div>
+                <!-- Daftar 10 Serial Number -->
+                <div class="flex-1 flex flex-col justify-between text-xs px-3 py-1">
+                  <div v-for="s in 10" :key="'print_lp1_'+s" class="flex items-center leading-tight">
+                    <span class="w-6 font-bold">{{ s }}.</span>
+                    <span class="font-black">{{ (crate.boxes?.[0]?.items?.[s - 1]?.serial_number) || (crate.items?.[s - 1]?.serial_number) || (typeof crate.items?.[s - 1] === 'string' ? crate.items[s - 1] : '') || '' }}</span>
+                  </div>
+                </div>
               </div>
-              <!-- Baris Kolom Header: Garis menyatu penuh sampe ujung -->
-              <div class="px-3 py-0.5 border-b-[2.5px] border-black flex text-[10px] font-black shrink-0">
-                <span class="w-6">NO.</span>
-                <span>SERIAL NUMBER</span>
-              </div>
-              <!-- Daftar 10 Serial Number -->
-              <div class="flex-1 flex flex-col justify-between text-xs px-3 py-1">
-                <div v-for="s in 10" :key="'print_dus2_'+s" class="flex items-center leading-tight">
-                  <span class="w-6 font-bold">{{ s }}.</span>
-                  <span class="font-black">{{ crate.boxes?.[1]?.items?.[s - 1]?.serial_number || '' }}</span>
+
+              <!-- Pak 2 (Kanan 50%) -->
+              <div class="w-1/2 flex flex-col justify-between">
+                <!-- Baris Judul Pak 2: Garis menyatu penuh sampe ujung -->
+                <div class="px-3 py-1 border-b-[2.5px] border-black font-black uppercase text-left text-[11px] shrink-0">
+                  PAK 2 DARI 2
+                </div>
+                <!-- Baris Kolom Header: Garis menyatu penuh sampe ujung -->
+                <div class="px-3 py-0.5 border-b-[2.5px] border-black flex text-[10px] font-black shrink-0">
+                  <span class="w-6">NO.</span>
+                  <span>SERIAL NUMBER</span>
+                </div>
+                <!-- Daftar 10 Serial Number -->
+                <div class="flex-1 flex flex-col justify-between text-xs px-3 py-1">
+                  <div v-for="s in 10" :key="'print_lp2_'+s" class="flex items-center leading-tight">
+                    <span class="w-6 font-bold">{{ s }}.</span>
+                    <span class="font-black">{{ crate.boxes?.[1]?.items?.[s - 1]?.serial_number || '' }}</span>
+                  </div>
                 </div>
               </div>
             </div>
+
             <!-- Bottom Row: Garis Kotak Menyatu Utuh & Garis Vertikal Menyambung Lurus 50/50 Langsung Menempel -->
             <div class="flex text-black text-xs shrink-0">
               <!-- Kolom Kiri 50%: TANGGAL & JUMLAH -->
@@ -797,7 +482,7 @@
                 <div class="px-3 py-1.5 flex items-center">
                   <span class="font-black text-xs w-[64px] shrink-0">JUMLAH</span>
                   <span class="font-black mr-1.5">:</span>
-                  <span class="font-black text-sm tracking-wide">10 UNIT</span>
+                  <span class="font-black text-sm tracking-wide">{{ crate.total_quantity || 20 }} UNIT</span>
                 </div>
               </div>
 
@@ -807,7 +492,215 @@
                   NO. PETI :
                 </div>
                 <div class="text-xl font-black tracking-wider leading-none">
-                  {{ cIdx + 1 }} DARI {{ activePrintDO.crates?.length || 20 }}
+                  {{ cIdx + 1 }} DARI {{ activePrintDO.crates?.length || activePrintDO.total_crates || 20 }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        v-if="(activePrintType === 'label_dus' || activePrintType === 'label_child' || (activePrintType === 'label_peti' && activePrintDO.package_type === 'box') || activePrintType === 'all') && activePrintDO">
+        <template v-for="(crate, cIdx) in activePrintDO.crates" :key="'print_dus_'+cIdx">
+          <!-- Dus 1 (Pak 1 dari 2) Sesuai Ukuran Pasti W x H = 100mm x 150mm (Garis Kotak Penuh Menyatu) -->
+          <div
+            class="mx-auto bg-white do-page-break do-label-100x150"
+            style="font-family: 'Roboto', Arial, sans-serif; width: 100mm; min-width: 100mm; max-width: 100mm; height: 150mm; min-height: 150mm; max-height: 150mm; padding: 4.5mm; box-sizing: border-box; overflow: hidden; margin: 0 auto;">
+            <div class="w-full h-full text-black bg-white border-[2.5px] border-black flex flex-col" style="box-sizing: border-box; overflow: hidden;">
+              <!-- Header Label Sesuai Permintaan User -->
+              <div class="px-3 pt-2.5 pb-2 border-b-[2.5px] border-black shrink-0">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="flex items-center shrink-0">
+                    <img :src="nkriLabelLogoBase64" alt="NKRI" style="height: 18px; width: auto;" class="object-contain">
+                  </div>
+                  <div class="text-right font-black text-[9.5px] text-black uppercase whitespace-nowrap tracking-tight">
+                    PT NANGGALA KENCANA REKATAMA INDONESIA
+                  </div>
+                </div>
+                <div class="text-center mt-2">
+                  <div class="font-black text-[25px] text-black tracking-[3px] uppercase leading-none">
+                    PACKING LIST
+                  </div>
+                </div>
+              </div>
+              <!-- Metadata List Sesuai PDF 4 (Garis Menyatu Penuh ke Pinggir) -->
+              <div class="px-3 py-1.5 border-b-[2.5px] border-black text-xs space-y-1 leading-snug shrink-0">
+                <div class="grid grid-cols-12 gap-1">
+                  <span class="col-span-3 font-bold">PROGRAM</span>
+                  <span class="col-span-1 font-bold">:</span>
+                  <span class="col-span-8 font-normal">{{ activePrintDO.program_name }}</span>
+                </div>
+                <div class="grid grid-cols-12 gap-1">
+                  <span class="col-span-3 font-bold">NOMOR</span>
+                  <span class="col-span-1 font-bold">:</span>
+                  <span class="col-span-8 font-normal">{{ activePrintDO.contract_number }}</span>
+                </div>
+                <div class="grid grid-cols-12 gap-1">
+                  <span class="col-span-3 font-bold">PRODUK</span>
+                  <span class="col-span-1 font-bold">:</span>
+                  <span class="col-span-8 font-normal">{{ activePrintDO.product_name || 'Nanggala P9' }}</span>
+                </div>
+                <div class="grid grid-cols-12 gap-1">
+                  <span class="col-span-3 font-bold">{{ activePrintDO.package_type === 'box' ? 'ID. DUS' : 'ID. PETI' }}</span>
+                  <span class="col-span-1 font-bold">:</span>
+                  <span class="col-span-8 font-normal">{{ activePrintDO.package_type === 'box' ? (crate.box_id || crate.boxes?.[0]?.box_id || crate.crate_id || '') : ((crate.crate_id || crate.crate_number || '2609-1001') + '-01') }}</span>
+                </div>
+                <div class="grid grid-cols-12 gap-1 pt-0.5">
+                  <span class="col-span-3 font-bold">PENERIMA</span>
+                  <span class="col-span-1 font-bold">:</span>
+                  <div class="col-span-8 font-normal space-y-0.5 leading-tight">
+                    <div>{{ activePrintDO.customer_name }}</div>
+                    <div>BADAN LOGISTIK PERTAHANAN</div>
+                    <div>{{ activePrintDO.customer_address }}</div>
+                  </div>
+                </div>
+              </div>
+              <!-- Serial Number 1 Kolom Sesuai Dus 1 (Garis Menyatu Penuh Langsung ke Baris Bawah) -->
+              <div class="flex-1 min-h-0 border-b-[2.5px] border-black flex flex-col justify-between text-xs">
+                <!-- Baris Judul Pak 1: HANYA MUNCUL JIKA PER PETI (Sesuai File Word: PAK 1 DARI 2). JIKA PER DUS: HILANGKAN PAKNYA! -->
+                <div v-if="activePrintDO.package_type !== 'box'" class="px-3 py-1 border-b-[2.5px] border-black font-black uppercase text-left text-[11px] shrink-0">
+                  PAK 1 DARI 2
+                </div>
+                <!-- Baris Kolom Header: Garis menyatu penuh sampe ujung -->
+                <div class="px-3 py-0.5 border-b-[2.5px] border-black flex text-[10px] font-black shrink-0">
+                  <span class="w-6">NO.</span>
+                  <span>SERIAL NUMBER</span>
+                </div>
+                <!-- Daftar 10 Serial Number -->
+                <div class="flex-1 flex flex-col justify-between text-xs px-3 py-1">
+                  <div v-for="s in 10" :key="'print_dus1_'+s" class="flex items-center leading-tight">
+                    <span class="w-6 font-bold">{{ s }}.</span>
+                    <span class="font-black">{{ crate.boxes?.[0]?.items?.[s - 1]?.serial_number || '' }}</span>
+                  </div>
+                </div>
+              </div>
+              <!-- Bottom Row: Garis Kotak Menyatu Utuh & Garis Vertikal Menyambung Lurus 50/50 Langsung Menempel -->
+              <div class="flex text-black text-xs shrink-0">
+                <!-- Kolom Kiri 50%: TANGGAL & JUMLAH -->
+                <div class="w-1/2 border-r-[2.5px] border-black flex flex-col justify-between">
+                  <div class="border-b-[2.5px] border-black px-3 py-1.5 flex items-center">
+                    <span class="font-black text-xs w-[64px] shrink-0">TANGGAL</span>
+                    <span class="font-black mr-1.5">:</span>
+                    <span class="font-black text-sm tracking-wide">{{ formatNumericDate(activePrintDO.do_date) }}</span>
+                  </div>
+                  <div class="px-3 py-1.5 flex items-center">
+                    <span class="font-black text-xs w-[64px] shrink-0">JUMLAH</span>
+                    <span class="font-black mr-1.5">:</span>
+                    <span class="font-black text-sm tracking-wide">10 UNIT</span>
+                  </div>
+                </div>
+
+                <!-- Kolom Kanan 50%: NO. DUS (jika Per Dus) atau NO. PETI (jika Per Peti) -->
+                <div class="w-1/2 px-3 py-1.5 flex flex-col items-center justify-center">
+                  <div class="font-black uppercase tracking-wider text-[11px] mb-1">
+                    {{ activePrintDO.package_type === 'box' ? 'NO. DUS :' : 'NO. PETI :' }}
+                  </div>
+                  <div class="text-xl font-black tracking-wider leading-none">
+                    {{ cIdx + 1 }} DARI {{ activePrintDO.crates?.length || (activePrintDO.package_type === 'box' ? getDOBoxCount(activePrintDO) : (activePrintDO.total_crates || 20)) }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dus 2 (Pak 2 dari 2) Sesuai Ukuran Pasti W x H = 100mm x 150mm (Garis Kotak Penuh Menyatu) -->
+          <div v-if="activePrintDO.package_type !== 'box' && crate.boxes && crate.boxes.length > 1"
+            class="mx-auto bg-white do-page-break do-label-100x150"
+            style="font-family: 'Roboto', Arial, sans-serif; width: 100mm; min-width: 100mm; max-width: 100mm; height: 150mm; min-height: 150mm; max-height: 150mm; padding: 4.5mm; box-sizing: border-box; overflow: hidden; margin: 0 auto;">
+            <div class="w-full h-full text-black bg-white border-[2.5px] border-black flex flex-col" style="box-sizing: border-box; overflow: hidden;">
+              <!-- Header Label Sesuai Permintaan User -->
+              <div class="px-3 pt-2.5 pb-2 border-b-[2.5px] border-black shrink-0">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="flex items-center shrink-0">
+                    <img :src="nkriLabelLogoBase64" alt="NKRI" style="height: 18px; width: auto;" class="object-contain">
+                  </div>
+                  <div class="text-right font-black text-[9.5px] text-black uppercase whitespace-nowrap tracking-tight">
+                    PT NANGGALA KENCANA REKATAMA INDONESIA
+                  </div>
+                </div>
+                <div class="text-center mt-2">
+                  <div class="font-black text-[25px] text-black tracking-[3px] uppercase leading-none">
+                    PACKING LIST
+                  </div>
+                </div>
+              </div>
+              <!-- Metadata List Sesuai PDF 4 (Garis Menyatu Penuh ke Pinggir) -->
+              <div class="px-3 py-1.5 border-b-[2.5px] border-black text-xs space-y-1 leading-snug shrink-0">
+                <div class="grid grid-cols-12 gap-1">
+                  <span class="col-span-3 font-bold">PROGRAM</span>
+                  <span class="col-span-1 font-bold">:</span>
+                  <span class="col-span-8 font-normal">{{ activePrintDO.program_name }}</span>
+                </div>
+                <div class="grid grid-cols-12 gap-1">
+                  <span class="col-span-3 font-bold">NOMOR</span>
+                  <span class="col-span-1 font-bold">:</span>
+                  <span class="col-span-8 font-normal">{{ activePrintDO.contract_number }}</span>
+                </div>
+                <div class="grid grid-cols-12 gap-1">
+                  <span class="col-span-3 font-bold">PRODUK</span>
+                  <span class="col-span-1 font-bold">:</span>
+                  <span class="col-span-8 font-normal">{{ activePrintDO.product_name || 'Nanggala P9' }}</span>
+                </div>
+                <div class="grid grid-cols-12 gap-1">
+                  <span class="col-span-3 font-bold">ID. PETI</span>
+                  <span class="col-span-1 font-bold">:</span>
+                  <span class="col-span-8 font-normal">{{ (crate.crate_id || crate.crate_number || '2609-1001')
+                    }}-02</span>
+                </div>
+                <div class="grid grid-cols-12 gap-1 pt-0.5">
+                  <span class="col-span-3 font-bold">PENERIMA</span>
+                  <span class="col-span-1 font-bold">:</span>
+                  <div class="col-span-8 font-normal space-y-0.5 leading-tight">
+                    <div>{{ activePrintDO.customer_name }}</div>
+                    <div>BADAN LOGISTIK PERTAHANAN</div>
+                    <div>{{ activePrintDO.customer_address }}</div>
+                  </div>
+                </div>
+              </div>
+              <!-- Serial Number 1 Kolom Sesuai Dus 2 (Garis Menyatu Penuh Langsung ke Baris Bawah) -->
+              <div class="flex-1 min-h-0 border-b-[2.5px] border-black flex flex-col justify-between text-xs">
+                <!-- Baris Judul Pak 2: Garis menyatu penuh sampe ujung -->
+                <div class="px-3 py-1 border-b-[2.5px] border-black font-black uppercase text-left text-[11px] shrink-0">
+                  PAK 2 DARI 2
+                </div>
+                <!-- Baris Kolom Header: Garis menyatu penuh sampe ujung -->
+                <div class="px-3 py-0.5 border-b-[2.5px] border-black flex text-[10px] font-black shrink-0">
+                  <span class="w-6">NO.</span>
+                  <span>SERIAL NUMBER</span>
+                </div>
+                <!-- Daftar 10 Serial Number -->
+                <div class="flex-1 flex flex-col justify-between text-xs px-3 py-1">
+                  <div v-for="s in 10" :key="'print_dus2_'+s" class="flex items-center leading-tight">
+                    <span class="w-6 font-bold">{{ s }}.</span>
+                    <span class="font-black">{{ crate.boxes?.[1]?.items?.[s - 1]?.serial_number || '' }}</span>
+                  </div>
+                </div>
+              </div>
+              <!-- Bottom Row: Garis Kotak Menyatu Utuh & Garis Vertikal Menyambung Lurus 50/50 Langsung Menempel -->
+              <div class="flex text-black text-xs shrink-0">
+                <!-- Kolom Kiri 50%: TANGGAL & JUMLAH -->
+                <div class="w-1/2 border-r-[2.5px] border-black flex flex-col justify-between">
+                  <div class="border-b-[2.5px] border-black px-3 py-1.5 flex items-center">
+                    <span class="font-black text-xs w-[64px] shrink-0">TANGGAL</span>
+                    <span class="font-black mr-1.5">:</span>
+                    <span class="font-black text-sm tracking-wide">{{ formatNumericDate(activePrintDO.do_date) }}</span>
+                  </div>
+                  <div class="px-3 py-1.5 flex items-center">
+                    <span class="font-black text-xs w-[64px] shrink-0">JUMLAH</span>
+                    <span class="font-black mr-1.5">:</span>
+                    <span class="font-black text-sm tracking-wide">10 UNIT</span>
+                  </div>
+                </div>
+
+                <!-- Kolom Kanan 50%: NO. PETI & Angka Disatukan Utuh Tanpa Garis Pemisah -->
+                <div class="w-1/2 px-3 py-1.5 flex flex-col items-center justify-center">
+                  <div class="font-black uppercase tracking-wider text-[11px] mb-1">
+                    NO. PETI :
+                  </div>
+                  <div class="text-xl font-black tracking-wider leading-none">
+                    {{ cIdx + 1 }} DARI {{ activePrintDO.crates?.length || 20 }}
+                  </div>
                 </div>
               </div>
             </div>
