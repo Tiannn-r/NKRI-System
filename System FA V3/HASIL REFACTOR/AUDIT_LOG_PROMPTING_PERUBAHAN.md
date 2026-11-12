@@ -42,7 +42,7 @@ flowchart TD
 ## 3. Log Kronologis Lengkap Seluruh 176 Prompting & Perubahan Sistem
 
 
-### Log Kronologis Perubahan Sistem (Prompt #165)
+### Log Kronologis Perubahan Sistem (Prompt #166)
 
 | No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
 |:---:|:---:|---|---|---|
@@ -211,3 +211,4 @@ flowchart TD
 | **#163** | `2026-11-12 10:34:59` | **Admin Centralized Batch** | ada revisi kembali untuk bagian delivery order: 1. Untuk batch pengiriman di atur dibagian admin cms jadi di form tidka lagi menginput batch. 2. untuk data pengiriman itu auto count otomatis ya jika misal belom ada dokumen yang terbuat (pisahkan count SJ dan PL jangan disamakan) maka pengirimannya otomatis ke 01, jika sudah ada 1 berarti 02 jika sudah ada 2 berarti 03 begitu terus count nya sampai dimana ketika batch nya diubah maka pengiriman harus disetting kembali ke 1. 3. masih ada symbol @ hilangkan saja | Sentralisasi pengaturan Nomor Batch Pengiriman di Portal Admin CMS (`do_settings`) + Reset counter saat batch berganti. |
 | **#164** | `2026-11-12 13:18:50` | **Admin CMS Live Sync** | perbaiki untuk halaman cms admin: 1. ketika data perakitan baru itu tidak otomatis masuk kedalam laporan kenapa ya? harus nya udah auto uodate ga sih? | Realtime refresh data perakitan baru di CMS Admin tanpa perlu reload manual halaman. |
 | **#165** | `2026-11-13 01:26:40` | **Data Seeding (200 Units)** | buatkan 200 data dari masterstock yang sudah lolos penerimaan yaa saya mau uji coba. tapi audit gudang dan audit perpartnya harus tetep ada. sesuai flow yang berjalan aja | Seeding 200 unit data Master Stock (600 part) yang lolos Good Receipts lengkap dengan audit gudang untuk pengujian DO. |
+| **#166** | `2026-11-13 01:47:08` | **Clean UI & Standarisasi** | ketika revisi sistem jangan menggunakan symbol @ saya ingin tampilan clean jangan menambahkan symbol symbol tidak perlu. tolong perbaiiki 1. gausah pake symbol @ di semua menu deliv order JIKA MEMANG TIDAK DIPERLUKAN. standarisasi tanpa menggunakan symbol 2. untuk jenis PL dan SJ yang backdate pengiriman dan batch nya bisa diatur sendiri (tapi tetep count otomatis berdasarkan berapa banyak dokumen yang sudah di buat dan batch otomatis sesuai dengan settingan di admin, namun bisa di ubah). 3. untuk jenis PL dan SJ realtime batch mengikuti aturan admin (tidak bisa diubah), dan count otomatis (tidak bisa diubah). 4. label admin cms, dan label auto countnya hapus saja tidak diperlukan itu 5. foto ketiga itu textbox pengiriman jadi batch, textbox batch jadi pengiriman. jadi dituker | Standarisasi anti-simbol: Menghapus simbol @ dan # dari seluruh teks, badge, placeholder, dan display data. |
