@@ -42,7 +42,7 @@ flowchart TD
 ## 3. Log Kronologis Lengkap Seluruh 176 Prompting & Perubahan Sistem
 
 
-### Log Kronologis Perubahan Sistem (Prompt #168)
+### Log Kronologis Perubahan Sistem (Prompt #169)
 
 | No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
 |:---:|:---:|---|---|---|
@@ -214,3 +214,4 @@ flowchart TD
 | **#166** | `2026-11-13 01:47:08` | **Clean UI & Standarisasi** | ketika revisi sistem jangan menggunakan symbol @ saya ingin tampilan clean jangan menambahkan symbol symbol tidak perlu. tolong perbaiiki 1. gausah pake symbol @ di semua menu deliv order JIKA MEMANG TIDAK DIPERLUKAN. standarisasi tanpa menggunakan symbol 2. untuk jenis PL dan SJ yang backdate pengiriman dan batch nya bisa diatur sendiri (tapi tetep count otomatis berdasarkan berapa banyak dokumen yang sudah di buat dan batch otomatis sesuai dengan settingan di admin, namun bisa di ubah). 3. untuk jenis PL dan SJ realtime batch mengikuti aturan admin (tidak bisa diubah), dan count otomatis (tidak bisa diubah). 4. label admin cms, dan label auto countnya hapus saja tidak diperlukan itu 5. foto ketiga itu textbox pengiriman jadi batch, textbox batch jadi pengiriman. jadi dituker | Standarisasi anti-simbol: Menghapus simbol @ dan # dari seluruh teks, badge, placeholder, dan display data. |
 | **#167** | `2026-11-13 01:59:36` | **Delivery Order Form Layout** | @[Quote] pastikan jangan sampe tertukar nanti output di id nya ya | Memastikan textbox nomor batch dan nomor pengiriman tidak tertukar posisinya. |
 | **#168** | `2026-11-13 02:34:24` | **DO Input Consistency** | kok beda? samakan saja lakukan persamaan ini untuk di sj juga referensinya ambil yang backdate | Menyelaraskan format tampilan input Nomor Batch & Nomor Pengiriman antara Packing List dan Surat Jalan (referensi Backdate). |
+| **#169** | `2026-11-13 03:38:07` | **DO Lock & Select State** | tolong perbaiki: 1. peti itu saya belom pake tapi sudah terkunci kenapa? 2. ketika sudah pilih status maka auto lock statusnya, dan jika ingin memilih ulang sediakan button kembali di form pertama. | Perbaikan lock state peti: Mencegah peti terkunci sebelum digunakan dan menyediakan tombol 'Pilih Ulang Mode'. |
