@@ -41,8 +41,8 @@ flowchart TD
 
 ## 3. Log Kronologis Lengkap Seluruh 176 Prompting & Perubahan Sistem
 
-
-### Log Kronologis Perubahan Sistem (Prompt #179)
+### Fase 1: Stabilisasi Blank Space, Auth Portal Admin & KPI Dashboard Inisial
+*Mengatasi blank space pada layout Vue, memisahkan otentikasi login admin `/admin` secara mandiri, membangun visualisasi Chart.js, dan memperbaiki state set perakitan.*
 
 | No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
 |:---:|:---:|---|---|---|
@@ -66,6 +66,13 @@ flowchart TD
 | **#018** | `2026-11-08 22:38:42` | **Hold & Declined** | status partnya jadi declined bukan tersedia kan harus di verif admin dulu | Mengubah status part yang ditolak menjadi 'declined' (wajib verifikasi admin) bukan langsung 'tersedia'. |
 | **#019** | `2026-11-08 22:47:50` | **Workstation Assembly** | ini format dokumen yang selesaikan sesi dan dilanjutkan ke orang selanjutnya kok udah berubah? kan harussnya ada - S2 nya | Menstandarisasi format dokumen serah terima sesi kerja antar operator. |
 | **#020** | `2026-11-08 23:55:14` | **Workstation Assembly** | ini masih gada s2nya terus itu didalamnya satu set kok tertulisnya malah 2? | Memperbaiki penomoran set dan penandaan sesi S2 agar konsisten 1 set = 3 part. |
+
+
+### Fase 2: Standarisasi Alur Linear, Riwayat Tahapan & Eliminasi Rework
+*Menghapus total status dan fungsi Rework di seluruh sistem, mengunci alur linear perakitan -> TF1 -> Good Receipts, memperbaiki identitas aktor (user login), dan mengatasi anomali status barang.*
+
+| No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
+|:---:|:---:|---|---|---|
 | **#021** | `2026-11-09 00:37:49` | **Warehouse & Returns** | ini statusnya kok masih tersupply padahal sudah dikembalikan ke gudang kan? harus nya historynya tertulis selesai kemudian ketika dilihat detail barang yanng dikembalikan ke gudang bertuliskan dikembalikan ke gudang gitu | Memperbaiki riwayat status agar part yang dikembalikan ke gudang tidak lagi berstatus tersupply. |
 | **#022** | `2026-11-09 01:03:24` | **Riwayat & History** | ini juga history di tf 1 ketika di click detail dan dilihat persetnya kok hasilnya gada tf 1nnya? malah yang di perakitan ada tf 1 nya kok aneh | Mengisolasi detail riwayat perakitan, TF1, dan TF2 agar hanya menampilkan hasil proses pada tahap tersebut. |
 | **#023** | `2026-11-09 01:12:53` | **Riwayat & History** | ini juga di detail perakitan harusnya munculin hasil perakitannya saja | Mengisolasi detail riwayat perakitan, TF1, dan TF2 agar hanya menampilkan hasil proses pada tahap tersebut. |
@@ -109,6 +116,13 @@ flowchart TD
 | **#061** | `2026-11-09 11:50:38` | **Layout Restoration** | ini kenapa jadi gini astaga | Merestorasi fokus layout dan mengembalikan struktur form yang sempat mengalami pergeseran visual. |
 | **#062** | `2026-11-09 11:50:56` | **Layout Restoration** | ini kenapa jadi gini astaga | Merestorasi fokus layout dan mengembalikan struktur form yang sempat mengalami pergeseran visual. |
 | **#063** | `2026-11-09 12:23:56` | **Layout Restoration** | MALAH JADI BERANTAKAN ANJING, FOKUS SAMA CHAT TERAKHIR YANG SAYA MINTA BANGSAT KENAPA KE FOTO FOTO YANG SEBELUMNYA DIBAWA JUGA ANJING DONGO | Merestorasi fokus layout dan mengembalikan struktur form yang sempat mengalami pergeseran visual. |
+
+
+### Fase 3: Presisi Kalibrasi Cetak Label Fisik (80x20mm & Dokumen Resmi)
+*Kalibrasi mendalam layout cetak printer thermal (margin kiri/kanan, footer, garis batas abu-abu), validasi input SN bebas duplikasi, dan aktivasi chart doughnut mutu.*
+
+| No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
+|:---:|:---:|---|---|---|
 | **#064** | `2026-11-10 01:13:09` | **Warehouse & Assembly** | itu set 2 dan 3 tuh yang di kembalika ke gudang kok ga ilang astaga kok masih ada disitu anjing | Menghapus set yang telah dikembalikan ke gudang dari list aktif perakitan. |
 | **#065** | `2026-11-10 01:28:20` | **UI/UX & Modal Z-Index** | kebuka nya malah dibelakangnya | Memperbaiki z-index modal ganti part agar muncul di atas modal utama (tidak tertimpa di belakang). |
 | **#066** | `2026-11-10 01:41:52` | **Hold & Status Logic** | ini kan status saat ini nya hold kemudian di pilihannya itu ada status hold juga, harusnya dihilangkan saja tidak sih? jadi ketika status ini berstatus "1" maka opsi "1" dhilangkan artinya ketika status ini berstatus hold maka opsi daftar ulang ke hold ini dihilangkan. logika enaknya seperti itu tidak sih? | Menghilangkan pilihan status 'Hold' jika status part saat ini sudah dalam kondisi 'Hold'. |
@@ -146,6 +160,13 @@ flowchart TD
 | **#098** | `2026-11-10 10:38:27` | **Admin CMS & Chart** | cart nya samakan kaya yang di dashboad | Mengaktifkan kembali grafik/chart doughnut pada dashboard admin. |
 | **#099** | `2026-11-10 11:44:11` | **UI/UX Components** | dropdownya mana | Menampilkan kembali dropdown seleksi yang sempat tertutup. |
 | **#100** | `2026-11-10 12:12:19` | **UI/UX Components** | kenapa | Menampilkan kembali dropdown seleksi yang sempat tertutup. |
+
+
+### Fase 4: Rekonstruksi Arsitektur Modular Delivery Order (DO & PL)
+*Refactoring monolitik DO menjadi 6 sub-file modular, standarisasi kemasan Per Peti (20 SN) dan Per Dus (10 SN), implementasi indikator titik warna Realtime/Backdate, pembersihan simbol @, dan integrasi Cloudinary PDF.*
+
+| No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
+|:---:|:---:|---|---|---|
 | **#101** | `2026-11-11 00:46:30` | **Delivery Order (Packing List)** | saya lupa kalo packing list itu hanya bisa bikin per peti dan perdus saja tidak bisa persatuan kalo misal SJ itu bisa satuan. kemudian untuk generate ID PL kayanya gausah anjir buat apa, kalo misal bikin dus yauda generate nya ID dus, kalo peti berarti generate nya ID peti, ditabel itu nya benerin kok jadi ada id id aneh gitu buat apa kan nanti consume nya itu berdasarkan id peti dan id dus nya. ngerti ga? | Membatasi struktur Packing List hanya pada opsi Per Peti (20 unit) dan Per Dus (10 unit). |
 | **#102** | `2026-11-11 01:22:28` | **Prints & Labels** | fix the bug | Fix bug pembersihan tombol berlebih pada halaman cetak label. |
 | **#103** | `2026-11-11 02:08:07` | **Prints & Labels** | tolong perbaiki eror dan bug berikut: 1. pada foto yang saya lampirkan hapus saja buttonnya. 2. pada foto yang saya lampirkan kedua, kenapa bisa WO nya dari 1 langsung ke 3? harusnya tetap berurutan kan 1,2, dan 3. pembuatan WO harus tetap berurutan setiap wo baru tetap count dari WO yang sebelumnya di cetak 3. pada foto ketiga. kenapa bisa PU-0001 nya itu ada 2? harusnya jika ada PU-0001 berarti count nya maju dong ketika ada set yang diarahkan lagi berarti menjadi 0002, ada set perakitan ulang baru jadi 0003 dan seterusnya 4. Pada menu selesaikan sesi dan dipilih ke operator lain maka dokumennya akan menjadi S2, ketika dokumen S2 itu diteruskan kembali maka akan menjadi S3 ketika S3 diteruskan ke operator yang lain lagi maka jadi S4 begitu terus yaa 5. pada foto keempat datanya ada 3/4, namun ketika saya click dan lihat datanya itu ada 5 dan data tulisannya berubah menjadi 4/5, tolong perbaiki ini. kemudian data yang benar adalah 5 set dan sudah selesai semua tapi kenapa progressnya masih 4/5? tolong perbaiki juga 6. Dihalaman Test functional 1. ketika semua set sudah dilakukan test uji parameter menunggu uji TF 1 itu masih ada 1 set yang belum diuji. kenapa bisa terjadi seperti itu 7. Dalam menu PL dan SJ itu apakah data backdate dan real time ada pembedanya? 8. foto kelima id dus ada yang salah, seharusnya yymm-batchkeberapa-pengirimankeberapa+peti(dikarenakan untuk dus maka peti nya di 00 kan saja)-no dus(nah untuk no dus nya itu count sebanyak dus nya jika ada 10 berarti 10 jika ada 7 berarti 07). namun ketika nanti template duss nya di pake di SJ tetap mengikuti id petinya misal id dus 07 dipake di peti ke 02 dus ke 01 maka auto berubah menyesuaikan id petinya. jika kurang jelas tanyakan saja. 9. nama produknya lock saja biar tidak bisa diubah diseluruh yang menggunakan input nama produk yaitu nanggala P9 10. ketika alokasi serial number ditemukan ada input SN yang tidak ada datanya dan sudah di alert maka tidak bisa menyimpan, mencetak dokumennya, dikarenakan data yang di input itu harus yang tersedia dan sudah melewati penerimaan dengan kondisi acc | Fix bug pembersihan tombol berlebih pada halaman cetak label. |
@@ -186,6 +207,13 @@ flowchart TD
 | **#138** | `2026-11-11 10:29:49` | **Hold Management** | lanjutkan dulu proses pengujiannya | Memperbaiki deteksi part berstatus Hold agar langsung terdaftar di antrean verifikasi hold. |
 | **#139** | `2026-11-11 10:32:47` | **Hold Management** | tolong perbaiki: 1. itu dalam foto jelas sekali ada yang gold tapi datanya tidak masuk kedalam data tf1 yang hold 2. dalam foto jelas set yang di pengembalian di acc itu akan hilang dan ketika dibuka lagi akan menjadi 0 dtanya seperti itu tolong perbaiki | Memperbaiki deteksi part berstatus Hold agar langsung terdaftar di antrean verifikasi hold. |
 | **#140** | `2026-11-11 10:57:32` | **DO SN Integration** | ini sudah good receipts tapi kenpa tidak bisa di inpiut di pengirimannn | Memastikan seluruh part yang lolos Good Receipts langsung tersedia untuk dialokasikan ke Delivery Order. |
+
+
+### Fase 5: Manajemen Hold, Verifikasi Declined & Pendaftaran Ulang Part
+*Penyederhanaan status defect menjadi satu status 'Declined', perbaikan z-index modal ganti part, alur pendaftaran ulang part rakitan baru, dan sentralisasi pengaturan batch CMS.*
+
+| No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
+|:---:|:---:|---|---|---|
 | **#141** | `2026-11-11 11:40:41` | **Warehouse State Fix** | ini setan gada anjg | Memperbaiki anomali status barang yang dikembalikan ke gudang agar tidak tercatat Good di perakitan. |
 | **#142** | `2026-11-11 11:41:50` | **Warehouse State Fix** | ini barang dikembalikan ke gudang kenapa bisa asssy nya good anjg? | Memperbaiki anomali status barang yang dikembalikan ke gudang agar tidak tercatat Good di perakitan. |
 | **#143** | `2026-11-11 11:46:14` | **DO SN Integration** | ini udah good receipts anjing gada dongo goblok | Memastikan seluruh part yang lolos Good Receipts langsung tersedia untuk dialokasikan ke Delivery Order. |
@@ -210,6 +238,13 @@ flowchart TD
 | **#162** | `2026-11-12 09:28:12` | **Delivery Order Form** | tolong perbaiki di bagian delivery order (hanya delivery order tidak boleh ke yang lain): 1. ketika saya menyelesaikan pembuatan PL dan SJ form nya tidak tereset dari awal lagi, form nya masih menyimpan datanya bahkan sampai saya buka history data nya masih kesimpan. harusnya setelah menyelesaikan form nya tereset kembali dari pemilihan jenis nya backdate atau realtime. 2. kemudian dokumen PL yang sudah terpakai harusnya hanya bisa di consume satu kali saja tidak bisa lebih dari satu. ketika sudah di consume maka tidak bisa di consume lagi. 3. kemudian hak consume PL untuk SJ. jika PL dibuat dengan jenis backdate maka hanya bisa diconsume oleh SJ yang dibuat dengan jenis backdate juga. jika PL yang dibuat memilih realtime maka hanya bisa di consume oleh SJ yang dibuat dengan jenis realtime juga. jadi syarat SJ bisa consume PL adalah jenisnya sama. 4. kemudian jelaskan kepada saya format untuk surat jalan, peti dan dus | Pemisahan strict nomor batch dan nomor urut pengiriman pada Packing List dan Surat Jalan. |
 | **#163** | `2026-11-12 10:34:59` | **Admin Centralized Batch** | ada revisi kembali untuk bagian delivery order: 1. Untuk batch pengiriman di atur dibagian admin cms jadi di form tidka lagi menginput batch. 2. untuk data pengiriman itu auto count otomatis ya jika misal belom ada dokumen yang terbuat (pisahkan count SJ dan PL jangan disamakan) maka pengirimannya otomatis ke 01, jika sudah ada 1 berarti 02 jika sudah ada 2 berarti 03 begitu terus count nya sampai dimana ketika batch nya diubah maka pengiriman harus disetting kembali ke 1. 3. masih ada symbol @ hilangkan saja | Sentralisasi pengaturan Nomor Batch Pengiriman di Portal Admin CMS (`do_settings`) + Reset counter saat batch berganti. |
 | **#164** | `2026-11-12 13:18:50` | **Admin CMS Live Sync** | perbaiki untuk halaman cms admin: 1. ketika data perakitan baru itu tidak otomatis masuk kedalam laporan kenapa ya? harus nya udah auto uodate ga sih? | Realtime refresh data perakitan baru di CMS Admin tanpa perlu reload manual halaman. |
+
+
+### Fase 6: Pengujian Skala Penuh (200 Unit), Konsumsi ID Peti, Margin 4.5mm & Clean UI
+*Seeding 200 unit master stock yang lolos Good Receipts, auto-convert ID Peti & ID Dus saat dikonsumsi ke SJ, penetapan margin cetak 4.5mm, standarisasi bebas simbol @, penyamaan lebar form 100% simetris (w-full), dan pembersihan kata-kata redundan.*
+
+| No | Waktu (UTC) | Kategori Modul | Instruksi Pengguna (Prompt Asli) | Tindakan & Perubahan Nyata pada Sistem |
+|:---:|:---:|---|---|---|
 | **#165** | `2026-11-13 01:26:40` | **Data Seeding (200 Units)** | buatkan 200 data dari masterstock yang sudah lolos penerimaan yaa saya mau uji coba. tapi audit gudang dan audit perpartnya harus tetep ada. sesuai flow yang berjalan aja | Seeding 200 unit data Master Stock (600 part) yang lolos Good Receipts lengkap dengan audit gudang untuk pengujian DO. |
 | **#166** | `2026-11-13 01:47:08` | **Clean UI & Standarisasi** | ketika revisi sistem jangan menggunakan symbol @ saya ingin tampilan clean jangan menambahkan symbol symbol tidak perlu. tolong perbaiiki 1. gausah pake symbol @ di semua menu deliv order JIKA MEMANG TIDAK DIPERLUKAN. standarisasi tanpa menggunakan symbol 2. untuk jenis PL dan SJ yang backdate pengiriman dan batch nya bisa diatur sendiri (tapi tetep count otomatis berdasarkan berapa banyak dokumen yang sudah di buat dan batch otomatis sesuai dengan settingan di admin, namun bisa di ubah). 3. untuk jenis PL dan SJ realtime batch mengikuti aturan admin (tidak bisa diubah), dan count otomatis (tidak bisa diubah). 4. label admin cms, dan label auto countnya hapus saja tidak diperlukan itu 5. foto ketiga itu textbox pengiriman jadi batch, textbox batch jadi pengiriman. jadi dituker | Standarisasi anti-simbol: Menghapus simbol @ dan # dari seluruh teks, badge, placeholder, dan display data. |
 | **#167** | `2026-11-13 01:59:36` | **Delivery Order Form Layout** | @[Quote] pastikan jangan sampe tertukar nanti output di id nya ya | Memastikan textbox nomor batch dan nomor pengiriman tidak tertukar posisinya. |
@@ -225,3 +260,23 @@ flowchart TD
 | **#177** | `2026-11-14 10:14:26` | **Git Version Control & Remote** | commit semuanya satu persatu kemudian push ke github ya | Pemisahan 7 commit modular terstruktur (`feat`, `fix`, `refactor`, `chore`) dan sinkronisasi push ke GitHub origin/main. |
 | **#178** | `2026-11-14 10:25:15` | **Quality Assurance & Verification** | sudah semuanya? | Verifikasi status git, pembersihan cache Laravel, dan pengujian kompilasi view Blade (`APP_OK ADMIN_OK`). |
 | **#179** | `2026-11-14 10:27:50` | **Audit Sync & Tracking** | sudah 176? | Audit verifikasi jumlah interaksi: 176 adalah saat prompt permintaan rekap diajukan, bertambah menjadi 179 secara real-time hingga saat ini. |
+| **#180** | `2026-11-14 11:00:50` | **Git Version Control & Documentation** | yaudah commit 170++ perubahann itu tuh ke git | Pencatatan dan commit dokumen resmi audit riwayat 180 prompting dan perubahan sistem ke repositori Git serta push ke GitHub. |
+
+---
+
+## 4. Rangkuman Modifikasi Teknis Utama per Modul
+
+### A. Modul Delivery Order & Distribusi
+- **Pemisahan File Modular:** Dari file tunggal dipecah menjadi [index.blade.php](file:///c:/Users/ibnhu/Desktop/Muhamad%20Ibnhu/Sistem%20Final%20Assembly/System%20FA%20V3/HASIL%20REFACTOR/resources/views/modules/delivery-orders/index.blade.php), [dashboard.blade.php](file:///c:/Users/ibnhu/Desktop/Muhamad%20Ibnhu/Sistem%20Final%20Assembly/System%20FA%20V3/HASIL%20REFACTOR/resources/views/modules/delivery-orders/dashboard.blade.php), [database-do.blade.php](file:///c:/Users/ibnhu/Desktop/Muhamad%20Ibnhu/Sistem%20Final%20Assembly/System%20FA%20V3/HASIL%20REFACTOR/resources/views/modules/delivery-orders/database-do.blade.php), [packing-list.blade.php](file:///c:/Users/ibnhu/Desktop/Muhamad%20Ibnhu/Sistem%20Final%20Assembly/System%20FA%20V3/HASIL%20REFACTOR/resources/views/modules/delivery-orders/packing-list.blade.php), [surat-jalan.blade.php](file:///c:/Users/ibnhu/Desktop/Muhamad%20Ibnhu/Sistem%20Final%20Assembly/System%20FA%20V3/HASIL%20REFACTOR/resources/views/modules/delivery-orders/surat-jalan.blade.php), [preview.blade.php](file:///c:/Users/ibnhu/Desktop/Muhamad%20Ibnhu/Sistem%20Final%20Assembly/System%20FA%20V3/HASIL%20REFACTOR/resources/views/modules/delivery-orders/preview.blade.php), dan [detail.blade.php](file:///c:/Users/ibnhu/Desktop/Muhamad%20Ibnhu/Sistem%20Final%20Assembly/System%20FA%20V3/HASIL%20REFACTOR/resources/views/modules/delivery-orders/detail.blade.php).
+- **Auto-Convert ID Peti & ID Dus saat Consume ke SJ:** Ketika ID Peti yang diterbitkan di Packing List (misal ID Peti `2611-01-0103`) dikonsumsi ke Surat Jalan untuk slot Peti 1, sistem secara dinamis dan otomatis mengonversi ID kemasan tersebut menjadi `2611-01-0101` (mengikuti nomor urut peti dan dus di Surat Jalan), dengan tetap menjaga integritas serial number unit.
+- **Sistem Batch Terpusat di Admin CMS:** Nomor batch dikelola terpusat di tabel `do_settings`. Mode Realtime mengunci nomor batch dan auto-count nomor pengiriman, sedangkan mode Backdate memberikan fleksibilitas penyesuaian historis.
+- **Clean UI & Lebar Simetris 100%:** Menghapus seluruh simbol `@`, menghilangkan label redundant (*Terbaru/Sekarang/Hari ini* → *Realtime*, *Backdate/Terlewat/Lama* → *Backdate*), serta mengganti batasan `max-w-4xl` menjadi `w-full` agar seluruh kartu form sejajar persis dengan kartu header.
+
+### B. Modul Workstation Perakitan & Pergantian Part
+- **Strict Linear Flow:** Penghapusan opsi Rework. Part yang rusak atau tidak sesuai diarahkan ke flow penggantian part (Hold/Declined) dengan pencatatan asal usul proses (Perakitan, TF1, atau TF2).
+- **Zero State Residual:** Form state direset total saat pergantian tray atau penyelesaian sesi serah terima kerja antar operator.
+- **Pendaftaran Ulang Part:** Memastikan part pengganti yang disetujui admin dapat langsung didaftarkan ulang ke set asalnya tanpa menghilangkan integritas set lain.
+
+### C. Modul Cetak Dokumen & Presisi Label Fisik
+- **Standar Margin Label 100x150mm:** Telah dikalibrasi presisi dengan margin `4.5mm` di [head.blade.php](file:///c:/Users/ibnhu/Desktop/Muhamad%20Ibnhu/Sistem%20Final%20Assembly/System%20FA%20V3/HASIL%20REFACTOR/resources/views/layouts/head.blade.php), [prints/index.blade.php](file:///c:/Users/ibnhu/Desktop/Muhamad%20Ibnhu/Sistem%20Final%20Assembly/System%20FA%20V3/HASIL%20REFACTOR/resources/views/prints/index.blade.php), dan [preview.blade.php](file:///c:/Users/ibnhu/Desktop/Muhamad%20Ibnhu/Sistem%20Final%20Assembly/System%20FA%20V3/HASIL%20REFACTOR/resources/views/modules/delivery-orders/preview.blade.php) untuk printer TSC.
+- **Kesesuaian Format Dokumen Fisik Resmi:** Desain format tabel, barcode/QR code, dan kolom identitas pengeluar 100% identik dengan standar fisik resmi PT NKRI.

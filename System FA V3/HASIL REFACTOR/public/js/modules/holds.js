@@ -61,6 +61,13 @@
       if (Boolean(item.is_declined) || String(item.status || '').toLowerCase() === 'declined' || String(item.verified_status || '').toUpperCase() === 'DECLINED') {
         return false;
       }
+      // Set yang sudah dirakit dengan status 'Good' pada tray PU adalah dokumen baru yang telah selesai (bukan sedang rakit ulang):
+      const isPUTrayDoc = String(item.tray_code || '').toUpperCase().includes('-PU') || String(item.tray_code || '').toUpperCase().includes('/PU/');
+      const st = String(item.assembly_status || item.status || '').trim().toLowerCase();
+      if (isPUTrayDoc && st === 'good') {
+        return false;
+      }
+
       const vStat = String(item.verified_status || '').trim().toUpperCase();
       // Jika statusnya WAITING_REASSEMBLY, APPROVED_REREG, atau COMPLETED_PU (hasil verifikasi admin), PASTI SUDAH RU:
       if (['WAITING_REASSEMBLY', 'APPROVED_REREG', 'COMPLETED_PU'].includes(vStat)) return true;
@@ -69,16 +76,15 @@
       if (vStat === 'PENDING_ADMIN_ASSY_REREG' || vStat === 'PENDING_ADMIN' || vStat === 'PENDING_ADMIN_QC' || item.pending_action_type === 'PENDING_DAFTAR_ULANG') {
         return false;
       }
-      const st = String(item.assembly_status || item.status || '').trim().toLowerCase();
       const assyTestSt = String(item.assy_test_status || '').trim().toUpperCase();
       const qcSt = String(item.qc_status || '').trim().toUpperCase();
       if (st === 'dirakit ulang' || st === 'ru' || assyTestSt === 'RU' || qcSt === 'RU') return true;
       if (Boolean(item.is_reregistered && st !== 'good' && !vStat.startsWith('PENDING_ADMIN'))) return true;
-      if (Boolean(item.rereg_pending_operator) || Boolean(item.rereg_wo_suffix)) return true;
-      if (item.latest_replacement_status === 'APPROVED') return true;
+      if ((Boolean(item.rereg_pending_operator) || Boolean(item.rereg_wo_suffix)) && st !== 'good') return true;
+      if (item.latest_replacement_status === 'APPROVED' && st !== 'good') return true;
       if (item.rework_reason && item.rework_reason.includes('Ganti Part') && (st === 'hold' || st === 'dirakit ulang' || vStat === 'WAITING_REASSEMBLY' || vStat === 'APPROVED' || vStat === 'COMPLETED_PU')) return true;
       const cleanR = String(item.assembly_reason || item.reason || '').toLowerCase();
-      if (cleanR.includes('dirakit ulang')) return true;
+      if (cleanR.includes('dirakit ulang') && st !== 'good') return true;
       return false;
     };
 
@@ -120,49 +126,64 @@
     const getAssemblyStageStatus = (it) => {
       if (!it) return 'Good';
 
+      // 0. Status Ditolak / Declined:
       const rawSt = String(it.assembly_status || it.status || '').trim().toLowerCase();
       const vStat = String(it.verified_status || '').trim().toUpperCase();
-
-      // 0. Status Ditolak / Declined:
       if (Boolean(it.is_declined) || rawSt === 'declined' || vStat === 'DECLINED') {
         return 'Declined';
       }
 
-      // 1. Prioritas Status Transisi Rakit Ulang (RU):
-      if (typeof isReassemblySet === 'function' && isReassemblySet(it)) {
+      // 1. Cek apakah set ini sudah dialihkan / berubah status ke RU (Rakit Ulang / Reassembly)
+      // PENTING: Dokumen tray PU (misal WH/ASSY/...-PU1) adalah dokumen tray baru hasil rakit ulang.
+      // Set di dalam tray PU adalah dokumen independen dan TIDAK boleh otomatis dianggap RU hanya karena nama tray mengandung '-PU'.
+      // Status set pada tray PU harus mencerminkan hasil perakitan nyata saat ini (Good / Hold / Scrap).
+      const isPUTrayDoc = String(it.tray_code || '').toUpperCase().includes('-PU') || String(it.tray_code || '').toUpperCase().includes('/PU/');
+
+      const isRU = !isPUTrayDoc && (
+        rawSt === 'ru' ||
+        rawSt === 'dirakit ulang' ||
+        rawSt === 'rework' ||
+        rawSt === 'rakit ulang' ||
+        vStat === 'APPROVED_REASSEMBLY' ||
+        vStat === 'WAITING_REASSEMBLY' ||
+        vStat === 'PENDING_ADMIN_ASSY_REREG' ||
+        vStat === 'APPROVED_REWORK' ||
+        (Boolean(it.is_rework) && rawSt !== 'good') ||
+        (Boolean(it.is_reregistered) && rawSt !== 'good' && !vStat.startsWith('PENDING_ADMIN')) ||
+        String(it.status || '').toLowerCase() === 'dirakit ulang' ||
+        String(it.status || '').toLowerCase() === 'ru'
+      );
+
+      // Jika pada tray PU set ini secara eksplisit dialihkan lagi ke rakit ulang lanjutan:
+      const isPurePU_RU = isPUTrayDoc && (rawSt === 'ru' || rawSt === 'dirakit ulang' || String(it.status || '').toLowerCase() === 'dirakit ulang' || vStat === 'APPROVED_REASSEMBLY');
+
+      if (isRU || isPurePU_RU) {
         return 'RU';
       }
-      const qcSt = String(it.qc_status || '').trim().toUpperCase();
-      const assyTestSt = String(it.assy_test_status || '').trim().toUpperCase();
 
-      if (rawSt === 'dirakit ulang' || rawSt === 'ru' || assyTestSt === 'RU' || qcSt === 'RU' || ['WAITING_REASSEMBLY', 'APPROVED_REREG', 'COMPLETED_PU'].includes(vStat)) {
-        return 'RU';
-      }
-
-      // 2. Ambil catatan status perakitan aktual awal (original_assembly_status dari database / history)
+      // 2. Ambil catatan status perakitan awal jika ada
       if (it.original_assembly_status) {
         const oSt = String(it.original_assembly_status).trim().toLowerCase();
         if (oSt === 'good') return 'Good';
         if (oSt === 'hold') return 'Hold';
         if (oSt === 'scrap') return 'Scrap';
-        if (oSt === 'rework') return 'Rework';
+        if (oSt === 'declined') return 'Declined';
+        if (oSt === 'ru' || oSt === 'dirakit ulang') return 'RU';
       }
 
       // 3. Cek apakah saat perakitan ada kendala/cacat/alasan asli
       const cleanReason = String(it.assembly_reason || it.reason || '').trim();
-      const isRealAssyReason = Boolean(cleanReason && cleanReason !== '-' && cleanReason !== 'None' && cleanReason !== 'null' && !cleanReason.startsWith('|') && !cleanReason.toLowerCase().includes('dirakit ulang'));
+      const isRealAssyReason = Boolean(cleanReason && cleanReason !== '-' && cleanReason !== 'None' && cleanReason !== 'null' && !cleanReason.startsWith('|') && !cleanReason.toLowerCase().includes('dirakit ulang') && !cleanReason.toLowerCase().includes('disetujui admin') && !cleanReason.toLowerCase().includes('perakitan ulang'));
       const hasDefectiveParts = Boolean(it.defective_parts && String(it.defective_parts).trim() !== '' && String(it.defective_parts).trim() !== '-');
 
       if (isRealAssyReason || hasDefectiveParts) {
         if (cleanReason.toLowerCase().includes('scrap')) return 'Scrap';
-        if (cleanReason.toLowerCase().includes('rework')) return 'Rework';
         return 'Hold';
       }
 
       // 4. Status mentah perakitan sebelum dirubah
       if (rawSt === 'hold') return 'Hold';
       if (rawSt === 'scrap') return 'Scrap';
-      if (rawSt === 'rework') return 'Rework';
 
       return 'Good';
     };
@@ -1122,9 +1143,9 @@
 
     const totalPartsToReplace = computed(() => {
       let count = 0;
-      if (isProblemPart('15') && replaceSelections.value['15']) count++;
-      if (isProblemPart('1') && replaceSelections.value['1']) count++;
-      if (isProblemPart('12') && replaceSelections.value['12']) count++;
+      if (replaceSelections.value['15']) count++;
+      if (replaceSelections.value['1']) count++;
+      if (replaceSelections.value['12']) count++;
       return count;
     });
 
@@ -1210,13 +1231,13 @@
       }
 
       const reps = [];
-      if (isProblemPart('15') && replaceSelections.value['15']) {
+      if (replaceSelections.value['15']) {
         reps.push({ part_type: '15', new_sn: replaceSelections.value['15'] });
       }
-      if (isProblemPart('1') && replaceSelections.value['1']) {
+      if (replaceSelections.value['1']) {
         reps.push({ part_type: '1', new_sn: replaceSelections.value['1'] });
       }
-      if (isProblemPart('12') && replaceSelections.value['12']) {
+      if (replaceSelections.value['12']) {
         reps.push({ part_type: '12', new_sn: replaceSelections.value['12'] });
       }
 
@@ -1385,6 +1406,7 @@
 
     const initFunctionalHoldTab = () => {
       if (window.logger) logger.info('HOLDS', 'Memuat data Hasil Test Functional Hold...');
+      loadAssemblyResults();
       loadProductionHoldItems();
       loadProductionProducts();
     };

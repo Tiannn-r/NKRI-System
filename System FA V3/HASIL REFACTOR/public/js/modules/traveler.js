@@ -28,6 +28,7 @@
     const currentTab = ctx.currentTab || ref('traveler');
     const selectedTrayCode = ctx.selectedTrayCode || ref('');
     const currentTray = ctx.currentTray || ref(null);
+    const currentTrayAssemblies = ctx.currentTrayAssemblies || ref([]);
     const traysList = ctx.traysList || ref([]);
     const traySlots = ctx.traySlots || ref([]);
     const activeAssyQCDocSlot = ctx.activeAssyQCDocSlot || ref(null);
@@ -53,6 +54,22 @@
     const getTravelerItemActualStatus = ctx.getTravelerItemActualStatus || function (item) {
       if (!item) return '-';
       return item.status || '-';
+    };
+    const formatDocStatus = (status) => {
+      if (!status || status === '-') return '-';
+      const s = String(status).trim().toUpperCase();
+      if (s === 'NOT_GOOD' || s === 'NOT GOOD' || s === 'NG') return 'NOT GOOD';
+      if (s === 'PASS' || s === 'PASSED' || s === 'GOOD' || s === 'ACC' || s === 'ACCEPTED') return 'GOOD';
+      if (s === 'HOLD' || s === 'HOLD_ASSY' || s === 'HOLD_QC') return 'HOLD';
+      if (s === 'RU' || s === 'DIRAKIT ULANG' || s === 'RAKIT ULANG') return 'DIRAKIT ULANG';
+      if (s === 'REWORK' || s === 'REWORK_ASSY' || s === 'REWORK_QC') return 'HOLD';
+      if (s === 'SCRAP' || s === 'DECLINED' || s === 'FAIL') return 'SCRAP';
+      if (s === 'PENDING' || s.includes('MENUNGGU') || s.includes('BELUM')) return 'PENDING';
+      return String(status);
+    };
+    const getAssyTestItemActualStatus = (item) => {
+      if (!item) return '-';
+      return item.assy_test_status || item.status || '-';
     };
 
     const loadTrays = ctx.loadTrays || (async () => {});
@@ -98,6 +115,8 @@
       const isPU = isPUTray(trayCode);
       const puNum = isPU ? getPUNumberOnly(trayCode) : '';
       const numPart = trayCode.includes('/') ? trayCode.split('/').pop() : trayCode;
+      const sessionMatch = numPart.match(/-S\d+/i);
+      const sessionSuffix = sessionMatch ? sessionMatch[0].toUpperCase() : '';
       const cleanNum = numPart.replace(/-PU\d*/i, '').replace(/-S\d*/i, '').replace(/\D/g, '').slice(-6).padStart(6, '0') || '000001';
 
       const t = String(type || '').toLowerCase();
@@ -105,23 +124,23 @@
       if (t === 'mo' || t === 'wh_mo') {
         return isPU ? `WH/MO/PU/${puNum}` : `WH/MO/${cleanNum}`;
       } else if (t === 'supply' || t === 'wo' || t === 'wh_wo') {
-        return isPU ? `WH/WO/PU/${puNum}` : `WH/WO/${cleanNum}`;
+        return isPU ? `WH/WO/PU/${puNum}` : `WH/WO/${cleanNum}${sessionSuffix}`;
       } else if (t === 'qc' || t === 'wh_qc') {
-        return isPU ? `WH/QC/PU/${puNum}` : `WH/QC/${cleanNum}`;
+        return isPU ? `WH/QC/PU/${puNum}` : `WH/QC/${cleanNum}${sessionSuffix}`;
       } else if (t === 'assy_qc' || t === 'tf1') {
-        return isPU ? `ASSY/QC/PU/${puNum}` : `ASSY/QC/${cleanNum}`;
+        return isPU ? `ASSY/QC/PU/${puNum}` : `ASSY/QC/${cleanNum}${sessionSuffix}`;
       } else if (t === 'warehouse_receipt' || t === 'receipt' || t === 'gr' || t === 'wh_gr') {
-        return isPU ? `WH/GR/PU/${puNum}` : `WH/GR/${cleanNum}`;
+        return isPU ? `WH/GR/PU/${puNum}` : `WH/GR/${cleanNum}${sessionSuffix}`;
       } else if (t === 'assy_rework' || t === 'rework') {
         return `WH/ASSY/PU/${puNum || cleanNum}`;
       } else if (t === 'origin_assy') {
-        return `WH/ASSY/${cleanNum}`;
+        return `WH/ASSY/${cleanNum}${sessionSuffix}`;
       } else if (t === 'assy') {
-        return isPU ? `WH/ASSY/PU/${puNum}` : `WH/ASSY/${cleanNum}`;
+        return isPU ? `WH/ASSY/PU/${puNum}` : `WH/ASSY/${cleanNum}${sessionSuffix}`;
       } else if (isPU) {
         return `WH/ASSY/PU/${puNum}`;
       }
-      return `WH/ASSY/${cleanNum}`;
+      return `WH/ASSY/${cleanNum}${sessionSuffix}`;
     };
 
     // ===================================================================
@@ -175,7 +194,11 @@
       }
 
       // 5. Dokumen Supply (WH/WO):
-      return t.total_sets || 0;
+      if (t.session_status === 'COMPLETED_SHIFT' || t.session_status === 'HANDED_OVER' || t.status === 'returned') {
+        const fin = t.finished_count !== undefined && t.finished_count !== null ? Number(t.finished_count) : 0;
+        if (fin > 0) return fin;
+      }
+      return Number(t.total_sets || 0);
     };
 
     const distinctPrintOperators = computed(() => {
@@ -414,6 +437,33 @@
       return '';
     });
 
+    const isAllSetsReturnedWithoutFinish = computed(() => {
+      const tray = travelerTray.value || currentTray.value;
+      if (!tray) return false;
+
+      // Status tray harus mengindikasikan pengembalian ke gudang
+      const isReturned = Boolean(
+        tray.status === 'returned' ||
+        tray.status === 'Dikembalikan ke Gudang' ||
+        tray.session_status === 'RETURNED_TO_WAREHOUSE' ||
+        Boolean(tray.return_verified) ||
+        Boolean(tray.return_verified_at) ||
+        Boolean(tray.return_reason) ||
+        (tray.session_status === 'COMPLETED_SHIFT' && tray.status === 'returned')
+      );
+
+      if (!isReturned) return false;
+
+      // Cek jumlah set yang telah selesai dirakit
+      const assemblies = currentTrayAssemblies.value || [];
+      const finishedInAssemblies = assemblies.filter(a => a && (a.finished_at || (a.status && !['TERSUPPLY', 'Dikembalikan ke Gudang', 'RETURNED'].includes(a.status)))).length;
+
+      const finishedCount = Number(tray.finished_count !== undefined && tray.finished_count !== null ? tray.finished_count : finishedInAssemblies);
+
+      // Jika belum ada satu pun set yang selesai dirakit (finishedCount === 0)
+      return finishedCount === 0;
+    });
+
     const getInspectorQC = (items) => {
       if (!items) return '';
       if (Array.isArray(items)) {
@@ -520,7 +570,7 @@
       window.print();
       setTimeout(() => {
         document.title = origTitle || 'Sistem Traceability Final Assembly P9';
-      }, 1000);
+      }, 2000);
     };
 
     // ===================================================================
@@ -983,12 +1033,16 @@
       resetPrintFilter,
       selectPrintDocType,
       openTravelerPUDoc,
+      getTravelerItemActualStatus,
+      formatDocStatus,
+      getAssyTestItemActualStatus,
       travelerTray,
       travelerItems,
       assyQCQualifiedItems,
       whQCQualifiedItems,
       whGRQualifiedItems,
       travelerAssyOperator,
+      isAllSetsReturnedWithoutFinish,
       getInspectorQC,
       currentTravelerMO,
       currentTravelerMOSuffix,

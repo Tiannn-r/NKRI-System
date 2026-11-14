@@ -236,8 +236,8 @@
     getStatusTextClass: function (status) {
       if (!status || status === '-') return 'text-slate-500 font-bold';
       var s = String(status).toLowerCase().trim();
-      if (['good', 'tersedia', 'pass', 'terima', 'accepted', 'completed'].includes(s)) return 'text-emerald-600 font-bold';
-      if (['hold', 'hold_assy', 'hold_qc', 'pending'].includes(s) || s.includes('menunggu')) return 'text-amber-600 font-bold';
+      if (['good', 'tersedia', 'pass', 'terima', 'accepted', 'acc', 'completed'].includes(s) || (s.includes('good') && !s.includes('not'))) return 'text-emerald-600 font-bold';
+      if (['hold', 'hold_assy', 'hold_qc', 'pending'].includes(s) || s.includes('menunggu') || s.includes('belum') || s.startsWith('hold')) return 'text-amber-600 font-bold';
       if (['rework', 'rework_assy', 'rework_qc', 'ru', 'dirakit ulang'].includes(s)) return 'text-purple-600 font-bold';
       if (['scrap', 'rusak', 'not_good', 'decline', 'declined', 'fail'].includes(s)) return 'text-red-600 font-bold';
       return 'text-slate-600 font-bold';

@@ -129,11 +129,15 @@
                           </div>
                         </div>
                         <div class="flex items-center gap-1 flex-wrap justify-end">
-                          <span v-if="t.session_status === 'COMPLETED_SHIFT'"
+                          <span v-if="(t.status === 'returned' || t.session_status === 'RETURNED_TO_WAREHOUSE') && (!t.finished_count || t.finished_count === 0)"
+                            class="text-[9px] bg-rose-100 text-rose-800 border border-rose-300 px-1.5 py-0.5 rounded font-sans font-bold flex items-center gap-1">
+                            <i class="fa-solid fa-boxes-packing text-[8px]"></i> Dikembalikan ke Gudang
+                          </span>
+                          <span v-else-if="t.session_status === 'COMPLETED_SHIFT'"
                             class="text-[9px] bg-indigo-100 text-indigo-800 border border-indigo-300 px-1.5 py-0.5 rounded font-sans font-bold flex items-center gap-1">
                             <i class="fa-solid fa-people-arrows text-[8px]"></i> Shift Selesai
                           </span>
-                          <span v-else-if="t.session_status === 'RETURNED_TO_WAREHOUSE'"
+                          <span v-else-if="t.session_status === 'RETURNED_TO_WAREHOUSE' || t.status === 'returned'"
                             class="text-[9px] bg-amber-100 text-amber-800 border border-amber-300 px-1.5 py-0.5 rounded font-sans font-bold flex items-center gap-1">
                             <i class="fa-solid fa-boxes-packing text-[8px]"></i> Selesai (Sisa Kembali)
                           </span>
@@ -145,21 +149,17 @@
                             class="text-[9px] bg-red-100 text-red-800 border border-red-300 px-1.5 py-0.5 rounded font-sans font-bold flex items-center gap-1">
                             <i class="fa-solid fa-trash-can text-[8px]"></i> Scrap ({{ t.scrap_count }})
                           </span>
-                          <span v-if="t.rework_count > 0"
-                            class="text-[9px] bg-purple-100 text-purple-800 border border-purple-300 px-1.5 py-0.5 rounded font-sans font-bold flex items-center gap-1">
-                            <i class="fa-solid fa-rotate-left text-[8px]"></i> Rework ({{ t.rework_count }})
-                          </span>
-                          <span v-if="t.session_status === 'COMPLETED' || (t.finished_count >= (t.total_sets || 22) && (t.total_sets || 22) > 0)"
+                          <span v-if="t.session_status === 'COMPLETED' || (t.total_sets > 0 && t.finished_count >= t.total_sets)"
                             class="text-[10px] bg-emerald-100 text-emerald-800 border border-emerald-300 px-1.5 py-0.5 rounded font-sans font-bold">
                             Selesai
                           </span>
-                          <span v-else-if="!t.hold_count && !t.scrap_count && !t.rework_count && t.finished_count === 0"
+                          <span v-else-if="t.finished_count === 0"
                             class="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-sans">
                             Baru
                           </span>
-                          <span v-else-if="!t.hold_count && !t.scrap_count && !t.rework_count"
-                            class="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-sans">
-                            Proses ({{ t.finished_count || 0 }}/{{ t.total_sets || 22 }})
+                          <span v-else
+                            class="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.5 rounded font-sans font-medium">
+                            Proses ({{ t.finished_count || 0 }}/{{ t.total_sets || 0 }})
                           </span>
                         </div>
                       </button>
@@ -194,12 +194,25 @@
             </div>
           </div>
 
+          <!-- Status Sesi Seluruh Set Dikembalikan ke Gudang (0 Set Selesai) Toolbar -->
+          <div v-if="currentTray && (currentTray.status === 'returned' || currentTray.session_status === 'RETURNED_TO_WAREHOUSE' || currentTray.session_status === 'COMPLETED_SHIFT') && finishedSlotsCount === 0"
+            class="flex flex-wrap items-center justify-between gap-2.5 bg-rose-50 border border-rose-300 p-3 rounded-xl text-rose-900 shadow-xs">
+            <div class="flex items-center space-x-2">
+              <i class="fa-solid fa-boxes-packing text-rose-600 text-base"></i>
+              <span class="text-xs font-bold">Status Sesi: Seluruh set dikembalikan ke gudang</span>
+            </div>
+            <span
+              class="bg-rose-200/80 text-rose-900 text-[10px] font-black uppercase px-2.5 py-1 rounded-lg border border-rose-400 font-mono">
+              0 SET DIRAKIT TERSIMPAN
+            </span>
+          </div>
+
           <!-- Status Sesi Selesai (Serah Terima Shift) Toolbar -->
-          <div v-if="currentTray && currentTray.session_status === 'COMPLETED_SHIFT'"
+          <div v-else-if="currentTray && currentTray.session_status === 'COMPLETED_SHIFT'"
             class="flex flex-wrap items-center justify-between gap-2.5 bg-indigo-50 border border-indigo-300 p-3 rounded-xl text-indigo-900 shadow-xs">
             <div class="flex items-center space-x-2">
               <i class="fa-solid fa-people-arrows text-indigo-600 text-base"></i>
-              <span class="text-xs font-bold">Status Sesi: Serah Terima Shift Selesai.a Sisa rakitan telah dipindahkan
+              <span class="text-xs font-bold">Status Sesi: Serah Terima Shift Selesai. Sisa rakitan telah dipindahkan
                 ke operator selanjutnya</span>
             </div>
             <span
@@ -209,7 +222,7 @@
           </div>
 
           <!-- Status Sesi Selesai (Sisa Kembali ke Gudang) Toolbar -->
-          <div v-else-if="currentTray && currentTray.session_status === 'RETURNED_TO_WAREHOUSE'"
+          <div v-else-if="currentTray && (currentTray.session_status === 'RETURNED_TO_WAREHOUSE' || currentTray.status === 'returned')"
             class="flex flex-wrap items-center justify-between gap-2.5 bg-amber-50 border border-amber-300 p-3 rounded-xl text-amber-900 shadow-xs">
             <div class="flex items-center space-x-2">
               <i class="fa-solid fa-boxes-packing text-amber-600 text-base"></i>
@@ -223,7 +236,7 @@
           </div>
 
           <!-- Selesaikan Sesi & Jeda Toolbar (Hanya untuk Operator / Admin saat Tray Aktif) -->
-          <div v-if="currentTray && userRole !== 'gudang' && userRole !== 'qc'"
+          <div v-if="currentTray && userRole !== 'gudang' && userRole !== 'qc' && currentTray.session_status !== 'COMPLETED_SHIFT' && currentTray.session_status !== 'RETURNED_TO_WAREHOUSE' && currentTray.status !== 'returned'"
             class="flex flex-wrap items-center justify-between gap-2.5 bg-slate-50 border border-slate-200 p-3 rounded-xl">
             <div class="flex items-center space-x-2">
               <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
@@ -331,11 +344,15 @@
             class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 border border-slate-200 p-3.5 sm:p-4 rounded-xl text-xs">
             <div>
               <span class="text-slate-500 text-[10px] font-bold block">Status tray</span>
-              <span v-if="currentTray.session_status === 'COMPLETED_SHIFT'"
+              <span v-if="(currentTray.status === 'returned' || currentTray.session_status === 'RETURNED_TO_WAREHOUSE') && finishedSlotsCount === 0"
+                class="text-rose-800 font-bold flex items-center gap-1 mt-0.5">
+                <i class="fa-solid fa-boxes-packing text-rose-600"></i> Dikembalikan ke Gudang
+              </span>
+              <span v-else-if="currentTray.session_status === 'COMPLETED_SHIFT'"
                 class="text-indigo-800 font-bold flex items-center gap-1 mt-0.5">
                 <i class="fa-solid fa-people-arrows text-indigo-600"></i> Shift Selesai
               </span>
-              <span v-else-if="currentTray.session_status === 'RETURNED_TO_WAREHOUSE'"
+              <span v-else-if="currentTray.session_status === 'RETURNED_TO_WAREHOUSE' || currentTray.status === 'returned'"
                 class="text-amber-800 font-bold flex items-center gap-1 mt-0.5">
                 <i class="fa-solid fa-boxes-packing text-amber-600"></i> Selesai (Sisa Kembali)
               </span>
@@ -378,17 +395,32 @@
         <!-- Grid Cards of Sets in Active Tray -->
         <div v-if="currentTray" class="space-y-4">
 
+          <!-- All Sets Returned Without Finish Notice Banner (0 Set Selesai) -->
+          <div v-if="currentTray && (currentTray.status === 'returned' || currentTray.session_status === 'RETURNED_TO_WAREHOUSE' || currentTray.session_status === 'COMPLETED_SHIFT') && finishedSlotsCount === 0"
+            class="bg-rose-50 border border-rose-300 text-rose-950 text-xs p-3.5 sm:p-4 rounded-xl flex items-start space-x-3 shadow-xs">
+            <i class="fa-solid fa-boxes-packing text-rose-600 text-lg mt-0.5 flex-shrink-0"></i>
+            <div>
+              <strong class="font-bold text-sm text-rose-950">Seluruh Set Dikembalikan ke Gudang</strong>
+              <p class="text-xs text-rose-800 mt-1 leading-relaxed">
+                Seluruh set pada tray ini telah dikembalikan ke gudang dan belum menyelesaikan satu pun set perakitan. Seluruh komponen telah diverifikasi kembali ke stok gudang.
+              </p>
+            </div>
+          </div>
+
           <!-- Shift Handover Completed Notice Banner -->
-          <div v-if="currentTray && currentTray.session_status === 'COMPLETED_SHIFT'"
+          <div v-else-if="currentTray && currentTray.session_status === 'COMPLETED_SHIFT'"
             class="bg-indigo-50 border border-indigo-300 text-indigo-950 text-xs p-3.5 sm:p-4 rounded-xl flex items-start space-x-3 shadow-xs">
             <i class="fa-solid fa-people-arrows text-indigo-600 text-lg mt-0.5 flex-shrink-0"></i>
             <div>
-              <strong class="font-bold text-sm text-indigo-950">Riwayat Perakitan Tersimpan.</strong>
+              <strong class="font-bold text-sm text-indigo-950">Sesi Serah Terima Shift Selesai</strong>
+              <p class="text-xs text-indigo-800 mt-1 leading-relaxed">
+                Pengerjaan pada shift ini telah ditutup. Sebanyak <strong>{{ finishedSlotsCount }} set</strong> yang telah dirakit tersimpan aman pada tray ini, sedangkan sisa set yang belum dirakit telah dialihkan ke operator shift selanjutnya.
+              </p>
             </div>
           </div>
 
           <!-- Returned Tray Notice Banner -->
-          <div v-else-if="currentTray && currentTray.session_status === 'RETURNED_TO_WAREHOUSE'"
+          <div v-else-if="currentTray && (currentTray.session_status === 'RETURNED_TO_WAREHOUSE' || currentTray.status === 'returned')"
             class="bg-amber-50 border border-amber-300 text-amber-950 text-xs p-3.5 sm:p-4 rounded-xl flex items-start space-x-3 shadow-xs">
             <i class="fa-solid fa-boxes-packing text-amber-600 text-lg mt-0.5 flex-shrink-0"></i>
             <div>
@@ -431,7 +463,7 @@
           <!-- Sets Grid -->
           <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-4">
             <div v-for="(slot, index) in traySlots" :key="index" :class="getItemCardClass(slot, index)"
-              class="border rounded-2xl p-4 shadow-sm transition-all duration-200 flex flex-col justify-between relative overflow-hidden min-h-[220px]">
+              class="rounded-2xl p-4 shadow-sm transition-all duration-200 flex flex-col justify-between relative overflow-hidden min-h-[220px]">
 
               <!-- Set Header Badge -->
               <div class="flex items-center justify-between border-b border-slate-100 pb-2 mb-3">
@@ -449,17 +481,33 @@
                     <i class="fa-solid fa-boxes-packing text-[9px]"></i> Dikembalikan
                   </span>
                   <template v-else>
-                    <!-- Dokumen Badge (Tetap tampil untuk unit Good maupun unit PU / Dirakit Ulang) -->
+                    <!-- 1. JIKA SUDAH DIALOKASIKAN KE OPERATOR (Sesi PU Aktif): Baru tempelkan nomor dokumen PU -->
                     <span
-                      v-if="slot.assy_doc_number || ((slot.status === 'Dirakit Ulang' || slot.qc_status === 'RU' || (typeof isReassemblySet === 'function' && isReassemblySet(slot))) && currentTray)"
+                      v-if="isSetAllocatedForReassembly(slot)"
                       class="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-lg border bg-indigo-50 text-indigo-800 border-indigo-200"
-                      :title="'Dokumen: ' + ((slot.status === 'Dirakit Ulang' || slot.qc_status === 'RU' || (typeof isReassemblySet === 'function' && isReassemblySet(slot))) ? getFormattedDocCode(currentTray ? currentTray.tray_code : '', 'assy_rework') : slot.assy_doc_number)">
-                      <i :class="slot.status === 'Good' ? 'fa-solid fa-circle-check text-indigo-600' : 'fa-solid fa-file-lines text-indigo-600'"
-                        class="mr-0.5"></i>
-                      {{ (slot.status === 'Dirakit Ulang' || slot.qc_status === 'RU' || (typeof isReassemblySet ===
-                      'function' && isReassemblySet(slot))) ? getFormattedDocCode(currentTray ? currentTray.tray_code : '', 'assy_rework')
-                      : slot.assy_doc_number }}
+                      :title="'Dokumen PU: ' + getSetPUDocNumber(slot)">
+                      <i class="fa-solid fa-file-lines text-indigo-600 mr-0.5"></i>
+                      {{ getSetPUDocNumber(slot) }}
                     </span>
+
+                    <!-- 2. JIKA DI DAFTAR ULANG TAPI BELUM DIALOKASIKAN KE OPERATOR: Keterangan PU / RU saja TANPA nomor dokumen -->
+                    <span
+                      v-else-if="isSetPendingReassemblyAllocation(slot)"
+                      class="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-lg border bg-purple-100 text-purple-800 border-purple-300"
+                      title="Perakitan Ulang (Menunggu Alokasi Penugasan Operator)">
+                      <i class="fa-solid fa-arrows-rotate text-purple-600 mr-0.5 text-[8px]"></i> RU
+                    </span>
+
+                    <!-- 3. JIKA SET NORMAL (Bukan RU): Tampilkan nomor dokumen perakitan asal -->
+                    <span
+                      v-else-if="slot.assy_doc_number"
+                      class="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-lg border bg-indigo-50 text-indigo-800 border-indigo-200"
+                      :title="'Dokumen: ' + slot.assy_doc_number">
+                      <i class="fa-solid fa-circle-check text-indigo-600 mr-0.5"></i>
+                      {{ slot.assy_doc_number }}
+                    </span>
+
+                    <!-- Status Hasil Perakitan (Good / Hold / Scrap) -->
                     <span :class="getStatusBadgeClass(slot.original_assembly_status || slot.status)"
                       class="text-[10px] font-black uppercase px-2 py-0.5 rounded-lg border">
                       {{ slot.original_assembly_status || slot.status }}
@@ -555,7 +603,7 @@
 
               <!-- 2. JIKA SUDAH SELESAI (Status Ada) -> HANYA ADA TOMBOL DETAIL -->
               <div v-else-if="slot.status || slot.finished_at" class="mt-auto">
-                <button @click="openDetailModal(slot, index)"
+                <button @click="openDetailModal(slot, index, 'assembly')"
                   class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 border border-slate-300 min-h-[38px] active:scale-95 shadow-xs cursor-pointer">
                   <i class="fa-solid fa-eye text-slate-500"></i>
                   <span>Lihat Detail</span>

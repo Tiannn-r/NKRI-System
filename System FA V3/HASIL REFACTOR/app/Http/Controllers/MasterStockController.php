@@ -118,7 +118,7 @@ class MasterStockController extends Controller
 
             if ($isReplaced) {
                 $query->where(DB::raw('COALESCE(m.is_replaced_from_assy, 0)'), 1)
-                      ->whereNotIn('m.status', ['Declined', 'Decline', 'Pending Verif Admin'])
+                      ->whereNotIn('m.status', ['Declined', 'Decline'])
                       ->where(function ($w) {
                           $w->whereNull('a.is_declined')->orWhere('a.is_declined', 0);
                       })
@@ -135,10 +135,12 @@ class MasterStockController extends Controller
 
         if ($status) {
 
-            if (in_array(strtolower($status), ['part diganti', 'replaced'])) {
+            $statusLower = strtolower(trim($status));
+
+            if (in_array($statusLower, ['part diganti', 'replaced'])) {
 
                 $query->where(DB::raw('COALESCE(m.is_replaced_from_assy, 0)'), 1)
-                      ->whereNotIn('m.status', ['Declined', 'Decline', 'Pending Verif Admin'])
+                      ->whereNotIn('m.status', ['Declined', 'Decline'])
                       ->where(function ($w) {
                           $w->whereNull('a.is_declined')->orWhere('a.is_declined', 0);
                       })
@@ -146,7 +148,7 @@ class MasterStockController extends Controller
                           $w->whereNull('a.verified_status')->orWhere('a.verified_status', '!=', 'DECLINED');
                       });
 
-            } elseif (in_array(strtolower($status), ['decline', 'declined', 'pending verif admin'])) {
+            } elseif (in_array($statusLower, ['decline', 'declined'])) {
 
                 $query->where(function ($w) {
 
@@ -154,8 +156,76 @@ class MasterStockController extends Controller
 
                       ->orWhere('a.verified_status', 'DECLINED')
 
-                      ->orWhereIn('m.status', ['Declined', 'Decline', 'Pending Verif Admin']);
+                      ->orWhere('a.warehouse_receipt_status', 'DECLINED')
 
+                      ->orWhereIn('m.status', ['Declined', 'Decline']);
+
+                });
+
+            } elseif ($statusLower === 'tersedia') {
+
+                $query->where(function ($w) {
+                    $w->where('m.status', 'Tersedia')
+                      ->orWhere('t.status', 'returned')
+                      ->orWhere('t.return_verified', 1);
+                })
+                ->where(function ($w) {
+                    $w->whereNull('a.is_declined')->orWhere('a.is_declined', 0);
+                })
+                ->where(function ($w) {
+                    $w->whereNull('a.verified_status')->orWhere('a.verified_status', '!=', 'DECLINED');
+                })
+                ->where(function ($w) {
+                    $w->whereNull('a.warehouse_receipt_status')->orWhere('a.warehouse_receipt_status', '!=', 'DECLINED');
+                })
+                ->whereNotIn('m.status', ['Declined', 'Decline', 'Pending Verif Admin', 'Scrap']);
+
+            } elseif ($statusLower === 'supplied') {
+
+                $query->where(function ($w) {
+                    $w->where(function ($inner) {
+                        $inner->whereNull('a.is_declined')->orWhere('a.is_declined', 0);
+                    })
+                    ->where(function ($inner) {
+                        $inner->whereNull('a.verified_status')->orWhere('a.verified_status', '!=', 'DECLINED');
+                    })
+                    ->where(function ($inner) {
+                        $inner->whereNull('a.warehouse_receipt_status')->orWhere('a.warehouse_receipt_status', '!=', 'DECLINED');
+                    })
+                    ->where(function ($inner) {
+                        $inner->whereNull('t.status')->orWhere('t.status', '!=', 'returned');
+                    })
+                    ->where(function ($inner) {
+                        $inner->whereNull('t.return_verified')->orWhere('t.return_verified', '!=', 1);
+                    })
+                    ->whereNotIn('m.status', ['Declined', 'Decline'])
+                    ->where(function ($inner) {
+                        $inner->where(DB::raw('COALESCE(a.status, m.status)'), 'Supplied')
+                              ->orWhere('m.status', 'Supplied')
+                              ->orWhere('m.status', 'Pending Verif Admin');
+                    });
+                });
+
+            } elseif ($statusLower === 'good') {
+
+                $query->where(function ($w) {
+                    $w->where(function ($inner) {
+                        $inner->whereNull('a.is_declined')->orWhere('a.is_declined', 0);
+                    })
+                    ->where(function ($inner) {
+                        $inner->whereNull('a.verified_status')->orWhere('a.verified_status', '!=', 'DECLINED');
+                    })
+                    ->where(function ($inner) {
+                        $inner->whereNull('a.warehouse_receipt_status')->orWhere('a.warehouse_receipt_status', '!=', 'DECLINED');
+                    })
+                    ->where(function ($inner) {
+                        $inner->whereNull('t.status')->orWhere('t.status', '!=', 'returned');
+                    })
+                    ->where(function ($inner) {
+                        $inner->whereNull('t.return_verified')->orWhere('t.return_verified', '!=', 1);
+                    })
+                    ->whereNotIn('m.status', ['Declined', 'Decline', 'Pending Verif Admin', 'Tersedia'])
+                    ->whereIn(DB::raw('COALESCE(a.status, m.status)'), ['Good', 'Done']);
                 });
 
             } else {
@@ -164,13 +234,21 @@ class MasterStockController extends Controller
 
                     $w->where(function ($inner) {
 
-                        $inner->where('a.is_declined', '!=', 1)
+                        $inner->whereNull('a.is_declined')->orWhere('a.is_declined', 0);
 
-                              ->where('a.verified_status', '!=', 'DECLINED')
+                    })
+                    ->where(function ($inner) {
 
-                              ->whereNotIn('m.status', ['Declined', 'Decline', 'Pending Verif Admin']);
+                        $inner->whereNull('a.verified_status')->orWhere('a.verified_status', '!=', 'DECLINED');
 
-                    })->where(DB::raw('COALESCE(a.status, m.status, "Tersedia")'), $status);
+                    })
+                    ->where(function ($inner) {
+
+                        $inner->whereNull('a.warehouse_receipt_status')->orWhere('a.warehouse_receipt_status', '!=', 'DECLINED');
+
+                    })
+                    ->whereNotIn('m.status', ['Declined', 'Decline', 'Pending Verif Admin'])
+                    ->where(DB::raw('COALESCE(a.status, m.status, "Tersedia")'), $status);
 
                 });
 
@@ -230,13 +308,13 @@ class MasterStockController extends Controller
 
             DB::raw('COALESCE(m.is_replaced_from_assy, 0) as is_replaced_from_assy'),
 
-            't.tray_code',
+            DB::raw('CASE WHEN (t.status = "returned" OR t.return_verified = 1) THEN NULL ELSE t.tray_code END as tray_code'),
 
-            DB::raw('COALESCE(u_wh.full_name, t.pic_warehouse) as pic_warehouse'),
+            DB::raw('CASE WHEN (t.status = "returned" OR t.return_verified = 1) THEN NULL ELSE COALESCE(u_wh.full_name, t.pic_warehouse) END as pic_warehouse'),
 
-            DB::raw('COALESCE(u_op.full_name, t.assigned_operator) as assigned_operator'),
+            DB::raw('CASE WHEN (t.status = "returned" OR t.return_verified = 1) THEN NULL ELSE COALESCE(u_op.full_name, t.assigned_operator) END as assigned_operator'),
 
-            't.source_document_mo',
+            DB::raw('CASE WHEN (t.status = "returned" OR t.return_verified = 1) THEN NULL ELSE t.source_document_mo END as source_document_mo'),
 
             'a.set_number',
 
@@ -257,16 +335,26 @@ class MasterStockController extends Controller
             'a.declined_reason',
 
             DB::raw('CASE 
-
+                WHEN (a.is_declined = 1 OR a.verified_status = "DECLINED" OR a.warehouse_receipt_status = "DECLINED" OR m.status IN ("Declined", "Decline")) THEN "Declined"
+                WHEN m.status = "Pending Verif Admin" THEN "Pending Verif Admin"
+                WHEN m.status = "Scrap" THEN "Scrap"
                 WHEN m.status = "Tersedia" THEN "Tersedia"
-
-                WHEN (a.is_declined = 1 OR a.verified_status = "DECLINED" OR m.status IN ("Declined", "Decline", "Pending Verif Admin")) THEN "Declined"
-
-                WHEN COALESCE(m.is_replaced_from_assy, 0) = 1 THEN "Part Diganti"
-
+                WHEN (t.status = "returned" OR t.return_verified = 1) THEN "Tersedia"
+                WHEN COALESCE(m.is_replaced_from_assy, 0) = 1 THEN "Hold"
+                WHEN COALESCE(a.status, m.status) IN ("Good", "Done") THEN "Good"
                 ELSE COALESCE(a.status, m.status, "Tersedia")
+            END as display_status'),
 
-            END as display_status')
+            DB::raw('CASE 
+                WHEN (a.is_declined = 1 OR a.verified_status = "DECLINED" OR a.warehouse_receipt_status = "DECLINED" OR m.status IN ("Declined", "Decline")) THEN "Declined"
+                WHEN m.status = "Pending Verif Admin" THEN "Pending Verif Admin"
+                WHEN m.status = "Scrap" THEN "Scrap"
+                WHEN m.status = "Tersedia" THEN "Tersedia"
+                WHEN (t.status = "returned" OR t.return_verified = 1) THEN "Tersedia"
+                WHEN COALESCE(m.is_replaced_from_assy, 0) = 1 THEN "Hold"
+                WHEN COALESCE(a.status, m.status) IN ("Good", "Done") THEN "Good"
+                ELSE COALESCE(a.status, m.status, "Tersedia")
+            END as effective_status')
 
         ])
 
@@ -312,6 +400,8 @@ class MasterStockController extends Controller
 
         $rows = DB::table('master_stocks as m')
 
+            ->leftJoin('trays as t', 'm.allocated_tray_id', '=', 't.id')
+
             ->leftJoin('assemblies as a', function ($join) {
 
                 $join->on('m.allocated_tray_id', '=', 'a.tray_id')
@@ -334,23 +424,27 @@ class MasterStockController extends Controller
 
                 DB::raw('COUNT(*) as total'),
 
-                DB::raw('COUNT(CASE WHEN m.status = "Tersedia" THEN 1 END) as available'),
+                DB::raw('COUNT(CASE WHEN (m.status = "Tersedia" OR t.status = "returned" OR t.return_verified = 1) AND (a.is_declined = 0 OR a.is_declined IS NULL) AND (a.warehouse_receipt_status IS NULL OR a.warehouse_receipt_status != "DECLINED") AND m.status NOT IN ("Declined", "Decline", "Pending Verif Admin", "Scrap") THEN 1 END) as available'),
 
-                DB::raw('COUNT(CASE WHEN m.status != "Tersedia" AND (a.is_declined = 1 OR a.verified_status = "DECLINED" OR m.status IN ("Declined", "Decline", "Pending Verif Admin")) THEN NULL WHEN m.status != "Tersedia" AND COALESCE(a.status, m.status) = "Supplied" THEN 1 END) as allocated'),
+                DB::raw('COUNT(CASE 
+                    WHEN (a.is_declined = 1 OR a.verified_status = "DECLINED" OR a.warehouse_receipt_status = "DECLINED" OR m.status IN ("Declined", "Decline")) THEN NULL
+                    WHEN m.status = "Pending Verif Admin" THEN 1
+                    WHEN m.status != "Tersedia" AND (t.status IS NULL OR (t.status != "returned" AND COALESCE(t.return_verified, 0) != 1)) AND COALESCE(a.status, m.status) = "Supplied" THEN 1 
+                END) as allocated'),
 
-                DB::raw('COUNT(CASE WHEN m.status != "Tersedia" AND (a.is_declined = 1 OR a.verified_status = "DECLINED" OR m.status IN ("Declined", "Decline", "Pending Verif Admin")) THEN NULL WHEN m.status != "Tersedia" AND COALESCE(a.status, m.status) = "Done" THEN 1 END) as used'),
+                DB::raw('COUNT(CASE WHEN m.status != "Tersedia" AND (t.status IS NULL OR (t.status != "returned" AND COALESCE(t.return_verified, 0) != 1)) AND (a.is_declined = 1 OR a.verified_status = "DECLINED" OR a.warehouse_receipt_status = "DECLINED" OR m.status IN ("Declined", "Decline")) THEN NULL WHEN m.status != "Tersedia" AND (t.status IS NULL OR (t.status != "returned" AND COALESCE(t.return_verified, 0) != 1)) AND COALESCE(a.status, m.status) = "Done" THEN 1 END) as used'),
 
-                DB::raw('COUNT(CASE WHEN m.status != "Tersedia" AND (a.is_declined = 1 OR a.verified_status = "DECLINED" OR m.status IN ("Declined", "Decline", "Pending Verif Admin")) THEN NULL WHEN m.status != "Tersedia" AND COALESCE(a.status, m.status) IN ("Good", "Done") THEN 1 END) as good_count'),
+                DB::raw('COUNT(CASE WHEN m.status != "Tersedia" AND (t.status IS NULL OR (t.status != "returned" AND COALESCE(t.return_verified, 0) != 1)) AND (a.is_declined = 1 OR a.verified_status = "DECLINED" OR a.warehouse_receipt_status = "DECLINED" OR m.status IN ("Declined", "Decline")) THEN NULL WHEN m.status != "Tersedia" AND (t.status IS NULL OR (t.status != "returned" AND COALESCE(t.return_verified, 0) != 1)) AND COALESCE(a.status, m.status) IN ("Good", "Done") THEN 1 END) as good_count'),
 
-                DB::raw('COUNT(CASE WHEN m.status != "Tersedia" AND (a.is_declined = 1 OR a.verified_status = "DECLINED" OR m.status IN ("Declined", "Decline", "Pending Verif Admin")) THEN NULL WHEN m.status != "Tersedia" AND COALESCE(a.status, m.status) = "Hold" THEN 1 END) as hold_count'),
+                DB::raw('COUNT(CASE WHEN m.status != "Tersedia" AND (t.status IS NULL OR (t.status != "returned" AND COALESCE(t.return_verified, 0) != 1)) AND (a.is_declined = 1 OR a.verified_status = "DECLINED" OR a.warehouse_receipt_status = "DECLINED" OR m.status IN ("Declined", "Decline")) THEN NULL WHEN m.status != "Tersedia" AND (t.status IS NULL OR (t.status != "returned" AND COALESCE(t.return_verified, 0) != 1)) AND COALESCE(a.status, m.status) = "Hold" THEN 1 END) as hold_count'),
 
-                DB::raw('COUNT(CASE WHEN m.status != "Tersedia" AND (a.is_declined = 1 OR a.verified_status = "DECLINED" OR m.status IN ("Declined", "Decline", "Pending Verif Admin")) THEN NULL WHEN m.status != "Tersedia" AND COALESCE(a.status, m.status) = "Scrap" THEN 1 END) as scrap_count'),
+                DB::raw('COUNT(CASE WHEN m.status != "Tersedia" AND (a.is_declined = 1 OR a.verified_status = "DECLINED" OR a.warehouse_receipt_status = "DECLINED" OR m.status IN ("Declined", "Decline")) THEN NULL WHEN m.status != "Tersedia" AND COALESCE(a.status, m.status) = "Scrap" THEN 1 END) as scrap_count'),
 
-                DB::raw('COUNT(CASE WHEN m.status != "Tersedia" AND (a.is_declined = 1 OR a.verified_status = "DECLINED" OR m.status IN ("Declined", "Decline", "Pending Verif Admin")) THEN NULL WHEN m.status != "Tersedia" AND COALESCE(a.status, m.status) = "Rework" THEN 1 END) as rework_count'),
+                DB::raw('COUNT(CASE WHEN m.status != "Tersedia" AND (t.status IS NULL OR (t.status != "returned" AND COALESCE(t.return_verified, 0) != 1)) AND (a.is_declined = 1 OR a.verified_status = "DECLINED" OR a.warehouse_receipt_status = "DECLINED" OR m.status IN ("Declined", "Decline")) THEN NULL WHEN m.status != "Tersedia" AND (t.status IS NULL OR (t.status != "returned" AND COALESCE(t.return_verified, 0) != 1)) AND COALESCE(a.status, m.status) = "Rework" THEN 1 END) as rework_count'),
 
-                DB::raw('COUNT(CASE WHEN (a.is_declined = 1 OR a.verified_status = "DECLINED" OR m.status IN ("Declined", "Decline", "Pending Verif Admin")) THEN 1 END) as decline_count'),
+                DB::raw('COUNT(CASE WHEN (a.is_declined = 1 OR a.verified_status = "DECLINED" OR a.warehouse_receipt_status = "DECLINED" OR m.status IN ("Declined", "Decline")) THEN 1 END) as decline_count'),
 
-                DB::raw('COUNT(CASE WHEN COALESCE(m.is_replaced_from_assy, 0) = 1 AND m.status NOT IN ("Declined", "Decline", "Pending Verif Admin") AND COALESCE(a.is_declined, 0) = 0 AND COALESCE(a.verified_status, "") != "DECLINED" THEN 1 END) as replaced_count'),
+                DB::raw('COUNT(CASE WHEN COALESCE(m.is_replaced_from_assy, 0) = 1 AND m.status NOT IN ("Declined", "Decline") AND COALESCE(a.is_declined, 0) = 0 AND COALESCE(a.verified_status, "") != "DECLINED" AND COALESCE(a.warehouse_receipt_status, "") != "DECLINED" THEN 1 END) as replaced_count'),
 
             ])
 
@@ -588,6 +682,42 @@ class MasterStockController extends Controller
                     ->first();
             }
 
+            // Jika masih belum ditemukan, cek apakah part ini pernah diganti dari suatu set perakitan (part_replacement_requests)
+            if (!$assembly) {
+                $repl = DB::table('part_replacement_requests')
+                    ->where(function ($w) use ($sn) {
+                        $w->where('replacements_json', 'LIKE', '%"old_sn":"' . $sn . '"%')
+                          ->orWhere('replacements_json', 'LIKE', '%"new_sn":"' . $sn . '"%');
+                    })
+                    ->orderBy('id', 'desc')
+                    ->first();
+
+                if ($repl) {
+                    $origAssy = DB::table('assemblies')->where('id', $repl->assembly_id)->first();
+                    if (!$origAssy && \Illuminate\Support\Facades\Schema::hasTable('assembly_wo_history')) {
+                        $origAssy = DB::table('assembly_wo_history')->where('id', $repl->assembly_id)->first();
+                    }
+                    if ($origAssy) {
+                        $assembly = clone $origAssy;
+                        $assembly->is_historical_replacement = true;
+                        // Pasang kembali nomor SN part ini ke field perakitannya agar pasangan part saat dirakit tampil akurat
+                        if ($stock->part_type === '15') {
+                            $assembly->part15_sn = $sn;
+                        } elseif ($stock->part_type === '1') {
+                            $assembly->part1_sn = $sn;
+                        } elseif ($stock->part_type === '12') {
+                            $assembly->part12_sn = $sn;
+                        }
+                        if (!empty($repl->reason)) {
+                            $assembly->reason = $repl->reason;
+                        }
+                        if (!$tray && (!empty($repl->tray_id) || !empty($assembly->tray_id))) {
+                            $tray = DB::table('trays')->where('id', $repl->tray_id ?: $assembly->tray_id)->first();
+                        }
+                    }
+                }
+            }
+
             if ($assembly && !$tray && !empty($assembly->tray_id)) {
                 $tray = DB::table('trays')->where('id', $assembly->tray_id)->first();
             }
@@ -599,16 +729,20 @@ class MasterStockController extends Controller
 
         // Format nama personil/operator agar mudah dan jelas dibaca
         if ($assembly) {
-            $pic = DB::table('users')->where('username', $assembly->pic_assembly)->value('full_name');
-            $assembly->pic_assembly_name = $pic ?: $assembly->pic_assembly;
-            $tester = DB::table('users')->where('username', $assembly->assy_tester_username)->value('full_name');
-            $assembly->assy_tester_fullname = $tester ?: $assembly->assy_tester_username;
+            $assyPic = $assembly->pic_assembly ?? null;
+            $pic = $assyPic ? DB::table('users')->where('username', $assyPic)->value('full_name') : null;
+            $assembly->pic_assembly_name = $pic ?: $assyPic;
+            $assyTester = $assembly->assy_tester_username ?? null;
+            $tester = $assyTester ? DB::table('users')->where('username', $assyTester)->value('full_name') : null;
+            $assembly->assy_tester_fullname = $tester ?: $assyTester;
         }
         if ($tray) {
-            $whUser = DB::table('users')->where('username', $tray->pic_warehouse)->value('full_name');
-            $tray->pic_warehouse_name = $whUser ?: $tray->pic_warehouse;
-            $opUser = DB::table('users')->where('username', $tray->assigned_operator)->value('full_name');
-            $tray->assigned_operator_name = $opUser ?: $tray->assigned_operator;
+            $whU = $tray->pic_warehouse ?? null;
+            $whUser = $whU ? DB::table('users')->where('username', $whU)->value('full_name') : null;
+            $tray->pic_warehouse_name = $whUser ?: $whU;
+            $opU = $tray->assigned_operator ?? null;
+            $opUser = $opU ? DB::table('users')->where('username', $opU)->value('full_name') : null;
+            $tray->assigned_operator_name = $opUser ?: $opU;
         }
 
 
@@ -691,17 +825,17 @@ class MasterStockController extends Controller
 
             $lifecycle['description'] = 'Komponen steril tanpa ikatan baki, siap dialokasikan ke Tray baru.';
 
-        } elseif ($stock->is_replaced_from_assy == 1 || $stock->status === 'Part Diganti') {
+        } elseif ($stock->is_replaced_from_assy == 1 || $stock->status === 'Part Diganti' || $stock->status === 'Hold') {
 
-            $lifecycle['stage_key'] = 'PART_DIGANTI';
+            $lifecycle['stage_key'] = 'HOLD';
 
-            $lifecycle['stage_title'] = 'Part Rusak Saat Perakitan (Telah Diganti)';
+            $lifecycle['stage_title'] = 'Part Dilepas dari Perakitan (Status Hold)';
 
-            $lifecycle['badge_color'] = 'rose';
+            $lifecycle['badge_color'] = 'amber';
 
             $lifecycle['current_location'] = 'Karantina Material / Evaluasi Admin';
 
-            $lifecycle['description'] = 'Part telah dilepas dari set rakitan asalnya dan digantikan oleh part baru.';
+            $lifecycle['description'] = 'Part telah dilepas dari set rakitan asalnya dan berstatus Hold.';
 
         } elseif ($stock->status === 'Scrap') {
 
@@ -883,10 +1017,40 @@ class MasterStockController extends Controller
             ->orderBy('part_audit_logs.created_at', 'desc')
             ->get();
 
+        $trayAssyOperator = $tray?->assigned_operator 
+            ?: ($assembly?->pic_assembly 
+            ?: ($stock?->last_operator ?: 'Administrator NKRI'));
+        $trayWhOperator = $tray?->pic_warehouse ?: 'Administrator NKRI';
+        $usersMap = DB::table('users')->pluck('full_name', 'username')->toArray();
+
+        foreach ($rawAuditLogs as $log) {
+            $actUser = trim((string)$log->actor_username);
+            $cleanUser = strtolower($actUser);
+
+            if (empty($actUser) || in_array($cleanUser, ['operator', 'gudang', 'tester', '-', 'null', 'undefined'])) {
+                if ($log->actor_role === 'gudang') {
+                    $resolvedName = $trayWhOperator;
+                } elseif ($log->actor_role === 'tester') {
+                    $resolvedName = $assembly?->assy_tester_fullname ?: ($assembly?->assy_tester_username ?: 'Administrator NKRI');
+                } elseif ($log->actor_role === 'qc') {
+                    $resolvedName = $assembly?->qc_tested_by ?: 'Administrator NKRI';
+                } else {
+                    $resolvedName = $trayAssyOperator;
+                }
+            } else {
+                $resolvedName = $usersMap[$actUser] ?? ($actUser === 'admin' ? 'Administrator NKRI' : $actUser);
+            }
+
+            $log->actor_full_name = $resolvedName;
+            $log->actor_username = $resolvedName;
+        }
+
         $mergedLogs = collect($rawAuditLogs);
 
         // Tambahkan jejak milestone siklus hidup aktual agar riwayat part selalu komprehensif
         if ($stock && $stock->created_at) {
+            $regUser = $stock->last_operator ?: 'admin';
+            $regName = $stock->last_operator ? (DB::table('users')->where('username', $stock->last_operator)->value('full_name') ?: $stock->last_operator) : 'Administrator NKRI';
             $mergedLogs->push((object)[
                 'id' => 'milestone_reg_' . $stock->id,
                 'created_at' => (string)$stock->created_at,
@@ -894,12 +1058,15 @@ class MasterStockController extends Controller
                 'old_status' => '-',
                 'new_status' => 'Tersedia',
                 'reason' => 'Registrasi nomor seri ke Master Stok Gudang',
-                'actor_full_name' => 'Administrator Gudang',
+                'actor_username' => $regUser,
+                'actor_full_name' => $regName,
                 'actor_role' => 'gudang'
             ]);
         }
 
         if ($tray && $tray->created_at) {
+            $supplyUser = $tray->pic_warehouse ?: 'admin';
+            $supplyName = $tray->pic_warehouse_name ?: (DB::table('users')->where('username', $supplyUser)->value('full_name') ?: ($supplyUser === 'admin' ? 'Administrator NKRI' : $supplyUser));
             $mergedLogs->push((object)[
                 'id' => 'milestone_supply_' . $tray->id,
                 'created_at' => (string)$tray->created_at,
@@ -907,64 +1074,82 @@ class MasterStockController extends Controller
                 'old_status' => 'Tersedia',
                 'new_status' => 'Supplied',
                 'reason' => "Dialokasikan ke Tray {$tray->tray_code}" . ($tray->source_document_mo ? " (MO: {$tray->source_document_mo})" : ''),
-                'actor_full_name' => $tray->pic_warehouse_name ?: ($tray->pic_warehouse ?: 'Petugas Gudang'),
+                'actor_username' => $supplyUser,
+                'actor_full_name' => $supplyName,
                 'actor_role' => 'gudang'
             ]);
         }
 
-        if ($assembly && $assembly->finished_at) {
+        if ($assembly && !empty($assembly->finished_at)) {
+            $assyUser = ($assembly->pic_assembly ?? null) ?: (($tray->assigned_operator ?? null) ?: 'operator');
+            $assyName = ($assembly->pic_assembly_name ?? null) ?: (DB::table('users')->where('username', $assyUser)->value('full_name') ?: ($assyUser === 'admin' ? 'Administrator NKRI' : $assyUser));
             $mergedLogs->push((object)[
                 'id' => 'milestone_assy_' . $assembly->id,
                 'created_at' => (string)$assembly->finished_at,
                 'action_type' => 'PERAKITAN_SET',
                 'old_status' => 'Supplied',
-                'new_status' => $assembly->status ?: 'Good',
-                'reason' => "Selesai dirakit di Set #{$assembly->set_number} (" . ($assembly->status ?: 'Good') . ")",
-                'actor_full_name' => $assembly->pic_assembly_name ?: ($assembly->pic_assembly ?: 'Operator Assembly'),
+                'new_status' => ($assembly->status ?? null) ?: 'Good',
+                'reason' => "Selesai dirakit di Set #{$assembly->set_number} (" . (($assembly->status ?? null) ?: 'Good') . ")",
+                'actor_username' => $assyUser,
+                'actor_full_name' => $assyName,
                 'actor_role' => 'assembly'
             ]);
         }
 
-        if ($assembly && $assembly->assy_tested_at) {
+        if ($assembly && !empty($assembly->assy_tested_at)) {
+            $testRow = DB::table('assembly_tests')->where('assembly_id', $assembly->id)->orWhere(function($q) use ($assembly) {
+                $q->where('tray_id', $assembly->tray_id)->where('set_number', $assembly->set_number);
+            })->first();
+            $tf1User = $testRow?->tester_username ?: (($assembly->assy_tester_username ?? null) ?: 'admin');
+            $tf1Name = ($assembly->assy_tester_fullname ?? null) ?: (DB::table('users')->where('username', $tf1User)->value('full_name') ?: ($tf1User === 'admin' ? 'Administrator NKRI' : $tf1User));
             $mergedLogs->push((object)[
                 'id' => 'milestone_tf1_' . $assembly->id,
                 'created_at' => (string)$assembly->assy_tested_at,
                 'action_type' => 'TEST_FUNCTIONAL_1',
-                'old_status' => $assembly->status ?: 'Good',
-                'new_status' => $assembly->assy_test_status ?: 'Good',
-                'reason' => "Uji Fungsional 1 ({$assembly->assy_test_status})" . ($assembly->assy_doc_number ? " - Dokumen: {$assembly->assy_doc_number}" : ''),
-                'actor_full_name' => $assembly->assy_tester_fullname ?: ($assembly->assy_tester_username ?: 'Administrator NKRI'),
+                'old_status' => ($assembly->status ?? null) ?: 'Good',
+                'new_status' => ($assembly->assy_test_status ?? null) ?: 'Good',
+                'reason' => "Uji Fungsional 1 (" . (($assembly->assy_test_status ?? null) ?: 'Good') . ")" . (!empty($assembly->assy_doc_number) ? " - Dokumen: {$assembly->assy_doc_number}" : ''),
+                'actor_username' => $tf1User,
+                'actor_full_name' => $tf1Name,
                 'actor_role' => 'tester'
             ]);
         }
 
-        if ($assembly && $assembly->qc_tested_at) {
+        if ($assembly && !empty($assembly->qc_tested_at)) {
+            $qcUser = ($assembly->qc_inspector_username ?? null) ?: (($assembly->qc_tested_by ?? null) ?: 'admin');
+            $qcName = DB::table('users')->where('username', $qcUser)->value('full_name') ?: ($qcUser === 'admin' ? 'Administrator NKRI' : $qcUser);
             $mergedLogs->push((object)[
                 'id' => 'milestone_qc_' . $assembly->id,
                 'created_at' => (string)$assembly->qc_tested_at,
                 'action_type' => 'TEST_FUNCTIONAL_2_QC',
-                'old_status' => $assembly->assy_test_status ?: 'Good',
-                'new_status' => $assembly->qc_status ?: 'GOOD',
-                'reason' => "Inspeksi Mutu QC ({$assembly->qc_status})" . ($assembly->qc_doc_number ? " - Dokumen: {$assembly->qc_doc_number}" : ''),
-                'actor_full_name' => $assembly->qc_inspector_username ?: 'Administrator NKRI',
+                'old_status' => ($assembly->assy_test_status ?? null) ?: 'Good',
+                'new_status' => ($assembly->qc_status ?? null) ?: 'GOOD',
+                'reason' => "Inspeksi Mutu QC (" . (($assembly->qc_status ?? null) ?: 'GOOD') . ")" . (!empty($assembly->qc_doc_number) ? " - Dokumen: {$assembly->qc_doc_number}" : ''),
+                'actor_username' => $qcUser,
+                'actor_full_name' => $qcName,
                 'actor_role' => 'qc'
             ]);
         }
 
-        if ($assembly && $assembly->warehouse_receipt_at) {
+        if ($assembly && !empty($assembly->warehouse_receipt_at)) {
+            $grUser = ($assembly->warehouse_receipt_by ?? null) ?: (($tray->verified_by_user ?? null) ?: (($tray->return_verified_by ?? null) ?: 'admin'));
+            $grName = DB::table('users')->where('username', $grUser)->value('full_name') ?: ($grUser === 'admin' ? 'Administrator NKRI' : $grUser);
             $mergedLogs->push((object)[
                 'id' => 'milestone_gr_' . $assembly->id,
                 'created_at' => (string)$assembly->warehouse_receipt_at,
                 'action_type' => 'PENERIMAAN_GUDANG',
-                'old_status' => $assembly->qc_status ?: 'GOOD',
-                'new_status' => $assembly->warehouse_receipt_status ?: 'ACCEPTED',
-                'reason' => "Verifikasi Fisik Gudang (" . ($assembly->warehouse_receipt_status ?: 'ACC') . ")" . ($assembly->warehouse_doc_number ? " - Dokumen: {$assembly->warehouse_doc_number}" : ''),
-                'actor_full_name' => $assembly->warehouse_receipt_by ?: 'Petugas Gudang',
+                'old_status' => ($assembly->qc_status ?? null) ?: 'GOOD',
+                'new_status' => ($assembly->warehouse_receipt_status ?? null) ?: 'ACCEPTED',
+                'reason' => "Verifikasi Fisik Gudang (" . (($assembly->warehouse_receipt_status ?? null) ?: 'ACC') . ")" . (!empty($assembly->warehouse_doc_number) ? " - Dokumen: {$assembly->warehouse_doc_number}" : ''),
+                'actor_username' => $grUser,
+                'actor_full_name' => $grName,
                 'actor_role' => 'gudang'
             ]);
         }
 
         if ($shipping && $shipping->packed_at) {
+            $doUser = $shipping->packed_by ?: 'admin';
+            $doName = DB::table('users')->where('username', $doUser)->value('full_name') ?: ($doUser === 'admin' ? 'Administrator NKRI' : $doUser);
             $mergedLogs->push((object)[
                 'id' => 'milestone_do_' . $shipping->delivery_order_id,
                 'created_at' => (string)$shipping->packed_at,
@@ -972,8 +1157,40 @@ class MasterStockController extends Controller
                 'old_status' => 'ACCEPTED',
                 'new_status' => 'SHIPPED',
                 'reason' => "Dikemas untuk Surat Jalan {$shipping->do_number} ke {$shipping->customer_name}",
-                'actor_full_name' => 'Petugas Ekspedisi',
+                'actor_username' => $doUser,
+                'actor_full_name' => $doName,
                 'actor_role' => 'gudang'
+            ]);
+        }
+
+        // Milestone Pelepasan / Penggantian Part jika pernah diganti dari rakitan
+        $replLog = DB::table('part_replacement_requests')
+            ->where(function ($w) use ($sn) {
+                $w->where('replacements_json', 'LIKE', '%"old_sn":"' . $sn . '"%')
+                  ->orWhere('replacements_json', 'LIKE', '%"new_sn":"' . $sn . '"%');
+            })
+            ->orderBy('id', 'desc')
+            ->first();
+
+        if ($replLog) {
+            $isOld = str_contains($replLog->replacements_json, '"old_sn":"' . $sn . '"');
+            $actType = $isOld ? 'PELEPASAN_PART' : 'PENGGANTIAN_PART_BARU';
+            $oldSt = $isOld ? 'Supplied' : 'Tersedia';
+            $newSt = $isOld ? ($replLog->old_part_status ?: 'Hold') : 'Supplied';
+            $rsn = $isOld ? "Dilepas dari Set #{$replLog->set_number}: {$replLog->reason}" : "Dipasang ke Set #{$replLog->set_number} sebagai part pengganti";
+            $actorU = $replLog->admin_username ?: ($replLog->requestor_username ?: 'admin');
+            $actorName = DB::table('users')->where('username', $actorU)->value('full_name') ?: ($actorU === 'admin' ? 'Administrator NKRI' : $actorU);
+
+            $mergedLogs->push((object)[
+                'id' => 'milestone_repl_' . $replLog->id,
+                'created_at' => (string)($replLog->verified_at ?: $replLog->created_at),
+                'action_type' => $actType,
+                'old_status' => $oldSt,
+                'new_status' => $newSt,
+                'reason' => $rsn,
+                'actor_username' => $actorU,
+                'actor_full_name' => $actorName,
+                'actor_role' => 'admin'
             ]);
         }
 
@@ -1074,35 +1291,28 @@ class MasterStockController extends Controller
 
 
         // Cek duplikasi di master_stocks
-
         $cleanDot = str_replace('.', '', $cleanSn);
-
         $existing = DB::table('master_stocks')
-
             ->where('part_type', $partType)
-
             ->where(function ($w) use ($cleanSn, $cleanDot) {
-
                 $w->where('sn', $cleanSn)
-
                   ->orWhere(DB::raw("REPLACE(sn, '.', '')"), $cleanDot);
-
             })
-
             ->first();
 
-
-
         if ($existing) {
-
             return response()->json([
-
                 'ok' => false,
-
-                'error' => "Part {$partType} SN {$cleanSn} sudah terdaftar di Master Stok (Status saat ini: {$existing->status})"
-
+                'error' => "Part {$partType} dengan nomor '{$cleanSn}' sudah terdaftar di Master Stok (Status: {$existing->status}). Transaksi dibatalkan.",
+                'existing_part' => [
+                    'id' => $existing->id,
+                    'part_type' => $existing->part_type,
+                    'sn' => $existing->sn,
+                    'status' => $existing->status,
+                    'cs' => $existing->cs ?? null,
+                    'created_at' => $existing->created_at ?? null,
+                ]
             ], 409);
-
         }
 
 
@@ -1320,7 +1530,7 @@ class MasterStockController extends Controller
                 'duplicate_count' => count($duplicates),
                 'new_sns' => $newSns,
                 'new_count' => count($newSns),
-                'can_submit' => count($newSns) > 0,
+                'can_submit' => (count($duplicates) === 0 && count($newSns) > 0),
             ]
         ]);
     }
@@ -1472,129 +1682,86 @@ class MasterStockController extends Controller
 
 
         $user = auth()->user();
-
         $actorUsername = $user?->username ?: 'admin';
-
         $actorRole = $user?->role ?: 'admin';
 
+        // 1. Strict Atomic Pre-Check: Deteksi apakah ada part yang sudah ada di master_stocks
+        // Sesuai aturan: jika ada 1 saja yang sudah ada, transaksi BATAL TOTAL (0 part ditambahkan)
+        $existingRows = DB::table('master_stocks')
+            ->where('part_type', $partType)
+            ->where(function ($w) use ($targetSns) {
+                $w->whereIn('sn', $targetSns)
+                  ->orWhereIn(DB::raw("REPLACE(sn, '.', '')"), array_map(fn($s) => str_replace('.', '', $s), $targetSns));
+            })
+            ->get(['id', 'part_type', 'sn', 'status']);
 
-
-        $added = [];
-
-        $duplicates = [];
-
-
-
-        DB::beginTransaction();
-
-        try {
-
-            foreach ($targetSns as $itemSn) {
-
-                $cleanDot = str_replace('.', '', $itemSn);
-
-                $existing = DB::table('master_stocks')
-
-                    ->where('part_type', $partType)
-
-                    ->where(function ($w) use ($itemSn, $cleanDot) {
-
-                        $w->where('sn', $itemSn)
-
-                          ->orWhere(DB::raw("REPLACE(sn, '.', '')"), $cleanDot);
-
-                    })
-
-                    ->first();
-
-
-
-                if ($existing) {
-
-                    $duplicates[] = ['sn' => $itemSn, 'status' => $existing->status];
-
-                } else {
-
-                    DB::table('master_stocks')->insert([
-
-                        'sn' => $itemSn,
-
-                        'cs' => $csVal,
-
-                        'part_type' => $partType,
-
-                        'status' => 'Tersedia',
-
-                        'created_at' => now(),
-
-                        'updated_at' => now(),
-
-                    ]);
-
-
-
-                    DB::table('part_audit_logs')->insert([
-
-                        'part_type' => $partType,
-
-                        'sn' => $itemSn,
-
-                        'old_status' => '-',
-
-                        'new_status' => 'Tersedia',
-
-                        'action_type' => 'ADD_PART_NUMBER',
-
-                        'actor_username' => $actorUsername,
-
-                        'actor_role' => $actorRole,
-
-                        'reason' => $reason,
-
-                        'created_at' => now(),
-
-                    ]);
-
-                    $added[] = $itemSn;
-
-                }
-
+        if ($existingRows->isNotEmpty()) {
+            $duplicateSns = $existingRows->pluck('sn')->unique()->values()->all();
+            $dupCount = count($duplicateSns);
+            $dupListStr = implode(', ', array_slice($duplicateSns, 0, 10));
+            if ($dupCount > 10) {
+                $dupListStr .= " dan " . ($dupCount - 10) . " lainnya";
             }
 
+            return response()->json([
+                'ok' => false,
+                'error' => "Transaksi dibatalkan: Ditemukan {$dupCount} part yang sudah ada di Master Stock: [{$dupListStr}]. Seluruh transaksi dibatalkan (0 part ditambahkan).",
+                'data' => [
+                    'part_type' => $partType,
+                    'total_submitted' => count($targetSns),
+                    'duplicate_count' => $dupCount,
+                    'duplicates' => $existingRows->map(fn($r) => ['sn' => $r->sn, 'status' => $r->status])->values()->all(),
+                    'added_count' => 0,
+                    'added' => [],
+                ]
+            ], 422);
+        }
 
+        // 2. Jika 100% bersih (0 duplikat), masukkan seluruh data secara atomik
+        $added = [];
+        DB::beginTransaction();
+        try {
+            foreach ($targetSns as $itemSn) {
+                DB::table('master_stocks')->insert([
+                    'sn' => $itemSn,
+                    'cs' => $csVal,
+                    'part_type' => $partType,
+                    'status' => 'Tersedia',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                DB::table('part_audit_logs')->insert([
+                    'part_type' => $partType,
+                    'sn' => $itemSn,
+                    'old_status' => '-',
+                    'new_status' => 'Tersedia',
+                    'action_type' => 'ADD_PART_NUMBER',
+                    'actor_username' => $actorUsername,
+                    'actor_role' => $actorRole,
+                    'reason' => $reason,
+                    'created_at' => now(),
+                ]);
+
+                $added[] = $itemSn;
+            }
 
             DB::commit();
 
-
-
             return response()->json([
-
                 'ok' => true,
-
-                'message' => "Berhasil menambahkan " . count($added) . " part baru. (" . count($duplicates) . " part sudah terdaftar sebelumnya)",
-
+                'message' => "Berhasil menambahkan seluruh " . count($added) . " part baru ke Master Stok.",
                 'data' => [
-
                     'part_type' => $partType,
-
                     'added_count' => count($added),
-
-                    'duplicate_count' => count($duplicates),
-
+                    'duplicate_count' => 0,
                     'added' => $added,
-
-                    'duplicates' => $duplicates,
-
+                    'duplicates' => [],
                 ]
-
             ]);
-
         } catch (\Exception $e) {
-
             DB::rollBack();
-
             return $this->errorResponse("Gagal menambahkan bulk part: " . $e->getMessage(), 500);
-
         }
 
     }

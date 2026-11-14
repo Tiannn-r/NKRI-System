@@ -394,19 +394,37 @@
                   </td>
                   <td class="p-2.5 sm:p-3 w-36 text-center whitespace-nowrap font-sans">
                     <span
-                      :class="((it.finished_count >= it.total_sets && it.total_sets > 0) || it.finished_at || it.session_status === 'COMPLETED_SHIFT' || it.status === 'Good' || it.status === 'SELESAI') ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-blue-100 text-blue-800 border-blue-300'"
+                      :class="((it.finished_count >= it.total_sets && it.total_sets > 0) || it.finished_at || it.session_status === 'COMPLETED_SHIFT' || it.tray_status === 'returned' || it.status === 'Good' || it.status === 'SELESAI' || it.status === 'Dikembalikan ke Gudang') ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-blue-100 text-blue-800 border-blue-300'"
                       class="px-2.5 py-0.5 rounded-md text-[10.5px] font-black uppercase border inline-flex items-center gap-1 font-mono shadow-2xs">
                       <i
-                        :class="((it.finished_count >= it.total_sets && it.total_sets > 0) || it.finished_at || it.session_status === 'COMPLETED_SHIFT' || it.status === 'Good' || it.status === 'SELESAI') ? 'fa-solid fa-circle-check text-emerald-600' : 'fa-solid fa-truck-ramp-box text-blue-600'"></i>
+                        :class="((it.finished_count >= it.total_sets && it.total_sets > 0) || it.finished_at || it.session_status === 'COMPLETED_SHIFT' || it.tray_status === 'returned' || it.status === 'Good' || it.status === 'SELESAI' || it.status === 'Dikembalikan ke Gudang') ? 'fa-solid fa-circle-check text-emerald-600' : 'fa-solid fa-truck-ramp-box text-blue-600'"></i>
                       <span>{{ ((it.finished_count >= it.total_sets && it.total_sets > 0) || it.finished_at ||
-                        it.session_status === 'COMPLETED_SHIFT' || it.status === 'Good' || it.status === 'SELESAI') ?
+                        it.session_status === 'COMPLETED_SHIFT' || it.tray_status === 'returned' || it.status === 'Good' || it.status === 'SELESAI' || it.status === 'Dikembalikan ke Gudang') ?
                         'SELESAI' : 'TERSUPPLY' }}</span>
                     </span>
                   </td>
-                  <td class="p-2.5 sm:p-3 min-w-[180px] text-slate-500 font-sans italic text-xs">
-                    {{ it.reason || (((it.finished_count >= it.total_sets && it.total_sets > 0) || it.finished_at ||
-                    it.session_status === 'COMPLETED_SHIFT' || it.status === 'Good' || it.status === 'SELESAI') ?
-                    'Pengerjaan Selesai' : 'Tray Tersupply ke Perakitan') }}
+                  <td class="p-2.5 sm:p-3 min-w-[180px] font-sans italic text-xs">
+                    <template v-if="it.is_declined || it.status === 'Decline' || it.status === 'Declined'">
+                      <span class="text-rose-600 font-semibold flex items-center gap-1">
+                        <i class="fa-solid fa-circle-xmark text-rose-500"></i>
+                        {{ it.declined_reason ? 'Dikembalikan ke Gudang (Declined: ' + it.declined_reason + ')' : 'Dikembalikan ke Gudang (Declined)' }}
+                      </span>
+                    </template>
+                    <template v-else-if="it.status === 'Dikembalikan ke Gudang' || (!it.finished_at && (it.session_status === 'COMPLETED_SHIFT' || it.tray_status === 'returned'))">
+                      <span class="text-amber-700 font-semibold flex items-center gap-1">
+                        <i class="fa-solid fa-arrow-rotate-left text-amber-600"></i>
+                        Dikembalikan ke Gudang
+                      </span>
+                    </template>
+                    <template v-else-if="it.finished_at || it.status === 'Good' || it.status === 'SELESAI'">
+                      <span class="text-emerald-700 font-semibold flex items-center gap-1">
+                        <i class="fa-solid fa-check text-emerald-600"></i>
+                        Selesai Dirakit
+                      </span>
+                    </template>
+                    <template v-else>
+                      <span class="text-slate-500">{{ it.reason || 'Tray Tersupply ke Perakitan' }}</span>
+                    </template>
                   </td>
                 </tr>
               </tbody>
@@ -504,7 +522,7 @@
                   </td>
                 </tr>
                 <tr v-for="(it, idx) in pagedAssyReport" :key="it.assembly_id || it.id || idx"
-                  @click="openDetailModal(it, idx)"
+                  @click="openDetailModal(it, idx, 'assembly')"
                   class="hover:bg-purple-50/50 cursor-pointer transition select-none group"
                   title="Klik baris untuk melihat detail riwayat lengkap">
                   <td
@@ -516,8 +534,8 @@
                   <td class="p-2.5 sm:p-3 w-48 whitespace-nowrap font-mono">
                     <span
                       class="px-2 py-0.5 rounded text-[11px] font-bold bg-slate-100 text-slate-800 border border-slate-300">
-                      {{ (it.status === 'Dirakit Ulang' || it.qc_status === 'RU' || (typeof isReassemblySet ===
-                      'function' && isReassemblySet(it))) ? getFormattedDocCode(it.tray_code, 'assy_rework') :
+                      {{ (typeof isSetAllocatedForReassembly === 'function' && isSetAllocatedForReassembly(it)) ?
+                      (getSetPUDocNumber(it) || getFormattedDocCode(it.tray_code, 'assy_rework')) :
                       ((it.assy_doc_number && it.assy_doc_number.toUpperCase().startsWith('WH/ASSY')) ?
                       it.assy_doc_number : getFormattedDocCode(it.tray_code, 'assy')) }}
                     </span>
@@ -651,7 +669,7 @@
                     <span>Tidak ada data Uji Fungsional 1 yang sesuai dengan filter.</span>
                   </td>
                 </tr>
-                <tr v-for="(it, idx) in pagedAssyTestReport" :key="it.id || idx" @click="openDetailModal(it, idx)"
+                <tr v-for="(it, idx) in pagedAssyTestReport" :key="it.id || idx" @click="openDetailModal(it, idx, 'assy_test')"
                   class="hover:bg-indigo-50/50 cursor-pointer transition select-none group"
                   title="Klik baris untuk melihat detail riwayat lengkap">
                   <td
@@ -820,7 +838,7 @@
                     <span>Tidak ada data Uji Mutu QC yang sesuai dengan filter.</span>
                   </td>
                 </tr>
-                <tr v-for="(it, idx) in pagedQCReport" :key="it.id || idx" @click="openDetailModal(it, idx)"
+                <tr v-for="(it, idx) in pagedQCReport" :key="it.id || idx" @click="openDetailModal(it, idx, 'qc_test')"
                   class="hover:bg-emerald-50/50 cursor-pointer transition select-none group"
                   title="Klik baris untuk melihat detail riwayat lengkap">
                   <td
@@ -990,7 +1008,7 @@
                   </td>
                 </tr>
                 <tr v-for="(it, idx) in pagedWarehouseReport" :key="it.assembly_id || it.id || idx"
-                  @click="openDetailModal(it, idx)"
+                  @click="openDetailModal(it, idx, 'warehouse_receipt')"
                   class="hover:bg-amber-50/50 cursor-pointer transition select-none group"
                   title="Klik baris untuk melihat detail riwayat lengkap">
                   <td
@@ -1059,9 +1077,9 @@
                     {{ formatDateTime(it.warehouse_receipt_at || it.verified_at || it.qc_tested_at || it.created_at) }}
                   </td>
                   <td class="p-2.5 sm:p-3 w-36 text-center whitespace-nowrap font-sans">
-                    <span :class="getStatusTextClass(it.warehouse_receipt_status === 'ACCEPTED' ? 'Good' : (it.warehouse_receipt_status === 'DECLINED' ? 'Scrap' : 'Hold'))"
+                    <span :class="getStatusTextClass(it.warehouse_receipt_status === 'ACCEPTED' ? 'accepted' : (it.warehouse_receipt_status === 'DECLINED' ? 'declined' : 'pending'))"
                       class="text-xs uppercase tracking-wide">
-                      {{ it.warehouse_receipt_status === 'ACCEPTED' ? 'ACC' : (it.warehouse_receipt_status === 'DECLINED' ? 'DECLINED' : 'MENUNGGU RECEIPTS') }}
+                      {{ it.warehouse_receipt_status === 'ACCEPTED' ? 'ACCEPTED' : (it.warehouse_receipt_status === 'DECLINED' ? 'DECLINED' : 'PENDING') }}
                     </span>
                   </td>
                   <td class="p-2.5 sm:p-3 min-w-[180px] font-sans text-xs">
@@ -1107,421 +1125,6 @@
             </div>
           </div>
 
-          <!-- ================= MODAL RINCIAN DOKUMEN (BREAKDOWN PER UNIT) ================= -->
-          <div v-if="selectedReportDoc"
-            class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
-            <div
-              class="bg-white border border-slate-200 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-scaleUp">
-              <!-- Header Modal -->
-              <div class="px-5 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                  <div
-                    class="w-10 h-10 rounded-xl bg-red-100 border border-red-200 text-red-600 flex items-center justify-center text-lg">
-                    <i class="fa-solid fa-file-invoice"></i>
-                  </div>
-                  <div>
-                    <div class="flex items-center gap-2">
-                      <span
-                        class="text-[10px] font-bold px-2 py-0.5 bg-red-50 text-red-700 border border-red-200 rounded uppercase">RINCIAN
-                        DOKUMEN</span>
-                      <span class="text-xs text-slate-400">|</span>
-                      <span class="text-xs font-semibold text-slate-500">{{ getReportCategoryTitle(reportSubTab)
-                        }}</span>
-                    </div>
-                    <h3 class="text-base font-black text-slate-900 font-mono mt-0.5">{{ selectedReportDoc.doc_code }}
-                    </h3>
-                  </div>
-                </div>
-                <button type="button" @click="closeReportDocDetail"
-                  class="w-8 h-8 rounded-lg bg-slate-200/70 hover:bg-slate-300 text-slate-600 flex items-center justify-center transition cursor-pointer">
-                  <i class="fa-solid fa-xmark text-sm"></i>
-                </button>
-              </div>
-
-              <!-- Metadata Summary Card -->
-              <div class="p-4 bg-slate-50/50 border-b border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                <div>
-                  <span class="text-[10.5px] font-bold text-slate-400 block">Dokumen Acuan:</span>
-                  <span class="font-mono font-bold text-blue-700">{{ selectedReportDoc.origin_doc || '-' }}</span>
-                </div>
-                <div>
-                  <span class="text-[10.5px] font-bold text-slate-400 block">Operator / Petugas:</span>
-                  <span class="font-bold text-slate-800">{{ selectedReportDoc.operator || '-' }}</span>
-                </div>
-                <div>
-                  <span class="text-[10.5px] font-bold text-slate-400 block">Waktu Transaksi:</span>
-                  <span class="font-mono text-slate-700">{{ formatDateTime(selectedReportDoc.timestamp) }}</span>
-                </div>
-                <div>
-                  <span class="text-[10.5px] font-bold text-slate-400 block">Total Unit / Set:</span>
-                  <span class="font-mono font-black text-slate-900">{{ modalReportDocItems.length }} Set</span>
-                </div>
-              </div>
-
-              <!-- List Unit Items in Document -->
-              <div class="p-4 overflow-y-auto flex-1">
-                <table class="w-full text-left text-xs border border-slate-200 rounded-xl overflow-hidden">
-                  <thead class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200 text-[11px]">
-                    <!-- 1. SUBTAB WO / MO: No | Set # | SN P15 | PN -> P1 | P12 -->
-                    <template v-if="reportSubTab === 'wo'">
-                      <tr>
-                        <th rowspan="2" class="p-2.5 text-center w-14 border-r border-b border-slate-200 align-middle">
-                          No</th>
-                        <th rowspan="2" class="p-2.5 text-center w-24 border-r border-b border-slate-200 align-middle">
-                          Set #</th>
-                        <th rowspan="2" class="p-2.5 text-center border-r border-b border-slate-200 align-middle">SN P15
-                        </th>
-                        <th colspan="2"
-                          class="p-2 text-center bg-slate-200/70 border-b border-slate-200 tracking-wider">PN</th>
-                      </tr>
-                      <tr>
-                        <th class="p-2 text-center border-r border-b border-slate-200 bg-slate-100/90 w-1/4">P1</th>
-                        <th class="p-2 text-center border-b border-slate-200 bg-slate-100/90 w-1/4">P12</th>
-                      </tr>
-                    </template>
-
-                    <!-- 2. SUBTAB PERAKITAN: Status Perakitan & Perubahan / Rework -->
-                    <template v-else-if="reportSubTab === 'assembly'">
-                      <tr>
-                        <th rowspan="2" class="p-2.5 text-center w-10 border-r border-b border-slate-200 align-middle">
-                          No</th>
-                        <th rowspan="2" class="p-2.5 text-center w-16 border-r border-b border-slate-200 align-middle">
-                          Set #</th>
-                        <th rowspan="2" class="p-2.5 text-center border-r border-b border-slate-200 align-middle">SN P15
-                        </th>
-                        <th colspan="2"
-                          class="p-2 text-center bg-slate-200/70 border-b border-slate-200 tracking-wider">PN</th>
-                        <th rowspan="2" class="p-2.5 text-center w-28 border-b border-slate-200 align-middle">Status
-                          Perakitan</th>
-                        <th rowspan="2" class="p-2.5 border-b border-slate-200 align-middle">Keterangan &amp; Perubahan
-                        </th>
-                        <th rowspan="2" class="p-2.5 text-center w-14 border-b border-slate-200 align-middle">Aksi</th>
-                      </tr>
-                      <tr>
-                        <th class="p-2 text-center border-r border-b border-slate-200 bg-slate-100/90 w-1/6">P1</th>
-                        <th class="p-2 text-center border-r border-b border-slate-200 bg-slate-100/90 w-1/6">P12</th>
-                      </tr>
-                    </template>
-
-                    <!-- 3. SUBTAB TEST FUNCTIONAL 1 (TF1): Perakitan Good + Hasil TF1 -->
-                    <template v-else-if="reportSubTab === 'assy_test'">
-                      <tr>
-                        <th rowspan="2" class="p-2.5 text-center w-10 border-r border-b border-slate-200 align-middle">
-                          No</th>
-                        <th rowspan="2" class="p-2.5 text-center w-16 border-r border-b border-slate-200 align-middle">
-                          Set #</th>
-                        <th rowspan="2" class="p-2.5 text-center border-r border-b border-slate-200 align-middle">SN P15
-                        </th>
-                        <th colspan="2"
-                          class="p-2 text-center bg-slate-200/70 border-b border-slate-200 tracking-wider">PN</th>
-                        <th rowspan="2" class="p-2.5 text-center w-24 border-b border-slate-200 align-middle">Perakitan
-                        </th>
-                        <th rowspan="2" class="p-2.5 text-center w-36 border-b border-slate-200 align-middle">Hasil TF1
-                        </th>
-                        <th rowspan="2" class="p-2.5 border-b border-slate-200 align-middle">Keterangan TF1</th>
-                        <th rowspan="2" class="p-2.5 text-center w-14 border-b border-slate-200 align-middle">Aksi</th>
-                      </tr>
-                      <tr>
-                        <th class="p-2 text-center border-r border-b border-slate-200 bg-slate-100/90 w-1/6">P1</th>
-                        <th class="p-2 text-center border-r border-b border-slate-200 bg-slate-100/90 w-1/6">P12</th>
-                      </tr>
-                    </template>
-
-                    <!-- 4. SUBTAB TEST FUNCTIONAL 2 (QC): Perakitan Good + TF1 Good Semua + Hasil QC -->
-                    <template v-else-if="reportSubTab === 'qc_test'">
-                      <tr>
-                        <th rowspan="2" class="p-2.5 text-center w-10 border-r border-b border-slate-200 align-middle">
-                          No</th>
-                        <th rowspan="2" class="p-2.5 text-center w-16 border-r border-b border-slate-200 align-middle">
-                          Set #</th>
-                        <th rowspan="2" class="p-2.5 text-center border-r border-b border-slate-200 align-middle">SN P15
-                        </th>
-                        <th colspan="2"
-                          class="p-2 text-center bg-slate-200/70 border-b border-slate-200 tracking-wider">PN</th>
-                        <th rowspan="2" class="p-2.5 text-center w-20 border-b border-slate-200 align-middle">Perakitan
-                        </th>
-                        <th rowspan="2" class="p-2.5 text-center w-24 border-b border-slate-200 align-middle">TF1</th>
-                        <th rowspan="2" class="p-2.5 text-center w-36 border-b border-slate-200 align-middle">Hasil QC
-                          (TF2)</th>
-                        <th rowspan="2" class="p-2.5 border-b border-slate-200 align-middle">Keterangan QC</th>
-                        <th rowspan="2" class="p-2.5 text-center w-14 border-b border-slate-200 align-middle">Aksi</th>
-                      </tr>
-                      <tr>
-                        <th class="p-2 text-center border-r border-b border-slate-200 bg-slate-100/90 w-1/6">P1</th>
-                        <th class="p-2 text-center border-r border-b border-slate-200 bg-slate-100/90 w-1/6">P12</th>
-                      </tr>
-                    </template>
-
-                    <!-- 5. SUBTAB RECEIPTS (WH/GR): Semua Good (Perakitan, TF1, TF2) + Status Receipts -->
-                    <template v-else-if="reportSubTab === 'warehouse_receipt'">
-                      <tr>
-                        <th rowspan="2" class="p-2.5 text-center w-10 border-r border-b border-slate-200 align-middle">
-                          No</th>
-                        <th rowspan="2" class="p-2.5 text-center w-16 border-r border-b border-slate-200 align-middle">
-                          Set #</th>
-                        <th rowspan="2" class="p-2.5 text-center border-r border-b border-slate-200 align-middle">SN P15
-                        </th>
-                        <th colspan="2"
-                          class="p-2 text-center bg-slate-200/70 border-b border-slate-200 tracking-wider">PN</th>
-                        <th rowspan="2" class="p-2.5 text-center w-20 border-b border-slate-200 align-middle">Perakitan
-                        </th>
-                        <th rowspan="2" class="p-2.5 text-center w-20 border-b border-slate-200 align-middle">TF1</th>
-                        <th rowspan="2" class="p-2.5 text-center w-20 border-b border-slate-200 align-middle">TF2 (QC)
-                        </th>
-                        <th rowspan="2" class="p-2.5 text-center w-28 border-b border-slate-200 align-middle">Receipts
-                          (WH/GR)</th>
-                        <th rowspan="2" class="p-2.5 border-b border-slate-200 align-middle">Keterangan</th>
-                        <th rowspan="2" class="p-2.5 text-center w-14 border-b border-slate-200 align-middle">Aksi</th>
-                      </tr>
-                      <tr>
-                        <th class="p-2 text-center border-r border-b border-slate-200 bg-slate-100/90 w-1/6">P1</th>
-                        <th class="p-2 text-center border-r border-b border-slate-200 bg-slate-100/90 w-1/6">P12</th>
-                      </tr>
-                    </template>
-
-                    <!-- FALLBACK DEFAULT -->
-                    <template v-else>
-                      <tr>
-                        <th rowspan="2" class="p-2.5 text-center w-10 border-r border-b border-slate-200 align-middle">
-                          No</th>
-                        <th rowspan="2" class="p-2.5 text-center w-16 border-r border-b border-slate-200 align-middle">
-                          Set #</th>
-                        <th rowspan="2" class="p-2.5 text-center border-r border-b border-slate-200 align-middle">SN P15
-                        </th>
-                        <th colspan="2"
-                          class="p-2 text-center bg-slate-200/70 border-b border-slate-200 tracking-wider">PN</th>
-                        <th rowspan="2" class="p-2.5 text-center border-b border-slate-200 align-middle">Status</th>
-                        <th rowspan="2" class="p-2.5 border-b border-slate-200 align-middle">Keterangan</th>
-                        <th rowspan="2" class="p-2.5 text-center w-14 border-b border-slate-200 align-middle">Aksi</th>
-                      </tr>
-                      <tr>
-                        <th class="p-2 text-center border-r border-b border-slate-200 bg-slate-100/90 w-1/6">P1</th>
-                        <th class="p-2 text-center border-r border-b border-slate-200 bg-slate-100/90 w-1/6">P12</th>
-                      </tr>
-                    </template>
-                  </thead>
-                  <tbody class="divide-y divide-slate-100 font-mono text-[11px]">
-                    <tr v-for="(it, i) in modalReportDocItems" :key="it.assembly_id || it.id || i"
-                      @click="reportSubTab !== 'wo' && openItemDetailFromDoc(it, i)"
-                      :class="reportSubTab === 'wo' ? 'select-none bg-white hover:bg-slate-50/70 transition' : 'hover:bg-red-50/50 transition cursor-pointer select-none group'"
-                      :title="reportSubTab === 'wo' ? '' : 'Klik baris atau tombol panah untuk melihat rincian hasil'">
-                      <!-- No -->
-                      <td class="p-2.5 text-center text-slate-400 font-sans"
-                        :class="reportSubTab === 'wo' ? 'border-r border-slate-100' : ''">{{ i + 1 }}</td>
-                      <!-- Set # -->
-                      <td class="p-2.5 text-center font-bold text-slate-800"
-                        :class="reportSubTab === 'wo' ? 'border-r border-slate-100' : ''">Set #{{ it.set_number || (i +
-                        1) }}</td>
-
-                      <!-- 1. JIKA WO / MO: Kolom dipanjangkan secara terpisah SN P15 | P1 | P12 -->
-                      <template v-if="reportSubTab === 'wo'">
-                        <td class="p-2.5 text-center font-mono border-r border-slate-100">
-                          <span
-                            class="font-bold text-red-900 text-xs px-3 py-1 bg-red-50 border border-red-200 rounded-lg inline-block shadow-2xs">
-                            {{ it.part15_sn || it.p9_sn || it.sn || '-' }}
-                          </span>
-                        </td>
-                        <td class="p-2.5 text-center font-mono border-r border-slate-100">
-                          <span
-                            class="font-bold text-slate-800 text-xs px-3 py-1 bg-slate-50 border border-slate-200 rounded-lg inline-block">
-                            {{ it.part1_sn || '-' }}
-                          </span>
-                        </td>
-                        <td class="p-2.5 text-center font-mono">
-                          <span
-                            class="font-bold text-slate-800 text-xs px-3 py-1 bg-slate-50 border border-slate-200 rounded-lg inline-block">
-                            {{ it.part12_sn || '-' }}
-                          </span>
-                        </td>
-                      </template>
-
-                      <!-- SUBTAB LAIN: Kolom terpisah SN P15 | P1 | P12 -->
-                      <template v-else>
-                        <td class="p-2.5 text-center font-mono border-r border-slate-100">
-                          <span
-                            class="font-bold text-red-900 text-xs px-3 py-1 bg-red-50 border border-red-200 rounded-lg inline-block shadow-2xs">
-                            {{ it.part15_sn || it.p9_sn || it.sn || '-' }}
-                          </span>
-                        </td>
-                        <td class="p-2.5 text-center font-mono border-r border-slate-100">
-                          <span
-                            class="font-bold text-slate-800 text-xs px-3 py-1 bg-slate-50 border border-slate-200 rounded-lg inline-block">
-                            {{ it.part1_sn || '-' }}
-                          </span>
-                        </td>
-                        <td class="p-2.5 text-center font-mono border-r border-slate-100">
-                          <span
-                            class="font-bold text-slate-800 text-xs px-3 py-1 bg-slate-50 border border-slate-200 rounded-lg inline-block">
-                            {{ it.part12_sn || '-' }}
-                          </span>
-                        </td>
-                      </template>
-
-                      <!-- 1. JIKA WO: HANYA TAMPIL SET DAN SN, TIDAK ADA KOLOM ATAU AKSI LAIN -->
-
-                      <!-- 2. JIKA PERAKITAN -->
-                      <template v-if="reportSubTab === 'assembly'">
-                        <td class="p-2.5 text-center font-sans">
-                          <span :class="getStatusTextClass(getAssemblyStageStatus(it))"
-                            class="text-xs uppercase tracking-wide">
-                            {{ formatDocumentStatusText(getAssemblyStageStatus(it)) }}
-                          </span>
-                        </td>
-                        <td class="p-2.5 font-sans text-slate-600 text-xs">
-                          <div v-if="it.rework_reason" class="text-purple-700 font-medium">
-                            <i class="fa-solid fa-rotate-left text-[10px] mr-1"></i>{{ it.rework_reason }}
-                          </div>
-                          <div v-else-if="it.assembly_reason || it.reason" class="text-slate-700 italic">
-                            {{ it.assembly_reason || it.reason }}
-                          </div>
-                          <div v-else class="text-slate-400 italic">-</div>
-                        </td>
-                        <td class="p-2.5 text-center font-sans">
-                          <button type="button" @click.stop="openItemDetailFromDoc(it, i)"
-                            class="w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-red-600 text-slate-500 group-hover:text-white border border-slate-200 group-hover:border-red-600 flex items-center justify-center transition shadow-2xs mx-auto cursor-pointer"
-                            title="Buka Rincian Hasil">
-                            <i
-                              class="fa-solid fa-arrow-right text-xs group-hover:translate-x-0.5 transition-transform"></i>
-                          </button>
-                        </td>
-                      </template>
-
-                      <!-- 3. JIKA TEST FUNCTIONAL 1 (TF1) -->
-                      <template v-else-if="reportSubTab === 'assy_test'">
-                        <td class="p-2.5 text-center font-sans">
-                          <span :class="getStatusTextClass(getAssemblyStageStatus(it))"
-                            class="text-xs uppercase tracking-wide">
-                            {{ formatDocumentStatusText(getAssemblyStageStatus(it)) }}
-                          </span>
-                        </td>
-                        <td class="p-2.5 text-center font-sans">
-                          <span
-                            v-if="it.assy_test_status || (it.status && !it.status.includes('Menunggu') && !it.status.includes('Belum'))"
-                            :class="getStatusBadgeClass(it.assy_test_status || it.status)"
-                            class="text-[10px] font-black uppercase px-2 py-0.5 rounded-lg border inline-block">
-                            {{ it.assy_test_status || it.status }}
-                          </span>
-                          <span v-else
-                            class="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-amber-50 text-amber-800 border border-amber-300 inline-flex items-center gap-1">
-                            <i class="fa-solid fa-clock text-[9px]"></i> Menunggu Test
-                          </span>
-                        </td>
-                        <td class="p-2.5 font-sans italic text-slate-500 text-xs">
-                          {{ it.failure_reasons ? formatFailureReason(it.failure_reasons) : (it.assy_failure_reasons ||
-                          it.notes || '-') }}
-                        </td>
-                        <td class="p-2.5 text-center font-sans">
-                          <button type="button" @click.stop="openItemDetailFromDoc(it, i)"
-                            class="w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-red-600 text-slate-500 group-hover:text-white border border-slate-200 group-hover:border-red-600 flex items-center justify-center transition shadow-2xs mx-auto cursor-pointer"
-                            title="Buka Rincian Hasil">
-                            <i
-                              class="fa-solid fa-arrow-right text-xs group-hover:translate-x-0.5 transition-transform"></i>
-                          </button>
-                        </td>
-                      </template>
-
-                      <!-- 4. JIKA TEST FUNCTIONAL 2 (QC) -->
-                      <template v-else-if="reportSubTab === 'qc_test'">
-                        <td class="p-2.5 text-center font-sans">
-                          <span :class="getStatusTextClass(getAssemblyStageStatus(it))"
-                            class="text-xs uppercase tracking-wide">
-                            {{ formatDocumentStatusText(getAssemblyStageStatus(it)) }}
-                          </span>
-                        </td>
-                        <td class="p-2.5 text-center font-sans">
-                          <span :class="getStatusBadgeClass(it.tf1_status || it.assy_test_status || 'Good')"
-                            class="text-[10px] font-black uppercase px-2 py-0.5 rounded-lg border inline-block">
-                            {{ (it.tf1_status || it.assy_test_status || 'Good').toUpperCase() === 'GOOD' ? 'LOLOS (GOOD)' : (it.tf1_status || it.assy_test_status || 'Hold') }}
-                          </span>
-                        </td>
-                        <td class="p-2.5 text-center font-sans">
-                          <span
-                            v-if="it.qc_test_status || it.qc_status || (it.status && !it.status.includes('Menunggu') && !it.status.includes('Belum'))"
-                            :class="getStatusBadgeClass(it.qc_test_status || it.qc_status || it.status)"
-                            class="text-[10px] font-black uppercase px-2 py-0.5 rounded-lg border inline-block">
-                            {{ it.qc_test_status || it.qc_status || it.status }}
-                          </span>
-                          <span v-else
-                            class="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-amber-50 text-amber-800 border border-amber-300 inline-flex items-center gap-1">
-                            <i class="fa-solid fa-clock text-[9px]"></i> Menunggu Test Functional 2
-                          </span>
-                        </td>
-                        <td class="p-2.5 font-sans italic text-slate-500 text-xs">
-                          {{ it.qc_failure_reasons || it.failure_reasons || it.qc_notes || it.notes || '-' }}
-                        </td>
-                        <td class="p-2.5 text-center font-sans">
-                          <button type="button" @click.stop="openItemDetailFromDoc(it, i)"
-                            class="w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-red-600 text-slate-500 group-hover:text-white border border-slate-200 group-hover:border-red-600 flex items-center justify-center transition shadow-2xs mx-auto cursor-pointer"
-                            title="Buka Rincian Hasil">
-                            <i
-                              class="fa-solid fa-arrow-right text-xs group-hover:translate-x-0.5 transition-transform"></i>
-                          </button>
-                        </td>
-                      </template>
-
-                      <!-- 5. JIKA RECEIPTS (WH/GR) -->
-                      <template v-else-if="reportSubTab === 'warehouse_receipt'">
-                        <td class="p-2.5 text-center font-sans">
-                          <span :class="getStatusTextClass(getAssemblyStageStatus(it))"
-                            class="text-xs uppercase tracking-wide">
-                            {{ formatDocumentStatusText(getAssemblyStageStatus(it)) }}
-                          </span>
-                        </td>
-                        <td class="p-2.5 text-center font-sans">
-                          <span :class="getStatusBadgeClass(it.tf1_status || it.assy_test_status || 'Good')"
-                            class="text-[10px] font-black uppercase px-2 py-0.5 rounded-lg border inline-block">
-                            {{ it.tf1_status || it.assy_test_status || 'Good' }}
-                          </span>
-                        </td>
-                        <td class="p-2.5 text-center font-sans">
-                          <span :class="getStatusBadgeClass(it.qc_test_status || it.qc_status || 'Good')"
-                            class="text-[10px] font-black uppercase px-2 py-0.5 rounded-lg border inline-block">
-                            {{ it.qc_test_status || it.qc_status || 'Good' }}
-                          </span>
-                        </td>
-                        <td class="p-2.5 text-center font-sans">
-                          <span
-                            :class="getStatusBadgeClass(it.warehouse_receipt_status || it.verified_status || 'Menunggu Verifikasi')"
-                            class="text-[10px] font-black uppercase px-2 py-0.5 rounded-lg border inline-block">
-                            {{ it.warehouse_receipt_status || it.verified_status || 'Menunggu Verifikasi' }}
-                          </span>
-                        </td>
-                        <td class="p-2.5 font-sans italic text-slate-500 text-xs">
-                          {{ it.warehouse_decline_reason || it.declined_reason || it.notes || '-' }}
-                        </td>
-                        <td class="p-2.5 text-center font-sans">
-                          <button type="button" @click.stop="openItemDetailFromDoc(it, i)"
-                            class="w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-red-600 text-slate-500 group-hover:text-white border border-slate-200 group-hover:border-red-600 flex items-center justify-center transition shadow-2xs mx-auto cursor-pointer"
-                            title="Buka Rincian Hasil">
-                            <i
-                              class="fa-solid fa-arrow-right text-xs group-hover:translate-x-0.5 transition-transform"></i>
-                          </button>
-                        </td>
-                      </template>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <!-- Footer Modal -->
-              <div class="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                  <span class="text-xs text-slate-500 font-medium">Menampilkan {{ modalReportDocItems.length }} set
-                    perakitan pada dokumen ini.</span>
-                  <!-- Cetak Label: icon only, shows all SN in document -->
-                  <button type="button" @click="openBatchLabelList(modalReportDocItems)"
-                    class="bg-amber-500 hover:bg-amber-600 text-white font-bold py-1.5 px-3 rounded-lg text-xs flex items-center justify-center gap-1.5 shadow-xs active:scale-95 transition cursor-pointer"
-                    title="Cetak Label - Tampilkan semua SN dalam dokumen ini">
-                    <i class="fa-solid fa-tags text-xs"></i>
-                  </button>
-                </div>
-                <button type="button" @click="closeReportDocDetail"
-                  class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs rounded-xl transition cursor-pointer">
-                  Tutup
-                </button>
-              </div>
-            </div>
-          </div>
 
         </div>
 

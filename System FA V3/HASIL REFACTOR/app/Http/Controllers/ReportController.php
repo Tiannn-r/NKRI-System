@@ -100,7 +100,9 @@ class ReportController extends Controller
 
                 DB::raw("COALESCE(a.part1_sn, h.part1_sn) as part1_sn"),
 
-                DB::raw("COALESCE(a.status, h.status, 'Good') as status"),
+                'a.original_assembly_status',
+                DB::raw("COALESCE(a.original_assembly_status, CASE WHEN a.status = 'Dirakit Ulang' THEN 'Good' ELSE a.status END, h.status, 'Good') as status"),
+                DB::raw("COALESCE(a.original_assembly_status, CASE WHEN a.status = 'Dirakit Ulang' THEN 'Good' ELSE a.status END, h.status, 'Good') as assembly_status"),
 
                 DB::raw("COALESCE(a.reason, h.reason) as reason"),
 
@@ -139,6 +141,11 @@ class ReportController extends Controller
                 't.created_at as created_at',
 
                 't.created_at as tray_created_at',
+                't.status as tray_status',
+                't.session_status',
+                't.return_verified',
+                't.return_verified_at',
+                't.return_reason',
 
                 'a.assy_doc_number',
 
@@ -219,9 +226,27 @@ class ReportController extends Controller
         // Filter Status
 
         if ($statusParam && !in_array($statusParam, ['Semua Status', 'ALL'])) {
-
-            $query->whereRaw("UPPER(COALESCE(a.status, h.status, 'Good')) = UPPER(?)", [$statusParam]);
-
+            $stUpper = strtoupper($statusParam);
+            if ($stUpper === 'SELESAI') {
+                $query->where(function ($w) {
+                    $w->whereNotNull('a.finished_at')
+                      ->orWhereRaw("UPPER(COALESCE(a.status, '')) = 'GOOD'")
+                      ->orWhere('t.session_status', 'COMPLETED_SHIFT')
+                      ->orWhere('t.status', 'returned')
+                      ->orWhere('t.return_verified', 1);
+                });
+            } elseif ($stUpper === 'TERSUPPLY') {
+                $query->where(function ($w) {
+                    $w->whereNull('a.finished_at')
+                      ->where('t.session_status', '!=', 'COMPLETED_SHIFT')
+                      ->where('t.status', '!=', 'returned')
+                      ->where(function ($subW) {
+                          $subW->whereNull('t.return_verified')->orWhere('t.return_verified', 0);
+                      });
+                });
+            } else {
+                $query->whereRaw("UPPER(COALESCE(a.status, h.status, 'Good')) = UPPER(?)", [$statusParam]);
+            }
         }
 
 
@@ -387,8 +412,10 @@ class ReportController extends Controller
                 't.created_at as tray_created_at',
 
                 't.session_status',
-
                 't.status',
+                't.return_verified',
+                't.return_verified_at',
+                't.return_reason',
 
             ])->get();
 
@@ -434,208 +461,115 @@ class ReportController extends Controller
         $syntheticRows = [];
 
         foreach ($allTrays as $tr) {
-
             if (!$allParts->has($tr->id)) continue;
-
             $partsGroup = $allParts->get($tr->id);
-
             $p15List = $partsGroup->where('part_type', '15')->values();
-
             $p1List = $partsGroup->where('part_type', '1')->values();
-
             $p12List = $partsGroup->where('part_type', '12')->values();
-
             $totalSets = max($p15List->count(), $p1List->count(), $p12List->count());
-
             $existingSets = isset($assembledSetsPerTray[$tr->id]) ? $assembledSetsPerTray[$tr->id] : [];
-
-
+            $isTrayReturned = ($tr->status === 'returned' || $tr->session_status === 'COMPLETED_SHIFT' || !empty($tr->return_verified));
 
             for ($i = 0; $i < $totalSets; $i++) {
-
                 $setNum = $i + 1;
-
                 if (in_array($setNum, $existingSets)) continue;
 
-
-
                 $p15Val = $p15List->get($i)?->sn;
-
                 $p1Val = $p1List->get($i)?->sn;
-
                 $p12Val = $p12List->get($i)?->sn;
 
-
-
                 // Terapkan filter tanggal jika ada
-
                 if ($startDate && substr($tr->created_at, 0, 10) < $startDate) continue;
-
                 if ($endDate && substr($tr->created_at, 0, 10) > $endDate) continue;
 
-
-
                 // Terapkan filter operator jika ada
-
                 if ($operator) {
-
                     $opLower = strtolower($operator);
-
                     $whMatch = str_contains(strtolower($tr->pic_warehouse ?? ''), $opLower);
-
                     $asMatch = str_contains(strtolower($tr->assigned_operator ?? ''), $opLower);
-
                     if (!$whMatch && !$asMatch) continue;
-
                 }
-
-
 
                 // Terapkan filter status
-
                 if ($statusParam && !in_array($statusParam, ['Semua Status', 'ALL'])) {
-
                     $stUpper = strtoupper($statusParam);
-
-                    if ($stUpper === 'GOOD' || $stUpper === 'SELESAI') continue; // Tray belum selesai dirakit
-
-                    if ($stUpper !== 'TERSUPPLY' && $stUpper !== 'AKTIF' && $stUpper !== 'ACTIVE') continue;
-
+                    if ($stUpper === 'GOOD' || $stUpper === 'SELESAI') {
+                        if (!$isTrayReturned) continue;
+                    } elseif ($stUpper === 'TERSUPPLY' || $stUpper === 'AKTIF' || $stUpper === 'ACTIVE') {
+                        if ($isTrayReturned) continue;
+                    }
                 }
-
-
 
                 // Terapkan filter tray code
-
                 if ($trayCode) {
-
                     $cleanCode = strtolower(trim($trayCode));
-
                     $cleanSuffix = strtolower(preg_replace('/^(WH\/WO\/|WH\/ASSY\/|ASSY\/QC\/|WH\/QC\/|WH\/GR\/)/i', '', $cleanCode));
-
                     $trayCodeLower = strtolower($tr->tray_code ?? '');
-
                     $moLower = strtolower($tr->source_document_mo ?? '');
-
                     $match = str_contains($trayCodeLower, $cleanCode) ||
-
                              str_contains($trayCodeLower, $cleanSuffix) ||
-
                              str_contains($moLower, $cleanCode);
-
                     if (!$match) continue;
-
                 }
-
-
 
                 // Terapkan pencarian umum (q)
-
                 if ($q) {
-
                     $qLower = strtolower($q);
-
                     $match = str_contains(strtolower($p15Val ?? ''), $qLower) ||
-
                              str_contains(strtolower($p1Val ?? ''), $qLower) ||
-
                              str_contains(strtolower($p12Val ?? ''), $qLower) ||
-
                              str_contains(strtolower($tr->tray_code ?? ''), $qLower) ||
-
                              str_contains(strtolower($tr->source_document_mo ?? ''), $qLower);
-
                     if (!$match) continue;
-
                 }
 
-
-
                 $syntheticRows[] = (object)[
-
                     'id' => 1000000 + ($tr->id * 1000) + $setNum,
-
                     'tray_id' => $tr->id,
-
                     'set_number' => $setNum,
-
                     'part15_sn' => $p15Val,
-
                     'part12_sn' => $p12Val,
-
                     'part1_sn' => $p1Val,
-
-                    'status' => 'TERSUPPLY',
-
-                    'reason' => null,
-
+                    'status' => $isTrayReturned ? 'Dikembalikan ke Gudang' : 'TERSUPPLY',
+                    'reason' => $isTrayReturned ? 'Dikembalikan ke gudang oleh operator assembly' : 'Tray Tersupply ke Perakitan',
                     'defective_parts' => null,
-
-                    'verified_status' => null,
-
+                    'verified_status' => $isTrayReturned ? 'RETURNED' : null,
                     'is_declined' => false,
-
                     'is_reregistered' => false,
-
                     'declined_reason' => null,
-
                     'started_at' => null,
-
                     'finished_at' => null,
-
                     'pic_assembly' => null,
-
                     'tray_code' => $tr->tray_code,
-
+                    'tray_status' => $tr->status,
+                    'session_status' => $tr->session_status,
+                    'return_verified' => $tr->return_verified,
+                    'return_verified_at' => $tr->return_verified_at ?? null,
+                    'return_reason' => $tr->return_reason ?? null,
                     'pic_warehouse' => $tr->pic_warehouse,
-
                     'assigned_operator' => $tr->assigned_operator,
-
                     'source_document_mo' => $tr->source_document_mo,
-
                     'product_type' => $tr->product_type,
-
                     'verified_by_gudang' => $tr->verified_by_gudang,
-
                     'verified_at' => $tr->verified_at,
-
                     'verified_by_user' => $tr->verified_by_user,
-
                     'created_at' => $tr->created_at,
-
                     'tray_created_at' => $tr->tray_created_at,
-
                     'assy_doc_number' => null,
-
                     'qc_doc_number' => null,
-
                     'qc_status' => null,
-
                     'qc_failure_reasons' => null,
-
                     'qc_notes' => null,
-
                     'rework_reason' => null,
-
                     'lifecycle_path' => 'FRESH_GOOD',
-
-                    'assy_status_history' => 'TERSUPPLY',
-
+                    'assy_status_history' => $isTrayReturned ? 'RETURNED' : 'TERSUPPLY',
                     'qc_status_history' => null,
-
                     'assy_test_checklist' => '[]',
-
                     'test_checklist' => '[]',
-
                     'assy_failure_reasons' => null,
-
                 ];
-
             }
-
         }
-
-
 
         $allRows = $assembledRows->concat($syntheticRows);
 
@@ -685,7 +619,8 @@ class ReportController extends Controller
 
                 't.stage',
 
-                DB::raw("COALESCE(NULLIF(t.doc_number, '-'), t.tray_code) as doc_number"),
+                DB::raw("COALESCE(NULLIF(t.doc_number, '-'), a.assy_doc_number, t.tray_code) as doc_number"),
+                DB::raw("COALESCE(NULLIF(t.doc_number, '-'), a.assy_doc_number, t.tray_code) as tf1_doc_number"),
 
                 't.tray_id',
 
@@ -724,6 +659,8 @@ class ReportController extends Controller
                 DB::raw("COALESCE(a.pic_assembly, tr_check.assigned_operator, '-') as pic_assembly"),
 
                 DB::raw("COALESCE(u_assy_op.full_name, a.pic_assembly, tr_check.assigned_operator, '-') as pic_assembly_name"),
+                'a.original_assembly_status',
+                DB::raw("COALESCE(a.original_assembly_status, CASE WHEN a.status = 'Dirakit Ulang' THEN 'Good' ELSE a.status END, 'Good') as assembly_status"),
 
                 DB::raw("COALESCE(t.tray_code, a.assy_doc_number) as assy_doc_number"),
 
@@ -776,6 +713,7 @@ class ReportController extends Controller
                         DB::raw("'ASSY' as stage"),
 
                         DB::raw("COALESCE(a.assy_doc_number, tr.tray_code) as doc_number"),
+                        DB::raw("COALESCE(a.assy_doc_number, tr.tray_code) as tf1_doc_number"),
 
                         'a.tray_id',
 
@@ -818,6 +756,8 @@ class ReportController extends Controller
                         DB::raw("COALESCE(a.pic_assembly, tr.assigned_operator, '-') as pic_assembly"),
 
                         DB::raw("COALESCE(u_op.full_name, a.pic_assembly, tr.assigned_operator, '-') as pic_assembly_name"),
+                        'a.original_assembly_status',
+                        DB::raw("COALESCE(a.original_assembly_status, CASE WHEN a.status = 'Dirakit Ulang' THEN 'Good' ELSE a.status END, 'Good') as assembly_status"),
 
                         DB::raw("COALESCE(tr.tray_code, a.assy_doc_number) as assy_doc_number"),
 
@@ -1033,7 +973,7 @@ class ReportController extends Controller
 
                 't.stage',
 
-                DB::raw("COALESCE(NULLIF(t.doc_number, '-'), t.tray_code) as doc_number"),
+                DB::raw("COALESCE(NULLIF(t.doc_number, '-'), a.qc_doc_number, t.tray_code) as doc_number"),
 
                 DB::raw("COALESCE(a.assy_doc_number, t.tray_code) as tf1_doc_number"),
 
@@ -1079,7 +1019,8 @@ class ReportController extends Controller
 
                 DB::raw("CASE WHEN t.tester_username IN ('tester', 'qc_inspector', 'inspector_qc', 'admin') THEN 'Administrator NKRI' ELSE COALESCE(u.full_name, t.tester_username) END as tester_full_name"),
 
-                DB::raw("COALESCE(a.status, 'Good') as assembly_status"),
+                'a.original_assembly_status',
+                DB::raw("COALESCE(a.original_assembly_status, CASE WHEN a.status = 'Dirakit Ulang' THEN 'Good' ELSE a.status END, 'Good') as assembly_status"),
 
                 DB::raw("COALESCE(a.assy_test_status, 'Good') as tf1_status"),
 
@@ -1193,7 +1134,8 @@ class ReportController extends Controller
 
                         DB::raw("'Menunggu Inspector QC' as tester_full_name"),
 
-                        DB::raw("COALESCE(a.status, 'Good') as assembly_status"),
+                        'a.original_assembly_status',
+                DB::raw("COALESCE(a.original_assembly_status, CASE WHEN a.status = 'Dirakit Ulang' THEN 'Good' ELSE a.status END, 'Good') as assembly_status"),
 
                         DB::raw("COALESCE(a.assy_test_status, 'Good') as tf1_status"),
 
@@ -1463,7 +1405,8 @@ class ReportController extends Controller
 
                 'a.part1_sn',
 
-                DB::raw("COALESCE(a.status, 'Good') as assembly_status"),
+                'a.original_assembly_status',
+                DB::raw("COALESCE(a.original_assembly_status, CASE WHEN a.status = 'Dirakit Ulang' THEN 'Good' ELSE a.status END, 'Good') as assembly_status"),
 
                 DB::raw("COALESCE(a.status, 'Good') as barang_status"),
 

@@ -214,7 +214,6 @@
                 <option value="Hold">Hold</option>
                 <option value="Scrap">Scrap</option>
                 <option value="Decline">Decline</option>
-                <option value="Part Diganti">Part Diganti</option>
               </select>
 
 
@@ -282,7 +281,7 @@
                     <div>P9 Part {{ m.part_type }}</div>
                     <span v-if="m.is_replaced_from_assy && !['Declined', 'Decline', 'Pending Verif Admin'].includes(m.effective_status) && !['Declined', 'Decline', 'Pending Verif Admin'].includes(m.stock_status)"
                       class="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[8.5px] bg-amber-100 text-amber-800 font-bold border border-amber-200 uppercase tracking-tight">
-                      Part Diganti
+                      Lepasan (Hold)
                     </span>
                   </td>
                   <td class="p-3 font-black text-slate-900 group-hover:text-red-700 transition-colors">
@@ -303,15 +302,15 @@
                       <i v-if="m.effective_status === 'Good'" class="fa-solid fa-circle-check text-[10px]"></i>
                       <i v-else-if="m.effective_status === 'Hold'" class="fa-solid fa-hand text-[10px]"></i>
                       <i v-else-if="m.effective_status === 'Scrap'" class="fa-solid fa-trash-can text-[10px]"></i>
-                      <i v-else-if="m.effective_status === 'Rework'" class="fa-solid fa-rotate-left text-[10px]"></i>
+                      <i v-else-if="m.effective_status === 'Rework'" class="fa-solid fa-hand text-[10px]"></i>
                       <i v-else-if="m.effective_status === 'Supplied'"
                         class="fa-solid fa-boxes-packing text-[10px]"></i>
-                      <i v-else-if="m.effective_status === 'Decline' || m.effective_status === 'Declined' || m.effective_status === 'Pending Verif Admin'"
+                      <i v-else-if="m.effective_status === 'Pending Verif Admin'"
+                        class="fa-solid fa-clock text-[10px]"></i>
+                      <i v-else-if="m.effective_status === 'Decline' || m.effective_status === 'Declined'"
                         class="fa-solid fa-ban text-[10px]"></i>
                       <i v-else class="fa-solid fa-check text-[10px]"></i>
-                      <span>{{ (m.effective_status === 'Decline' || m.effective_status === 'Declined' ||
-                        m.effective_status === 'Pending Verif Admin') ? 'Menunggu Verifikasi' : (m.effective_status ||
-                        m.stock_status) }}</span>
+                      <span>{{ m.effective_status === 'Pending Verif Admin' ? 'Menunggu Verif' : ((m.effective_status === 'Decline' || m.effective_status === 'Declined') ? 'Declined' : (m.effective_status === 'Rework' ? 'Hold' : (m.effective_status || m.stock_status))) }}</span>
                     </button>
                   </td>
                   <td class="p-3 text-slate-700 font-sans text-xs">
@@ -348,20 +347,6 @@
                         title="Lihat alur proses & riwayat part">
                         <i class="fa-solid fa-timeline text-[10px] text-red-600"></i>
                         <span>Detail</span>
-                      </button>
-
-                      <!-- Status Decline: Menunggu verifikasi di master stok -->
-                      <span
-                        v-if="m.effective_status === 'Decline' || m.effective_status === 'Declined' || m.effective_status === 'Pending Verif Admin'"
-                        class="text-slate-400 text-[11px] italic font-medium">
-                        Menunggu Verif
-                      </span>
-                      <!-- Hanya Part Lepasan Perakitan (Kuning) yang ada tombol Daftar Ulang -->
-                      <button v-else-if="m.is_replaced_from_assy" @click="openReregisterModal(m)"
-                        class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-2.5 py-1.5 rounded-lg text-[10.5px] transition flex items-center justify-center gap-1 shadow-xs active:scale-95 cursor-pointer whitespace-nowrap"
-                        title="Daftarkan Ulang Part Lepasan Perakitan ini">
-                        <i class="fa-solid fa-rotate-left text-[10px]"></i>
-                        <span>Daftar Ulang</span>
                       </button>
                     </div>
                   </td>

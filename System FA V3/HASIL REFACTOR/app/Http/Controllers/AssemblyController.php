@@ -42,7 +42,7 @@ class AssemblyController extends Controller
 
         $setNumber = (int)$request->input('set_number');
 
-        $operator = auth()->user()?->username ?: $request->input('operator', 'assembly');
+        $operator = $this->resolveActor($request)['full_name'];
 
 
 
@@ -334,7 +334,7 @@ class AssemblyController extends Controller
 
 
 
-            $operator = $request->input('operator') ?: (auth()->user()?->username ?: $request->input('pic_assembly', 'assembly'));
+            $operator = $this->resolveActor($request)['full_name'];
 
 
 
@@ -502,20 +502,19 @@ class AssemblyController extends Controller
 
 
 
-            // Cek apakah seluruh 22 set telah selesai dirakit
-
+            // Cek apakah seluruh set pada baki telah selesai dirakit
             $totalFinished = Assembly::where('tray_id', $tray->id)
-
                 ->whereNotNull('finished_at')
-
                 ->whereNotNull('status')
-
                 ->count();
 
-            if ($totalFinished >= 22) {
+            $targetSets = (int)ceil($tray->parts()->count() / 3);
+            if ($targetSets <= 0) {
+                $targetSets = Assembly::where('tray_id', $tray->id)->max('set_number') ?: 22;
+            }
 
+            if ($totalFinished >= $targetSets) {
                 $tray->update(['session_status' => 'COMPLETED']);
-
             }
 
 
@@ -674,7 +673,7 @@ class AssemblyController extends Controller
 
                 'notes' => $request->input('notes'),
 
-                'test_checklist' => is_string($checklist) ? $checklist : json_encode($checklist),
+                'test_checklist' => is_string($checklist) ? (json_decode($checklist, true) ?: $checklist) : $checklist,
 
                 'tester_username' => $tester,
 
@@ -718,7 +717,7 @@ class AssemblyController extends Controller
 
             'set_number' => $request->input('set_number'),
 
-            'operator' => auth()->user()?->username ?: $request->input('operator', 'operator'),
+            'operator' => $this->resolveActor($request)['full_name'],
 
             'reason' => $request->reason,
 
@@ -750,7 +749,7 @@ class AssemblyController extends Controller
 
         $trayCode = $request->input('tray_code');
 
-        $operator = auth()->user()?->username ?: $request->input('operator');
+        $operator = $this->resolveActor($request)['full_name'];
 
 
 
@@ -888,10 +887,8 @@ class AssemblyController extends Controller
 
         $oldPartStatus = trim((string)$request->input('old_part_status', 'Hold'));
 
-        if (!in_array($oldPartStatus, ['Hold', 'Rework', 'Scrap'])) {
-
+        if (!in_array($oldPartStatus, ['Hold', 'Scrap'])) {
             $oldPartStatus = 'Hold';
-
         }
 
 
@@ -934,9 +931,9 @@ class AssemblyController extends Controller
 
 
 
-        $operator = auth()->user()?->username ?: $request->input('operator', 'operator');
-
-        $operatorRole = auth()->user()?->role ?: 'operator';
+        $actorData = $this->resolveActor($request);
+        $operator = $actorData['full_name'];
+        $operatorRole = $actorData['role'];
 
 
 
@@ -1322,29 +1319,26 @@ class AssemblyController extends Controller
 
             if (!$targetTray) {
 
-                $existingPUs = Tray::where('tray_code', 'LIKE', "{$baseTrayCode}-PU%")->get();
+                $allPUs = Tray::where(function ($w) {
+                    $w->where('tray_code', 'LIKE', '%-PU%')
+                      ->orWhere('tray_code', 'LIKE', '%/PU/%')
+                      ->orWhere('tray_code', 'LIKE', 'WH/ASSY-PU/%');
+                })->get(['tray_code']);
 
-                $nextPuNum = 1;
-
-                foreach ($existingPUs as $pu) {
-
-                    if (preg_match('/-PU(\d+)$/i', $pu->tray_code, $m)) {
-
-                        $n = (int)$m[1];
-
-                        if ($n >= $nextPuNum) {
-
-                            $nextPuNum = $n + 1;
-
-                        }
-
+                $maxPuNum = 0;
+                foreach ($allPUs as $pu) {
+                    if (preg_match('/(?:-PU|\/PU\/|WH\/ASSY-PU\/)(\d+)/i', $pu->tray_code, $m)) {
+                        $maxPuNum = max($maxPuNum, (int)$m[1]);
                     }
-
                 }
 
-                $puTrayCode = "{$baseTrayCode}-PU{$nextPuNum}";
+                $nextPuNum = $maxPuNum + 1;
+                $puTrayCode = 'WH/ASSY/PU/' . str_pad($nextPuNum, 6, '0', STR_PAD_LEFT);
 
-
+                while (Tray::where('tray_code', $puTrayCode)->orWhere('tray_code', 'WH/ASSY-PU/' . str_pad($nextPuNum, 6, '0', STR_PAD_LEFT))->exists()) {
+                    $nextPuNum++;
+                    $puTrayCode = 'WH/ASSY/PU/' . str_pad($nextPuNum, 6, '0', STR_PAD_LEFT);
+                }
 
                 $targetTray = Tray::create([
 
@@ -1431,8 +1425,8 @@ class AssemblyController extends Controller
                     'pic_assembly' => $assignedOp,
                     'rereg_pending_operator' => $assignedOp,
                 ];
+                $updateData['status'] = 'Dirakit Ulang';
                 if ($isGoodInAssy) {
-                    $updateData['status'] = 'Good';
                     $updateData['original_assembly_status'] = 'Good';
                     if (in_array($item->assy_test_status, ['Hold TF 1', 'Hold', 'Not Good', 'FAIL', 'RU'])) {
                         $updateData['assy_test_status'] = 'RU';
@@ -1440,8 +1434,6 @@ class AssemblyController extends Controller
                     if (in_array($item->qc_status, ['HOLD_QC', 'REWORK_QC', 'RU'])) {
                         $updateData['qc_status'] = 'RU';
                     }
-                } else {
-                    $updateData['status'] = 'Dirakit Ulang';
                 }
                 $item->update($updateData);
 
@@ -1824,6 +1816,15 @@ class AssemblyController extends Controller
 
             $r['product_type'] = $row->product_type;
 
+            $isPUTrayDoc = str_contains($row->tray_code, '-PU') || str_contains($row->tray_code, '/PU/');
+            if (!$isPUTrayDoc && (in_array($row->verified_status, ['APPROVED_REASSEMBLY', 'WAITING_REASSEMBLY']) || (!empty($row->is_reregistered) && $row->is_reregistered == 1) || $row->status === 'Dirakit Ulang')) {
+                $r['status'] = 'Dirakit Ulang';
+                $r['assembly_status'] = 'Dirakit Ulang';
+            } elseif ($isPUTrayDoc && $row->status !== 'Dirakit Ulang' && $row->status !== 'RU') {
+                $r['status'] = $row->status ?: 'Good';
+                $r['assembly_status'] = $row->status ?: 'Good';
+            }
+
             $uniqueRows[] = $r;
 
 
@@ -1872,28 +1873,18 @@ class AssemblyController extends Controller
 
             $traysDict[$tid]['sets_count']++;
 
-            $st = strtoupper(trim((string)($row->status ?? 'Good')));
+            $st = strtoupper(trim((string)($row->original_assembly_status ?: $row->status ?: 'Good')));
 
             if ($st === 'HOLD') {
-
                 $traysDict[$tid]['hold_count']++;
-
             } elseif ($st === 'REWORK') {
-
                 $traysDict[$tid]['rework_count']++;
-
             } elseif ($st === 'SCRAP') {
-
                 $traysDict[$tid]['scrap_count']++;
-
             } elseif ($st === 'DECLINED' || !empty($row->is_declined)) {
-
                 $traysDict[$tid]['declined_count']++;
-
             } else {
-
                 $traysDict[$tid]['good_count']++;
-
             }
 
         }
@@ -1988,7 +1979,7 @@ class AssemblyController extends Controller
 
             $tray->update([
 
-                'session_status' => 'COMPLETED_SHIFT',
+                'session_status' => 'RETURNED_TO_WAREHOUSE',
 
                 'status' => 'returned',
 
@@ -2076,35 +2067,25 @@ class AssemblyController extends Controller
 
 
 
-                // Buat nomor baki baru kelanjutan (-S2, -S3, dst)
-
-                if (preg_match('/-S(\d+)$/', $tray->tray_code, $m)) {
-
-                    $nextS = (int)$m[1] + 1;
-
-                    $newTrayCode = preg_replace('/-S\d+$/', "-S{$nextS}", $tray->tray_code);
-
-                } else {
-
-                    $newTrayCode = $tray->tray_code . '-S2';
-
+                // Buat nomor baki baru kelanjutan (-S2, -S3, dst secara berurutan)
+                $baseCode = preg_replace('/-S\d+$/i', '', $tray->tray_code);
+                $allRelatedTrays = Tray::where('tray_code', 'LIKE', "{$baseCode}-S%")->get(['tray_code']);
+                $maxS = 1;
+                foreach ($allRelatedTrays as $rt) {
+                    if (preg_match('/-S(\d+)$/i', $rt->tray_code, $sm)) {
+                        $maxS = max($maxS, (int)$sm[1]);
+                    }
+                }
+                if (preg_match('/-S(\d+)$/i', $tray->tray_code, $currSm)) {
+                    $maxS = max($maxS, (int)$currSm[1]);
                 }
 
-
-
-                $candidateCode = $newTrayCode;
-
-                $counter = 2;
-
-                while (Tray::where('tray_code', $candidateCode)->exists()) {
-
-                    $counter++;
-
-                    $candidateCode = preg_replace('/-S\d+$/', '', $tray->tray_code) . "-S{$counter}";
-
+                $nextS = $maxS + 1;
+                $newTrayCode = "{$baseCode}-S{$nextS}";
+                while (Tray::where('tray_code', $newTrayCode)->exists()) {
+                    $nextS++;
+                    $newTrayCode = "{$baseCode}-S{$nextS}";
                 }
-
-                $newTrayCode = $candidateCode;
 
 
 
@@ -2510,7 +2491,7 @@ class AssemblyController extends Controller
 
         $notes = $request->input('notes') ?: 'Verifikasi in-aktual barang OK, langsung dilanjutkan Good';
 
-        $actor = auth()->user()?->username ?: 'operator';
+        $actor = $this->resolveActor($request)['full_name'];
 
 
 
@@ -2830,7 +2811,7 @@ class AssemblyController extends Controller
 
         $notes = trim((string)$request->input('notes', ''));
 
-        $actor = auth()->user()?->username ?: 'operator';
+        $actor = $this->resolveActor($request)['full_name'];
 
 
 

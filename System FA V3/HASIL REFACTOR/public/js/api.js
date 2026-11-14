@@ -61,6 +61,13 @@
         options.headers['Authorization'] = 'Bearer ' + token;
       }
 
+      var actUser = localStorage.getItem('username') || '';
+      var actFull = localStorage.getItem('full_name') || '';
+      var actRole = localStorage.getItem('role') || '';
+      if (actUser) options.headers['X-Actor-Username'] = actUser;
+      if (actFull) options.headers['X-Actor-Fullname'] = encodeURIComponent(actFull);
+      if (actRole) options.headers['X-Actor-Role'] = actRole;
+
       var method = (options.method || 'GET').toUpperCase();
       var cleanPath = String(path).startsWith('/') ? path : '/' + path;
       var url = '/api' + cleanPath;

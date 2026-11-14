@@ -365,7 +365,7 @@ class QcController extends Controller
 
                         'notes' => $request->input('notes'),
 
-                        'test_checklist' => $checklistJson,
+                        'test_checklist' => is_string($checklistJson) ? (json_decode($checklistJson, true) ?: $checklistJson) : $checklistJson,
 
                         'tester_username' => $inspector,
 
@@ -679,7 +679,7 @@ class QcController extends Controller
                 str_contains($decision, '_QC') ||
                 str_contains($assembly->notes ?? '', 'Penerimaan');
 
-            $actor = auth()->user()?->username ?: 'Administrator NKRI';
+            $actor = $this->resolveActor($request)['full_name'];
 
             if ($isQC) {
                 $qcDocNumber = $assembly->qc_doc_number;
@@ -717,6 +717,10 @@ class QcController extends Controller
                 $assembly->update([
                     'status' => 'Good',
                     'assy_test_status' => 'PENDING',
+                    'assy_test_checklist' => null,
+                    'assy_tested_at' => null,
+                    'assy_doc_number' => null,
+                    'assy_failure_reasons' => null,
                     'verified_status' => 'APPROVED_PROCEED_TF1',
                     'notes' => $notes ?: 'Disetujui oleh Administrator untuk lanjut ke Test Functional 1 (TF 1)',
                 ]);
@@ -737,8 +741,12 @@ class QcController extends Controller
                 $assembly->update([
                     'assy_test_status' => 'Good',
                     'status' => 'Good',
-                    'verified_status' => 'APPROVED_PROCEED_TF2',
                     'qc_status' => 'PENDING_QC',
+                    'qc_test_checklist' => null,
+                    'qc_tested_at' => null,
+                    'qc_doc_number' => null,
+                    'qc_failure_reasons' => null,
+                    'verified_status' => 'APPROVED_PROCEED_TF2',
                     'notes' => $notes ?: 'Disetujui oleh Administrator untuk lanjut ke TF 2',
                 ]);
 

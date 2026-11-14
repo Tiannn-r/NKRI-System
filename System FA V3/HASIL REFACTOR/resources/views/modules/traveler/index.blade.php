@@ -14,7 +14,7 @@
             <div class="flex flex-wrap items-center gap-2 sm:gap-3">
               <!-- Document Type Dropdown (Jenis Form Dokumen) -->
               <div
-                class="flex items-center bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1 min-h-[38px] shadow-sm focus-within:border-red-600 focus-within:bg-white transition">
+                class="flex items-center bg-white border border-slate-300 rounded-xl px-2.5 py-1 min-h-[38px] shadow-sm focus-within:border-red-600 transition">
                 <span class="text-xs font-bold text-slate-600 mr-1.5 flex items-center gap-1 whitespace-nowrap">
                   <i class="fa-solid fa-file-lines text-red-600"></i> Form:
                 </span>
@@ -34,7 +34,7 @@
 
               <!-- Quick Edit Source Document MO (Locked Prefix WH/MO/) -->
               <div
-                class="flex items-center bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1 min-h-[38px] shadow-sm">
+                class="flex items-center bg-white border border-slate-300 rounded-xl px-2.5 py-1 min-h-[38px] shadow-sm">
                 <span class="text-xs font-bold text-slate-600 mr-1.5 flex items-center gap-1"><i
                     class="fa-solid fa-file-invoice text-slate-400"></i> MO:</span>
                 <div
@@ -46,7 +46,7 @@
                     class="bg-transparent text-xs font-mono font-bold text-slate-800 outline-none w-20 px-1.5 py-1 placeholder:font-normal placeholder:italic">
                 </div>
                 <button @click="updateTravelerMO"
-                  class="ml-1.5 text-[10px] px-2.5 py-1.5 bg-slate-200 hover:bg-red-600 hover:text-white rounded-lg font-bold transition flex items-center gap-1"
+                  class="ml-1.5 text-[10px] px-2.5 py-1.5 bg-slate-100 hover:bg-red-600 hover:text-white rounded-lg font-bold transition flex items-center gap-1"
                   title="Simpan perubahan MO">
                   <i class="fa-solid fa-check text-[9px]"></i> Simpan
                 </button>
@@ -75,7 +75,7 @@
                 <i class="fa-solid fa-calendar-day mr-1"></i> Tanggal mulai
               </label>
               <input type="date" v-model="printFilter.startDate"
-                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-red-600 min-h-[36px]">
+                class="w-full bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-red-600 min-h-[36px]">
             </div>
 
             <!-- Filter Tanggal Selesai -->
@@ -84,7 +84,7 @@
                 <i class="fa-solid fa-calendar-day mr-1"></i> Tanggal selesai
               </label>
               <input type="date" v-model="printFilter.endDate"
-                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-red-600 min-h-[36px]">
+                class="w-full bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-red-600 min-h-[36px]">
             </div>
 
             <!-- Filter Operator Assembly -->
@@ -93,7 +93,7 @@
                 <i class="fa-solid fa-user-gear mr-1"></i> Operator assembly
               </label>
               <select v-model="printFilter.operator"
-                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 text-xs text-slate-900 font-bold focus:outline-none focus:border-red-600 min-h-[36px] cursor-pointer">
+                class="w-full bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs text-slate-900 font-bold focus:outline-none focus:border-red-600 min-h-[36px] cursor-pointer">
                 <option value="">Semua operator</option>
                 <option v-for="op in distinctPrintOperators" :key="op" :value="op">{{ getOperatorFullName(op) }}
                 </option>
@@ -106,7 +106,7 @@
                 <i class="fa-solid fa-filter mr-1"></i> Filter status set:
               </label>
               <select v-model="printStatusFilter"
-                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 text-xs text-slate-900 font-bold focus:outline-none focus:border-red-600 min-h-[36px] cursor-pointer">
+                class="w-full bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs text-slate-900 font-bold focus:outline-none focus:border-red-600 min-h-[36px] cursor-pointer">
                 <option value="ALL">Semua status</option>
                 <option value="GOOD">Hanya good saja</option>
               </select>
@@ -122,7 +122,7 @@
                   filteredPrintTrays.length }} tray)</span>
               </div>
               <select v-model="selectedTrayCode" @change="loadTravelerTray"
-                class="w-full bg-slate-50 border border-slate-300 text-slate-900 font-black text-xs px-3 py-1.5 rounded-xl min-h-[36px] focus:outline-none focus:border-red-600">
+                class="w-full bg-white border border-slate-300 text-slate-900 font-black text-xs px-3 py-1.5 rounded-xl min-h-[36px] focus:outline-none focus:border-red-600">
                 <option v-for="t in filteredPrintTrays" :key="t.tray_code" :value="t.tray_code">
                   {{ getFormattedDocCode(t.tray_code, activePrintDocType) }} - {{ t.assigned_operator ?
                   getOperatorFullName(t.assigned_operator) : 'Belum Ditugaskan' }} ({{ getPrintDocSetCount(t) }} Set)
@@ -145,9 +145,9 @@
               <!-- Empty state: jika dokumen supply belum ada / tray belum dipilih -->
               <div
                 v-if="!travelerTray || filteredPrintTrays.length === 0"
-                class="print-doc-wrapper flex flex-col justify-center items-center flex-grow h-full w-full py-20 px-8 text-center bg-slate-50/70 rounded-2xl border-2 border-dashed border-slate-300 my-auto min-h-[420px]">
+                class="print-doc-wrapper flex flex-col justify-center items-center flex-grow h-full w-full py-20 px-8 text-center bg-white rounded-2xl border-2 border-dashed border-slate-200 my-auto min-h-[420px]">
                 <div
-                  class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-4 shadow-inner">
+                  class="w-16 h-16 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-400 mb-4 shadow-xs">
                   <i class="fa-solid fa-file-circle-xmark text-3xl"></i>
                 </div>
                 <h3 class="text-base font-black text-slate-800 tracking-wide">Dokumen Supply Material Belum Tersedia</h3>
@@ -220,22 +220,22 @@
                         <col style="width: 29%;">
                       </colgroup>
                       <thead
-                        class="bg-slate-100 text-slate-900 border-b border-slate-800 font-bold text-[10px] tracking-wider">
+                        class="bg-white text-slate-900 border-b border-slate-800 font-bold text-[10px] tracking-wider">
                         <tr class="divide-x divide-slate-300 border-b border-slate-300">
-                          <th rowspan="2" class="p-1.5 text-center bg-slate-100">No</th>
-                          <th class="p-1.5 text-center bg-slate-100">Serial Number</th>
-                          <th colspan="2" class="p-1.5 text-center bg-slate-100">Production Number</th>
+                          <th rowspan="2" class="p-1.5 text-center bg-white">No</th>
+                          <th class="p-1.5 text-center bg-white">Serial Number</th>
+                          <th colspan="2" class="p-1.5 text-center bg-white">Production Number</th>
                         </tr>
                         <tr class="divide-x divide-slate-300">
-                          <th class="p-1.5 text-center bg-slate-100">P9 Part 15</th>
-                          <th class="p-1.5 text-center bg-slate-100">P9 Part 1</th>
-                          <th class="p-1.5 text-center bg-slate-100">P9 Part 12</th>
+                          <th class="p-1.5 text-center bg-white">P9 Part 15</th>
+                          <th class="p-1.5 text-center bg-white">P9 Part 1</th>
+                          <th class="p-1.5 text-center bg-white">P9 Part 12</th>
                         </tr>
                       </thead>
                       <tbody class="divide-y divide-slate-300 text-slate-900 font-mono text-[11px]">
                         <tr v-for="item in travelerItems" :key="item.set_number"
-                          class="divide-x divide-slate-200 hover:bg-slate-50">
-                          <td class="p-2 text-center font-bold font-sans text-slate-700 bg-slate-50/50">{{
+                          class="divide-x divide-slate-200 bg-white">
+                          <td class="p-2 text-center font-bold font-sans text-slate-700 bg-white">{{
                             item.set_number }}</td>
                           <td class="p-2 text-center font-bold text-slate-900 break-all">{{ item.part15_sn || '-' }}
                           </td>
@@ -243,8 +243,13 @@
                           <td class="p-2 text-center text-slate-800 break-all">{{ item.part12_sn || '-' }}</td>
                         </tr>
                         <tr v-if="travelerItems.length === 0">
-                          <td colspan="4" class="p-4 text-center text-slate-400 font-sans">Tidak ada data part dalam
-                            dokumen supply ini.</td>
+                          <td colspan="4" class="p-4 text-center font-sans" :class="isAllSetsReturnedWithoutFinish ? 'text-red-700 font-bold uppercase tracking-wider bg-red-50/30' : 'text-slate-400'">
+                            <span v-if="isAllSetsReturnedWithoutFinish" class="inline-flex items-center justify-center gap-2">
+                              <i class="fa-solid fa-boxes-packing text-red-600"></i>
+                              Seluruh set dikembalikan ke gudang
+                            </span>
+                            <span v-else>Tidak ada data part dalam dokumen supply ini.</span>
+                          </td>
                         </tr>
                       </tbody>
                     </table>
@@ -295,9 +300,9 @@
               <!-- Empty state: jika dokumen PU belum ada / belum ditunjuk ke operator & mulai dirakit ulang -->
               <div
                 v-if="activePrintDocType === 'assy_rework' && (!travelerTray || !isPUTray(travelerTray) || filteredPrintTrays.length === 0)"
-                class="print-doc-wrapper flex flex-col justify-center items-center flex-grow h-full w-full py-20 px-8 text-center bg-slate-50/70 rounded-2xl border-2 border-dashed border-slate-300 my-auto min-h-[420px]">
+                class="print-doc-wrapper flex flex-col justify-center items-center flex-grow h-full w-full py-20 px-8 text-center bg-white rounded-2xl border-2 border-dashed border-slate-200 my-auto min-h-[420px]">
                 <div
-                  class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-4 shadow-inner">
+                  class="w-16 h-16 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-400 mb-4 shadow-xs">
                   <i class="fa-solid fa-file-circle-xmark text-3xl"></i>
                 </div>
                 <h3 class="text-base font-black text-slate-800 tracking-wide">Dokumen Perakitan Ulang Belum Tersedia
@@ -309,9 +314,9 @@
               <!-- Empty state: jika dokumen perakitan normal belum ada / belum dipilih -->
               <div
                 v-else-if="activePrintDocType === 'assy' && (!travelerTray || filteredPrintTrays.length === 0)"
-                class="print-doc-wrapper flex flex-col justify-center items-center flex-grow h-full w-full py-20 px-8 text-center bg-slate-50/70 rounded-2xl border-2 border-dashed border-slate-300 my-auto min-h-[420px]">
+                class="print-doc-wrapper flex flex-col justify-center items-center flex-grow h-full w-full py-20 px-8 text-center bg-white rounded-2xl border-2 border-dashed border-slate-200 my-auto min-h-[420px]">
                 <div
-                  class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-4 shadow-inner">
+                  class="w-16 h-16 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-400 mb-4 shadow-xs">
                   <i class="fa-solid fa-file-circle-xmark text-3xl"></i>
                 </div>
                 <h3 class="text-base font-black text-slate-800 tracking-wide">Dokumen Hasil Perakitan Belum Tersedia</h3>
@@ -328,7 +333,7 @@
                       <img :src="nkriLogoBase64 || nkriLabelLogoBase64 || (window.NKRI_LOGO || 'nkri-logo.png')"
                         alt="NKRI Logo" class="h-9 sm:h-11 w-auto object-contain flex-shrink-0">
                       <h2 class="text-base sm:text-lg font-black tracking-wider text-slate-900 leading-none pt-0.5">
-                        {{ activePrintDocType === 'assy_rework' ? 'Perakitan Ulang (Rework Assembly)' : 'Final Assembly'
+                        {{ activePrintDocType === 'assy_rework' ? 'Perakitan Ulang' : 'Final Assembly'
                         }}
                       </h2>
                       <span class="text-[11px] sm:text-xs font-bold text-slate-600 tracking-wide">
@@ -391,25 +396,25 @@
                         <col style="width: 12.5%;">
                       </colgroup>
                       <thead
-                        class="bg-slate-100 text-slate-900 border-b border-slate-800 font-bold text-[10px] tracking-wider">
+                        class="bg-white text-slate-900 border-b border-slate-800 font-bold text-[10px] tracking-wider">
                         <tr class="divide-x divide-slate-300 border-b border-slate-300">
-                          <th rowspan="2" class="p-1.5 text-center bg-slate-100">No</th>
-                          <th class="p-1.5 text-center bg-slate-100">Serial Number</th>
-                          <th colspan="2" class="p-1.5 text-center bg-slate-100">Production Number</th>
-                          <th rowspan="2" class="p-1.5 text-center bg-slate-100">Mulai</th>
-                          <th rowspan="2" class="p-1.5 text-center bg-slate-100">Selesai</th>
-                          <th rowspan="2" class="p-1.5 text-center bg-slate-100">Status</th>
+                          <th rowspan="2" class="p-1.5 text-center bg-white">No</th>
+                          <th class="p-1.5 text-center bg-white">Serial Number</th>
+                          <th colspan="2" class="p-1.5 text-center bg-white">Production Number</th>
+                          <th rowspan="2" class="p-1.5 text-center bg-white">Mulai</th>
+                          <th rowspan="2" class="p-1.5 text-center bg-white">Selesai</th>
+                          <th rowspan="2" class="p-1.5 text-center bg-white">Status</th>
                         </tr>
                         <tr class="divide-x divide-slate-300">
-                          <th class="p-1.5 text-center bg-slate-100">P9 Part 15</th>
-                          <th class="p-1.5 text-center bg-slate-100">P9 Part 1</th>
-                          <th class="p-1.5 text-center bg-slate-100">P9 Part 12</th>
+                          <th class="p-1.5 text-center bg-white">P9 Part 15</th>
+                          <th class="p-1.5 text-center bg-white">P9 Part 1</th>
+                          <th class="p-1.5 text-center bg-white">P9 Part 12</th>
                         </tr>
                       </thead>
                       <tbody class="divide-y divide-slate-300 text-slate-900 font-mono text-[11px]">
                         <tr v-for="item in travelerItems" :key="item.set_number"
-                          class="divide-x divide-slate-200 hover:bg-slate-50">
-                          <td class="p-2 text-center font-bold font-sans text-slate-700 bg-slate-50/50">{{
+                          class="divide-x divide-slate-200 bg-white">
+                          <td class="p-2 text-center font-bold font-sans text-slate-700 bg-white">{{
                             item.set_number }}</td>
                           <td class="p-2 text-center break-all">
                             <span :class="getDefectiveTableCellClass(item, '15')">{{ item.part15_sn || '-' }}</span>
@@ -434,8 +439,13 @@
                           </td>
                         </tr>
                         <tr v-if="travelerItems.length === 0">
-                          <td colspan="7" class="p-4 text-center text-slate-400 font-sans">Tidak ada data part dalam
-                            dokumen perakitan ini.</td>
+                          <td colspan="7" class="p-4 text-center font-sans" :class="isAllSetsReturnedWithoutFinish ? 'text-red-700 font-bold uppercase tracking-wider bg-red-50/30' : 'text-slate-400'">
+                            <span v-if="isAllSetsReturnedWithoutFinish" class="inline-flex items-center justify-center gap-2">
+                              <i class="fa-solid fa-boxes-packing text-red-600"></i>
+                              Seluruh set dikembalikan ke gudang
+                            </span>
+                            <span v-else>Tidak ada data part dalam dokumen perakitan ini.</span>
+                          </td>
                         </tr>
                       </tbody>
                     </table>
@@ -485,9 +495,9 @@
               <!-- Empty state: jika dokumen hasil uji fungsional belum ada / belum diuji TF 1 -->
               <div
                 v-if="!travelerTray || filteredPrintTrays.length === 0 || assyQCQualifiedItems.length === 0"
-                class="print-doc-wrapper flex flex-col justify-center items-center flex-grow h-full w-full py-20 px-8 text-center bg-slate-50/70 rounded-2xl border-2 border-dashed border-slate-300 my-auto min-h-[420px]">
+                class="print-doc-wrapper flex flex-col justify-center items-center flex-grow h-full w-full py-20 px-8 text-center bg-white rounded-2xl border-2 border-dashed border-slate-200 my-auto min-h-[420px]">
                 <div
-                  class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-4 shadow-inner">
+                  class="w-16 h-16 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-400 mb-4 shadow-xs">
                   <i class="fa-solid fa-file-circle-xmark text-3xl"></i>
                 </div>
                 <h3 class="text-base font-black text-slate-800 tracking-wide">Laporan Hasil Uji Fungsional Belum Tersedia</h3>
@@ -570,25 +580,25 @@
                         <col style="width: 28%;">
                       </colgroup>
                       <thead
-                        class="bg-slate-100 text-slate-900 border-b border-slate-800 font-bold text-[9.5px] tracking-wider">
+                        class="bg-white text-slate-900 border-b border-slate-800 font-bold text-[9.5px] tracking-wider">
                         <tr class="divide-x divide-slate-300 border-b border-slate-300">
-                          <th rowspan="2" class="p-1.5 text-center bg-slate-100">Set</th>
-                          <th rowspan="2" class="p-1.5 text-center bg-slate-100">Tanggal</th>
-                          <th class="p-1.5 text-center bg-slate-100">Serial Number</th>
-                          <th colspan="2" class="p-1.5 text-center bg-slate-100">Production Number</th>
-                          <th rowspan="2" class="p-1.5 text-center bg-slate-100">Status Uji</th>
-                          <th rowspan="2" class="p-1.5 text-center bg-slate-100">Tahap Uji (1 - 15)</th>
+                          <th rowspan="2" class="p-1.5 text-center bg-white">Set</th>
+                          <th rowspan="2" class="p-1.5 text-center bg-white">Tanggal</th>
+                          <th class="p-1.5 text-center bg-white">Serial Number</th>
+                          <th colspan="2" class="p-1.5 text-center bg-white">Production Number</th>
+                          <th rowspan="2" class="p-1.5 text-center bg-white">Status Uji</th>
+                          <th rowspan="2" class="p-1.5 text-center bg-white">Tahap Uji (1 - 15)</th>
                         </tr>
                         <tr class="divide-x divide-slate-300">
-                          <th class="p-1.5 text-center bg-slate-100">P9 Part 15</th>
-                          <th class="p-1.5 text-center bg-slate-100">P9 Part 1</th>
-                          <th class="p-1.5 text-center bg-slate-100">P9 Part 12</th>
+                          <th class="p-1.5 text-center bg-white">P9 Part 15</th>
+                          <th class="p-1.5 text-center bg-white">P9 Part 1</th>
+                          <th class="p-1.5 text-center bg-white">P9 Part 12</th>
                         </tr>
                       </thead>
                       <tbody class="divide-y divide-slate-300 text-slate-900 font-mono text-[10px]">
                         <tr v-for="item in assyQCQualifiedItems" :key="item.set_number"
-                          class="divide-x divide-slate-200 hover:bg-slate-50">
-                          <td class="p-1 text-center font-bold font-sans text-slate-700 bg-slate-50/50">#{{
+                          class="divide-x divide-slate-200 bg-white">
+                          <td class="p-1 text-center font-bold font-sans text-slate-700 bg-white">#{{
                             item.set_number }}</td>
                           <td class="p-1 text-center font-sans text-slate-700 text-[9px] leading-tight">{{
                             formatDateOnly(item.assy_tested_at || item.finished_at || (travelerTray ?
@@ -613,7 +623,7 @@
                                 <tr v-for="(row, rIdx) in [[1,2,3,4,5], [6,7,8,9,10], [11,12,13,14,15]]" :key="rIdx"
                                   class="divide-x divide-slate-300 border-b border-slate-300 last:border-b-0">
                                   <td v-for="n in row" :key="n" class="p-0.5 text-center whitespace-nowrap"
-                                    :class="getTestItemParamStatus(item, n) === 'GOOD' ? 'bg-emerald-50/30' : (getTestItemParamStatus(item, n) === 'NOT_GOOD' ? 'bg-red-50/50' : 'bg-slate-50/30')"
+                                    :class="getTestItemParamStatus(item, n) === 'GOOD' ? 'bg-emerald-50/30' : (getTestItemParamStatus(item, n) === 'NOT_GOOD' ? 'bg-red-50/50' : 'bg-white')"
                                     style="width: 20%;">
                                     <span class="font-bold text-slate-700 text-[6.5px]">T{{ n }}:</span>
                                     <span v-if="getTestItemParamStatus(item, n) === 'GOOD'"
@@ -629,7 +639,12 @@
                         </tr>
                         <tr v-if="assyQCQualifiedItems.length === 0">
                           <td colspan="7" class="p-6 text-center text-slate-500 font-sans">
-                            <div class="flex flex-col items-center justify-center space-y-1">
+                            <div v-if="isAllSetsReturnedWithoutFinish" class="flex flex-col items-center justify-center space-y-1">
+                              <i class="fa-solid fa-boxes-packing text-red-600 text-lg"></i>
+                              <span class="font-bold text-xs text-red-700 uppercase tracking-wide">Seluruh set dikembalikan ke gudang</span>
+                              <span class="text-[11px] text-slate-400">Tray ini telah dikembalikan seluruhnya ke gudang dan belum menyelesaikan perakitan set.</span>
+                            </div>
+                            <div v-else class="flex flex-col items-center justify-center space-y-1">
                               <i class="fa-solid fa-flask-vial text-slate-400 text-lg"></i>
                               <span class="font-bold text-xs">Laporan Hasil Uji Fungsional Belum Tersedia</span>
                               <span class="text-[11px] text-slate-400">Rakitan pada tray ini belum melalui pengujian
@@ -687,9 +702,9 @@
               <!-- Empty state: jika dokumen mutu QC belum ada / belum lulus uji QC -->
               <div
                 v-if="!travelerTray || filteredPrintTrays.length === 0 || whQCQualifiedItems.length === 0 || !isCurrentTravelerQCDone"
-                class="print-doc-wrapper flex flex-col justify-center items-center flex-grow h-full w-full py-20 px-8 text-center bg-slate-50/70 rounded-2xl border-2 border-dashed border-slate-300 my-auto min-h-[420px]">
+                class="print-doc-wrapper flex flex-col justify-center items-center flex-grow h-full w-full py-20 px-8 text-center bg-white rounded-2xl border-2 border-dashed border-slate-200 my-auto min-h-[420px]">
                 <div
-                  class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-4 shadow-inner">
+                  class="w-16 h-16 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-400 mb-4 shadow-xs">
                   <i class="fa-solid fa-file-circle-xmark text-3xl"></i>
                 </div>
                 <h3 class="text-base font-black text-slate-800 tracking-wide">Laporan Dokumen Mutu (WH/QC) Belum Tersedia</h3>
@@ -765,24 +780,24 @@
                         <col style="width: 34%;">
                       </colgroup>
                       <thead
-                        class="bg-slate-100 text-slate-900 border-b border-slate-800 font-bold text-[10px] tracking-wider">
+                        class="bg-white text-slate-900 border-b border-slate-800 font-bold text-[10px] tracking-wider">
                         <tr class="divide-x divide-slate-300 border-b border-slate-300">
-                          <th rowspan="2" class="p-1.5 text-center bg-slate-100">Set</th>
-                          <th class="p-1.5 text-center bg-slate-100">Serial Number</th>
-                          <th colspan="2" class="p-1.5 text-center bg-slate-100">Production Number</th>
-                          <th rowspan="2" class="p-1.5 text-center bg-slate-100">Status Testing Assy</th>
-                          <th rowspan="2" class="p-1.5 text-center bg-slate-100">Hasil Test Functional 2 (QC)</th>
+                          <th rowspan="2" class="p-1.5 text-center bg-white">Set</th>
+                          <th class="p-1.5 text-center bg-white">Serial Number</th>
+                          <th colspan="2" class="p-1.5 text-center bg-white">Production Number</th>
+                          <th rowspan="2" class="p-1.5 text-center bg-white">Status Testing Assy</th>
+                          <th rowspan="2" class="p-1.5 text-center bg-white">Hasil Test Functional 2 (QC)</th>
                         </tr>
                         <tr class="divide-x divide-slate-300">
-                          <th class="p-1.5 text-center bg-slate-100">P9 Part 15</th>
-                          <th class="p-1.5 text-center bg-slate-100">P9 Part 1</th>
-                          <th class="p-1.5 text-center bg-slate-100">P9 Part 12</th>
+                          <th class="p-1.5 text-center bg-white">P9 Part 15</th>
+                          <th class="p-1.5 text-center bg-white">P9 Part 1</th>
+                          <th class="p-1.5 text-center bg-white">P9 Part 12</th>
                         </tr>
                       </thead>
                       <tbody class="divide-y divide-slate-300 text-slate-900 font-mono text-[11px]">
                         <tr v-for="item in whQCQualifiedItems" :key="item.set_number"
-                          class="divide-x divide-slate-200 hover:bg-slate-50">
-                          <td class="p-1.5 text-center font-bold font-sans text-slate-700 bg-slate-50/50">#{{
+                          class="divide-x divide-slate-200 bg-white">
+                          <td class="p-1.5 text-center font-bold font-sans text-slate-700 bg-white">#{{
                             item.set_number }}</td>
                           <td class="p-1.5 text-center font-black text-slate-900 break-all text-[10px]">{{
                             item.part15_sn || '-' }}
@@ -807,7 +822,12 @@
                         </tr>
                         <tr v-if="whQCQualifiedItems.length === 0">
                           <td colspan="6" class="p-6 text-center text-slate-500 font-sans">
-                            <div class="flex flex-col items-center justify-center space-y-1">
+                            <div v-if="isAllSetsReturnedWithoutFinish" class="flex flex-col items-center justify-center space-y-1">
+                              <i class="fa-solid fa-boxes-packing text-red-600 text-lg"></i>
+                              <span class="font-bold text-xs text-red-700 uppercase tracking-wide">Seluruh set dikembalikan ke gudang</span>
+                              <span class="text-[11px] text-slate-400">Tray ini telah dikembalikan seluruhnya ke gudang dan belum menyelesaikan perakitan set.</span>
+                            </div>
+                            <div v-else class="flex flex-col items-center justify-center space-y-1">
                               <i class="fa-solid fa-clock-rotate-left text-amber-500 text-lg"></i>
                               <span class="font-bold text-xs text-slate-700">Laporan Dokumen Mutu (WH/QC) Belum
                                 Tersedia</span>
@@ -849,9 +869,9 @@
               <!-- Empty state: jika dokumen penerimaan gudang belum ada / belum diverifikasi gudang -->
               <div
                 v-if="!travelerTray || filteredPrintTrays.length === 0 || whGRQualifiedItems.length === 0 || !isCurrentTravelerWHQCVerified"
-                class="print-doc-wrapper flex flex-col justify-center items-center flex-grow h-full w-full py-20 px-8 text-center bg-slate-50/70 rounded-2xl border-2 border-dashed border-slate-300 my-auto min-h-[420px]">
+                class="print-doc-wrapper flex flex-col justify-center items-center flex-grow h-full w-full py-20 px-8 text-center bg-white rounded-2xl border-2 border-dashed border-slate-200 my-auto min-h-[420px]">
                 <div
-                  class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-4 shadow-inner">
+                  class="w-16 h-16 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-400 mb-4 shadow-xs">
                   <i class="fa-solid fa-file-circle-xmark text-3xl"></i>
                 </div>
                 <h3 class="text-base font-black text-slate-800 tracking-wide">Laporan Penerimaan Gudang (WH/GR) Belum Tersedia</h3>
@@ -931,24 +951,24 @@
                         <col style="width: 34%;">
                       </colgroup>
                       <thead
-                        class="bg-slate-100 text-slate-900 border-b border-slate-800 font-bold text-[10px] tracking-wider uppercase select-none">
+                        class="bg-white text-slate-900 border-b border-slate-800 font-bold text-[10px] tracking-wider uppercase select-none">
                         <tr class="divide-x divide-slate-300 border-b border-slate-300">
-                          <th rowspan="2" class="p-1.5 text-center bg-slate-100">Set</th>
-                          <th class="p-1.5 text-center bg-slate-100">Serial Number</th>
-                          <th colspan="2" class="p-1.5 text-center bg-slate-100">Production Number</th>
-                          <th rowspan="2" class="p-1.5 text-center bg-slate-100">Hasil Test QC (TF 2)</th>
-                          <th rowspan="2" class="p-1.5 text-center bg-slate-100">Verifikasi Fisik Gudang</th>
+                          <th rowspan="2" class="p-1.5 text-center bg-white">Set</th>
+                          <th class="p-1.5 text-center bg-white">Serial Number</th>
+                          <th colspan="2" class="p-1.5 text-center bg-white">Production Number</th>
+                          <th rowspan="2" class="p-1.5 text-center bg-white">Hasil Test QC (TF 2)</th>
+                          <th rowspan="2" class="p-1.5 text-center bg-white">Verifikasi Fisik Gudang</th>
                         </tr>
                         <tr class="divide-x divide-slate-300">
-                          <th class="p-1.5 text-center bg-slate-100">P9 Part 15</th>
-                          <th class="p-1.5 text-center bg-slate-100">P9 Part 1</th>
-                          <th class="p-1.5 text-center bg-slate-100">P9 Part 12</th>
+                          <th class="p-1.5 text-center bg-white">P9 Part 15</th>
+                          <th class="p-1.5 text-center bg-white">P9 Part 1</th>
+                          <th class="p-1.5 text-center bg-white">P9 Part 12</th>
                         </tr>
                       </thead>
                       <tbody class="divide-y divide-slate-300 text-slate-900 font-mono text-[11px]">
                         <tr v-for="item in whGRQualifiedItems" :key="item.set_number"
-                          class="divide-x divide-slate-200 hover:bg-slate-50">
-                          <td class="p-1.5 text-center font-bold font-sans text-slate-700 bg-slate-50/50">#{{
+                          class="divide-x divide-slate-200 bg-white">
+                          <td class="p-1.5 text-center font-bold font-sans text-slate-700 bg-white">#{{
                             item.set_number }}</td>
                           <td class="p-1.5 text-center font-black text-slate-900 break-all text-[10px]">{{
                             item.part15_sn || '-' }}</td>
@@ -980,7 +1000,12 @@
                         </tr>
                         <tr v-if="whGRQualifiedItems.length === 0">
                           <td colspan="6" class="p-6 text-center text-slate-500 font-sans">
-                            <div class="flex flex-col items-center justify-center space-y-1">
+                            <div v-if="isAllSetsReturnedWithoutFinish" class="flex flex-col items-center justify-center space-y-1">
+                              <i class="fa-solid fa-boxes-packing text-red-600 text-lg"></i>
+                              <span class="font-bold text-xs text-red-700 uppercase tracking-wide">Seluruh set dikembalikan ke gudang</span>
+                              <span class="text-[11px] text-slate-400">Tray ini telah dikembalikan seluruhnya ke gudang sebelum proses penerimaan produk jadi.</span>
+                            </div>
+                            <div v-else class="flex flex-col items-center justify-center space-y-1">
                               <i class="fa-solid fa-clock-rotate-left text-amber-500 text-lg"></i>
                               <span class="font-bold text-xs text-slate-700">Laporan Penerimaan Gudang (WH/GR) Belum
                                 Tersedia</span>

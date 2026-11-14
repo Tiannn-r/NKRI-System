@@ -232,31 +232,12 @@
                       class="bg-amber-100 text-amber-900 border border-amber-300 font-black text-[9px] uppercase px-2 py-0.5 rounded-lg inline-flex items-center gap-1 whitespace-nowrap shadow-xs">
                       <i class="fa-solid fa-hand text-amber-600 text-[8.5px]"></i> HOLD TF 1
                     </span>
-                    <!-- 2. Rework Test -->
-                    <span v-else-if="slot.qc_status === 'REWORK_ASSY' || slot.assy_test_status === 'Rework'"
-                      class="bg-purple-100 text-purple-900 border border-purple-300 font-black text-[9px] uppercase px-2 py-0.5 rounded-lg inline-flex items-center gap-1 whitespace-nowrap shadow-xs">
-                      <i class="fa-solid fa-rotate-left text-purple-600 text-[8.5px]"></i> Rework Test
-                    </span>
-                    <!-- 3. Pasca Rework disetujui Good (Rework -> Good) -->
+                    <!-- Pasca Hold disetujui Good (Hold -> Good) -->
                     <template
-                      v-else-if="(slot.assy_doc_number || slot.assy_test_status === 'Good') && (slot.lifecycle_path === 'HOLD_REWORK_APPROVED' || slot.lifecycle_path === 'HOLD_QC_REWORK_APPROVED' || slot.verified_status === 'REWORK_GUDANG' || slot.verified_status === 'REWORK_QC_GUDANG')">
-                      <span
-                        class="bg-purple-100 text-purple-900 border border-purple-300 font-black text-[9px] uppercase px-1.5 py-0.5 rounded-lg inline-flex items-center gap-1 whitespace-nowrap shadow-xs"
-                        title="Riwayat: Rework">
-                        <i class="fa-solid fa-rotate-left text-purple-600 text-[8.5px]"></i> Rework
-                      </span>
-                      <span
-                        class="bg-emerald-100 text-emerald-900 border border-emerald-300 font-black text-[9px] uppercase px-1.5 py-0.5 rounded-lg inline-flex items-center gap-1 whitespace-nowrap shadow-xs"
-                        title="Status Saat Ini: Good">
-                        <i class="fa-solid fa-circle-check text-emerald-600 text-[8.5px]"></i> Good
-                      </span>
-                    </template>
-                    <!-- 4. Pasca Hold disetujui Good (Hold -> Good) -->
-                    <template
-                      v-else-if="(slot.assy_doc_number || slot.assy_test_status === 'Good') && (slot.lifecycle_path === 'HOLD_APPROVED' || slot.lifecycle_path === 'HOLD_QC_APPROVED' || slot.verified_status === 'APPROVED' || slot.verified_status === 'APPROVED_QC')">
+                      v-else-if="(slot.assy_doc_number || slot.assy_test_status === 'Good') && (slot.lifecycle_path === 'HOLD_APPROVED' || slot.lifecycle_path === 'HOLD_QC_APPROVED' || slot.lifecycle_path === 'HOLD_REWORK_APPROVED' || slot.lifecycle_path === 'HOLD_QC_REWORK_APPROVED' || slot.verified_status === 'APPROVED' || slot.verified_status === 'APPROVED_QC' || slot.verified_status === 'HOLD_GUDANG' || slot.verified_status === 'HOLD_QC_GUDANG' || slot.verified_status === 'REWORK_GUDANG' || slot.verified_status === 'REWORK_QC_GUDANG')">
                       <span
                         class="bg-amber-100 text-amber-900 border border-amber-300 font-black text-[9px] uppercase px-1.5 py-0.5 rounded-lg inline-flex items-center gap-1 whitespace-nowrap shadow-xs"
-                        title="Riwayat: Hold">
+                        title="Riwayat: Pernah Hold">
                         <i class="fa-solid fa-hand text-amber-600 text-[8.5px]"></i> Hold
                       </span>
                       <span
@@ -347,10 +328,7 @@
                     class="p-1.5 bg-emerald-50/80 border border-emerald-200 rounded-lg text-[10px] text-emerald-900 leading-tight flex items-center justify-between">
                     <span class="font-bold text-[9.5px] text-emerald-800 flex items-center gap-1">
                       <i class="fa-solid fa-check-double text-emerald-600"></i>
-                      <span
-                        v-if="slot.lifecycle_path === 'HOLD_REWORK_APPROVED' || slot.verified_status === 'REWORK_GUDANG'">Disetujui
-                        Good (Pasca Rework)</span>
-                      <span v-else>Disetujui Good (Pasca Hold)</span>
+                      <span>Disetujui Good (Pasca Hold)</span>
                     </span>
                     <span
                       class="text-[9px] font-mono text-emerald-700 font-black bg-white px-1.5 py-0.5 rounded border border-emerald-300">ACC</span>
@@ -383,7 +361,7 @@
                 <!-- 2. JIKA SUDAH DIUJI -> TERKUNCI DARI PENGUJIAN ULANG + TOMBOL DETAIL -->
                 <div v-else class="mt-auto space-y-1.5">
                   <div class="flex items-center gap-1.5">
-                    <button type="button" @click="openDetailModal(slot, idx)"
+                    <button type="button" @click="openDetailModal(slot, idx, 'assy_test')"
                       class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 rounded-xl text-[11px] border border-slate-300 transition flex items-center justify-center space-x-1 min-h-[34px] cursor-pointer">
                       <i class="fa-solid fa-eye text-slate-500"></i>
                       <span>Detail</span>
@@ -401,8 +379,8 @@
                       <span>{{ slot.qc_status === 'GOOD' ? 'Lolos QC' : 'Lolos Uji (QC)' }}</span>
                     </span>
                     <span v-else-if="slot.qc_status === 'REWORK_ASSY' || slot.assy_test_status === 'Rework'"
-                      class="flex-1 text-[10px] text-purple-800 bg-purple-50 border border-purple-200 rounded-xl flex items-center justify-center font-bold px-1 text-center shadow-2xs whitespace-nowrap select-none min-h-[34px]">
-                      <i class="fa-solid fa-rotate-left text-purple-600 mr-1 text-[9px]"></i> Rework Test
+                      class="flex-1 text-[10px] text-amber-800 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-center font-bold px-1 text-center shadow-2xs whitespace-nowrap select-none min-h-[34px]">
+                      <i class="fa-solid fa-hand text-amber-600 mr-1 text-[9px]"></i> HOLD TF 1
                     </span>
                     <span v-else-if="isSlotTF1Hold(slot)"
                       class="flex-1 text-[10px] text-amber-800 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-center font-bold px-1 text-center shadow-2xs whitespace-nowrap select-none min-h-[34px]">
@@ -876,7 +854,7 @@
 
         <!-- ================= MODAL VALIDASI SIMPAN PROGRES UJI ASSEMBLY ================= -->
         <div v-if="showAssySaveProgressModal"
-          class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100005] flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fadeIn">
+          class="modal-backdrop-full !m-0 !top-0 !left-0 !right-0 !bottom-0 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fadeIn">
           <div class="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 my-auto">
             <div
               class="w-12 h-12 mx-auto rounded-2xl bg-indigo-50 border border-indigo-200 text-indigo-600 flex items-center justify-center text-xl shadow-xs">
@@ -913,7 +891,7 @@
 
         <!-- ================= MODAL KONFIRMASI NOT GOOD PERTAMA KALI ================= -->
         <div v-if="showFirstNGPromptModal"
-          class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100005] flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fadeIn">
+          class="modal-backdrop-full !m-0 !top-0 !left-0 !right-0 !bottom-0 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fadeIn">
           <div class="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 my-auto">
             <div
               class="w-12 h-12 mx-auto rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center text-xl shadow-xs">
@@ -946,7 +924,7 @@
 
         <!-- ================= MODAL KONFIRMASI AKHIRI SESI TESTING ================= -->
         <div v-if="showSecondNGPromptModal"
-          class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100005] flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fadeIn">
+          class="modal-backdrop-full !m-0 !top-0 !left-0 !right-0 !bottom-0 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fadeIn">
           <div class="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 my-auto">
             <div
               class="w-12 h-12 mx-auto rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center text-xl shadow-xs">
@@ -980,8 +958,8 @@
       </section>
 
       <!-- ================= MODAL FORM ASSEMBLY ITEM (NO-PRINT) ================= -->
-      <div v-if="activeModalIndex !== null" @click.self="safeCloseModal(closeModal, !!assyForm.started_at)"
-        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div v-if="activeModalIndex !== null" @click.self="safeCloseModal(closeModal, !!assyForm?.started_at)"
+        class="modal-backdrop-full !m-0 !top-0 !left-0 !right-0 !bottom-0 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
         <div
           class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-lg w-full p-4 sm:p-6 shadow-2xl space-y-4 my-auto max-h-[92vh] overflow-y-auto">
 
@@ -997,7 +975,7 @@
                 <p class="text-[11px] sm:text-xs text-slate-500 font-mono">Tray: {{ currentTray?.tray_code }}</p>
               </div>
             </div>
-            <button @click="safeCloseModal(closeModal, !!assyForm.started_at)"
+            <button @click="safeCloseModal(closeModal, !!assyForm?.started_at)"
               class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg transition cursor-pointer"
               title="Tutup Modal">
               <i class="fa-solid fa-xmark text-lg"></i>
@@ -1024,7 +1002,7 @@
           <div class="space-y-3.5 sm:space-y-4">
             <!-- 1. JAM SECTION -->
             <!-- State A: Jam LOCKED (Abu-abu) Saat Belum Klik Mulai -->
-            <div v-if="!assyForm.started_at"
+            <div v-if="!assyForm?.started_at"
               class="bg-slate-100 border border-slate-300 rounded-xl sm:rounded-2xl p-3.5 space-y-2">
               <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-2">
@@ -1064,7 +1042,7 @@
                   <div>
                     <span class="block text-xs font-black uppercase text-emerald-950">Timer Pengerjaan Aktif (ON)</span>
                     <span class="text-[10px] text-emerald-700 font-semibold">Mulai: <strong>{{
-                        formatTimeOnly(assyForm.started_at) }} WIB</strong></span>
+                        formatTimeOnly(assyForm?.started_at) }} WIB</strong></span>
                   </div>
                 </div>
                 <span
@@ -1090,13 +1068,13 @@
             <div>
               <label class="block text-xs font-bold uppercase text-slate-700 mb-1 flex items-center justify-between">
                 <span>1. P9 Part 15 (Identitas P9) <span class="text-red-600">*</span></span>
-                <span v-if="assyForm.started_at"
+                <span v-if="assyForm?.started_at"
                   class="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded flex items-center gap-1">
                   <i class="fa-solid fa-lock text-[9px]"></i> Terkunci
                 </span>
               </label>
-              <select v-model="assyForm.part15" :disabled="!!assyForm.started_at"
-                :class="assyForm.started_at ? 'bg-slate-100 border-slate-300 text-slate-600 cursor-not-allowed select-none' : 'bg-slate-50 border-slate-300 focus:bg-white focus:border-red-600 focus:ring-2 focus:ring-red-100 text-slate-900 cursor-pointer'"
+              <select v-model="assyForm.part15" :disabled="!!assyForm?.started_at"
+                :class="assyForm?.started_at ? 'bg-slate-100 border-slate-300 text-slate-600 cursor-not-allowed select-none' : 'bg-slate-50 border-slate-300 focus:bg-white focus:border-red-600 focus:ring-2 focus:ring-red-100 text-slate-900 cursor-pointer'"
                 class="w-full border rounded-xl px-3.5 py-2.5 sm:py-3 text-xs sm:text-sm font-mono font-bold focus:outline-none min-h-[42px]">
                 <option value="">Pilih P9 Part 15</option>
                 <option v-for="p in availablePartsByType('15')" :key="p.sn" :value="p.sn">
@@ -1109,13 +1087,13 @@
             <div>
               <label class="block text-xs font-bold uppercase text-slate-700 mb-1 flex items-center justify-between">
                 <span>2. P9 Part 1 <span class="text-red-600">*</span></span>
-                <span v-if="assyForm.started_at"
+                <span v-if="assyForm?.started_at"
                   class="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded flex items-center gap-1">
                   <i class="fa-solid fa-lock text-[9px]"></i> Terkunci
                 </span>
               </label>
-              <select v-model="assyForm.part1" :disabled="!!assyForm.started_at"
-                :class="assyForm.started_at ? 'bg-slate-100 border-slate-300 text-slate-600 cursor-not-allowed select-none' : 'bg-slate-50 border-slate-300 focus:bg-white focus:border-red-600 focus:ring-2 focus:ring-red-100 text-slate-900 cursor-pointer'"
+              <select v-model="assyForm.part1" :disabled="!!assyForm?.started_at"
+                :class="assyForm?.started_at ? 'bg-slate-100 border-slate-300 text-slate-600 cursor-not-allowed select-none' : 'bg-slate-50 border-slate-300 focus:bg-white focus:border-red-600 focus:ring-2 focus:ring-red-100 text-slate-900 cursor-pointer'"
                 class="w-full border rounded-xl px-3.5 py-2.5 sm:py-3 text-xs sm:text-sm font-mono font-bold focus:outline-none min-h-[42px]">
                 <option value="">Pilih P9 Part 1</option>
                 <option v-for="p in availablePartsByType('1')" :key="p.sn" :value="p.sn">
@@ -1128,13 +1106,13 @@
             <div>
               <label class="block text-xs font-bold uppercase text-slate-700 mb-1 flex items-center justify-between">
                 <span>3. P9 Part 12 <span class="text-red-600">*</span></span>
-                <span v-if="assyForm.started_at"
+                <span v-if="assyForm?.started_at"
                   class="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded flex items-center gap-1">
                   <i class="fa-solid fa-lock text-[9px]"></i> Terkunci
                 </span>
               </label>
-              <select v-model="assyForm.part12" :disabled="!!assyForm.started_at"
-                :class="assyForm.started_at ? 'bg-slate-100 border-slate-300 text-slate-600 cursor-not-allowed select-none' : 'bg-slate-50 border-slate-300 focus:bg-white focus:border-red-600 focus:ring-2 focus:ring-red-100 text-slate-900 cursor-pointer'"
+              <select v-model="assyForm.part12" :disabled="!!assyForm?.started_at"
+                :class="assyForm?.started_at ? 'bg-slate-100 border-slate-300 text-slate-600 cursor-not-allowed select-none' : 'bg-slate-50 border-slate-300 focus:bg-white focus:border-red-600 focus:ring-2 focus:ring-red-100 text-slate-900 cursor-pointer'"
                 class="w-full border rounded-xl px-3.5 py-2.5 sm:py-3 text-xs sm:text-sm font-mono font-bold focus:outline-none min-h-[42px]">
                 <option value="">Pilih P9 Part 12</option>
                 <option v-for="p in availablePartsByType('12')" :key="p.sn" :value="p.sn">
@@ -1146,7 +1124,7 @@
             <!-- 3. QC & STATUS SELECTION -->
             <div class="pt-2 border-t border-slate-100 space-y-3">
               <!-- Jika Belum Klik Mulai: Pilihan Status Di-hide Sesuai Kesepakatan -->
-              <div v-if="!assyForm.started_at"
+              <div v-if="!assyForm?.started_at"
                 class="p-3.5 bg-amber-50/90 border border-amber-200 rounded-xl flex items-center gap-2.5 text-xs text-amber-900 font-semibold shadow-sm">
                 <i class="fa-solid fa-circle-info text-amber-600 text-base flex-shrink-0"></i>
                 <span>Silakan klik tombol <strong>Mulai Perakitan</strong> di bawah terlebih dahulu untuk mengaktifkan
@@ -1255,11 +1233,11 @@
             <!-- Button Batal / Tutup Jeda -->
             <button @click="closeModal"
               class="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold text-center transition min-h-[40px]">
-              {{ assyForm.started_at ? 'Tutup (Jeda)' : 'Batal' }}
+              {{ assyForm?.started_at ? 'Tutup (Jeda)' : 'Batal' }}
             </button>
 
             <!-- Button Mulai (Saat Belum Mulai) ATAU Button Selesai (Saat Sudah Mulai) -->
-            <button v-if="!assyForm.started_at" type="button" @click="startAssemblyNow" :disabled="isWorkstationPaused"
+            <button v-if="!assyForm?.started_at" type="button" @click="startAssemblyNow" :disabled="isWorkstationPaused"
               :class="isWorkstationPaused ? 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-60' : 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer active:scale-95 shadow-md shadow-emerald-600/25'"
               class="font-bold px-7 py-2.5 rounded-xl text-xs transition flex items-center justify-center space-x-2 min-h-[40px]">
               <i class="fa-solid fa-play"></i>
@@ -1280,7 +1258,7 @@
       <!-- ================= MODAL QUICK PILIH STATUS (NO-PRINT) ================= -->
       <div v-if="showQuickStatusModal"
         @click.self="safeCloseModal(() => showQuickStatusModal = false, !!quickStatusData.status)"
-        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+        class="modal-backdrop-full !m-0 !top-0 !left-0 !right-0 !bottom-0 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
         <div
           class="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4 my-auto">
           <div class="flex items-center justify-between border-b border-slate-100 pb-3">

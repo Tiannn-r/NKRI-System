@@ -414,11 +414,9 @@
                         <span class="flex items-center gap-1">
                           <i
                             :class="(item.qc_status === 'REWORK_QC' || item.rework_reason) ? 'fa-solid fa-rotate-left' : 'fa-solid fa-circle-exclamation'"></i>
-                          {{ (item.qc_status === 'REWORK_QC' || item.rework_reason) ? 'Alasan Kendala / Rework:' :
-                          'Alasan Hold QC:' }}
+                          Alasan Hold QC:
                         </span>
-                        <span v-if="item.rework_reason"
-                          class="text-[8px] bg-purple-200/80 text-purple-900 font-mono font-bold px-1 rounded">REWORK</span>
+                        
                       </div>
                       <div class="font-medium italic leading-tight">
                         {{ formatQCReworkReason(item) }}
@@ -688,12 +686,9 @@
                   <span class="flex items-center gap-1">
                     <i
                       :class="(qcTestForm.qc_status === 'REWORK_QC' || qcTestForm.rework_reason) ? 'fa-solid fa-rotate-left' : 'fa-solid fa-clipboard-list'"></i>
-                    {{ (qcTestForm.qc_status === 'REWORK_QC' || qcTestForm.rework_reason) ? 'Alasan Kendala / Rework:' :
-                    'Catatan / Alasan Penahanan:' }}
+                    Catatan / Alasan Penahanan (Hold):
                   </span>
-                  <span v-if="qcTestForm.rework_reason"
-                    class="text-[8.5px] bg-purple-100 text-purple-800 border border-purple-200 font-mono font-bold px-1.5 py-0.2 rounded">RIWAYAT
-                    REWORK</span>
+                  
                 </div>
                 <div class="font-semibold italic leading-relaxed">{{ formatQCReworkReason(qcTestForm) }}</div>
               </div>

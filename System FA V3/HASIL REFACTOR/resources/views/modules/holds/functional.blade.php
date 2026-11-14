@@ -110,9 +110,8 @@
 
                   Good</span>
 
-                <span class="text-xl sm:text-2xl font-black text-emerald-950 font-mono">{{ Math.max(0, 1000 -
-
-                  productionHoldCounts.active_hold) }}</span>
+                <span class="text-xl sm:text-2xl font-black text-emerald-950 font-mono">{{
+                  assemblyResultsSummary.totalGood || 0 }}</span>
 
                 <span class="text-[10px] text-emerald-700 block mt-0.5">Lolos Uji TF 1 &amp; QC</span>
 
@@ -468,8 +467,7 @@
                   class="hover:bg-blue-50/40 transition-colors">
 
                   <td class="p-3 text-center font-sans font-bold text-slate-500">{{ idx + 1 +
-
-                    (pgState.productionHold.page - 1) * pgState.productionHold.size }}</td>
+                    (((pgState?.productionHold?.page || 1) - 1) * (pgState?.productionHold?.size || 15)) }}</td>
 
                   <td class="p-3 font-sans font-bold text-slate-800">{{ item.product_type || 'Nanggala P9' }}</td>
 
@@ -774,23 +772,15 @@
                   </span>
 
                   <span
-
-                    v-else-if="item.qc_status === 'REWORK_QC' || item.verified_status === 'REWORK_QC_GUDANG' || item.lifecycle_path === 'REWORK_QC'"
-
-                    class="px-2.5 py-1 rounded-lg text-[10.5px] font-black uppercase tracking-wider bg-purple-100 text-purple-800 border border-purple-300 flex items-center gap-1 shadow-xs whitespace-nowrap">
-
-                    <i class="fa-solid fa-rotate-left text-xs text-purple-600"></i> Rework QC
-
+                    v-else-if="item.qc_status === 'REWORK_QC' || item.verified_status === 'REWORK_QC_GUDANG' || item.lifecycle_path === 'REWORK_QC' || item.hold_source === 'QC'"
+                    class="px-2.5 py-1 rounded-lg text-[10.5px] font-black uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1 shadow-xs whitespace-nowrap">
+                    <i class="fa-solid fa-hand text-xs text-rose-600"></i> Hold QC
                   </span>
 
                   <span
-
-                    v-else-if="item.assembly_status === 'Rework' || item.status === 'Rework' || item.verified_status === 'REWORK_GUDANG' || item.lifecycle_path === 'REWORK'"
-
-                    class="px-2.5 py-1 rounded-lg text-[10.5px] font-black uppercase tracking-wider bg-purple-100 text-purple-800 border border-purple-300 flex items-center gap-1 shadow-xs whitespace-nowrap">
-
-                    <i class="fa-solid fa-rotate-left text-xs text-purple-600"></i> Rework Test
-
+                    v-else-if="item.assembly_status === 'Rework' || item.status === 'Rework' || item.verified_status === 'REWORK_GUDANG' || item.lifecycle_path === 'REWORK' || item.hold_source === 'TESTER_ASSEMBLY'"
+                    class="px-2.5 py-1 rounded-lg text-[10.5px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1 shadow-xs whitespace-nowrap">
+                    <i class="fa-solid fa-hand text-xs text-amber-600"></i> Hold TF 1
                   </span>
 
                   <span
@@ -1002,36 +992,20 @@
               <!-- Failure / Hold / Rework Reason Box -->
 
               <div
-
-                :class="(item.assembly_status === 'Rework' || item.status === 'Rework' || item.qc_status === 'REWORK_QC' || item.verified_status === 'REWORK_GUDANG' || item.verified_status === 'REWORK_QC_GUDANG' || item.lifecycle_path === 'REWORK' || item.lifecycle_path === 'REWORK_QC') ? 'bg-purple-50 border-purple-200 text-purple-950' : (item.hold_source === 'QC' ? 'bg-rose-50 border-rose-200 text-rose-900' : 'bg-amber-50 border-amber-200 text-amber-950')"
-
+                :class="item.hold_source === 'QC' ? 'bg-rose-50 border-rose-200 text-rose-900' : 'bg-amber-50 border-amber-200 text-amber-950'"
                 class="p-2.5 rounded-xl border text-xs space-y-1">
 
                 <div class="text-[9.5px] font-bold uppercase tracking-wider flex items-center gap-1"
-
-                  :class="(item.assembly_status === 'Rework' || item.status === 'Rework' || item.qc_status === 'REWORK_QC' || item.verified_status === 'REWORK_GUDANG' || item.verified_status === 'REWORK_QC_GUDANG' || item.lifecycle_path === 'REWORK' || item.lifecycle_path === 'REWORK_QC') ? 'text-purple-800' : (item.hold_source === 'QC' ? 'text-rose-700' : 'text-amber-800')">
-
+                  :class="item.hold_source === 'QC' ? 'text-rose-700' : 'text-amber-800'">
                   <i class="fa-solid fa-circle-exclamation"></i>
-
-                  <span>Alasan Kendala {{ (item.assembly_status === 'Rework' || item.status === 'Rework' ||
-
-                    item.qc_status === 'REWORK_QC' || item.verified_status === 'REWORK_GUDANG' || item.verified_status
-
-                    === 'REWORK_QC_GUDANG' || item.lifecycle_path === 'REWORK' || item.lifecycle_path === 'REWORK_QC') ?
-
-                    '(REWORK)' : (item.hold_source === 'QC' ? '(HOLD QC)' : '(HOLD)') }}:</span>
-
+                  <span>Alasan Kendala {{ item.hold_source === 'QC' ? '(HOLD QC)' : '(HOLD TF 1)' }}:</span>
                 </div>
 
                 <div class="font-semibold text-[11px] leading-relaxed italic">
-
                   "{{ formatQCReworkReason(item) }}"
-
                 </div>
 
               </div>
-
-
 
               <!-- Inspector & Timestamp Details -->
 
@@ -1059,13 +1033,7 @@
 
                 <div class="flex items-center justify-between text-slate-500 text-[10.5px]">
 
-                  <span>{{ (item.assembly_status === 'Rework' || item.status === 'Rework' || item.qc_status ===
-
-                    'REWORK_QC' || item.verified_status === 'REWORK_GUDANG' || item.verified_status ===
-
-                    'REWORK_QC_GUDANG' || item.lifecycle_path === 'REWORK' || item.lifecycle_path === 'REWORK_QC') ?
-
-                    'Waktu Rework:' : 'Waktu Hold:' }}</span>
+                  <span>Waktu Hold:</span>
 
                   <span class="font-medium text-slate-700">{{ formatDateTime(item.qc_tested_at || item.assy_tested_at ||
 
@@ -1173,7 +1141,7 @@
 
           <!-- Pagination for Hold Perakitan -->
 
-          <div v-if="filteredProductionHoldList.length > 0"
+          <div v-if="filteredProductionHoldList.length > 0 && pgState?.productionHold"
 
             class="flex items-center justify-between px-4 py-3 bg-white border border-slate-200 rounded-2xl shadow-2xs">
 

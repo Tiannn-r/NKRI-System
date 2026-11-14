@@ -296,11 +296,7 @@
                     class="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 font-mono">
                     <i class="fa-solid fa-hand text-[10px] text-amber-700 mr-1"></i>{{ tray.hold_count }} Hold
                   </span>
-                  <span v-if="tray.rework_count > 0"
-                    class="px-2.5 py-1 rounded-lg text-xs font-bold bg-purple-100 text-purple-900 border border-purple-300 font-mono">
-                    <i class="fa-solid fa-rotate-left text-[10px] text-purple-700 mr-1"></i>{{ tray.rework_count }}
-                    Rework
-                  </span>
+                  
                   <span v-if="tray.scrap_count > 0"
                     class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-200 text-slate-800 border border-slate-300 font-mono">
                     <i class="fa-solid fa-ban text-[10px] text-slate-700 mr-1"></i>{{ tray.scrap_count }} Scrap
@@ -312,7 +308,7 @@
               <div class="p-4 sm:p-5 bg-slate-50/40">
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
                   <div v-for="it in tray.items" :key="it.assembly_id"
-                    :class="getAssemblyStageStatus(it) === 'RU' ? 'border-indigo-300 bg-indigo-50/20' : (getAssemblyStageStatus(it) === 'Hold' ? 'border-amber-300 bg-amber-50/20' : (getAssemblyStageStatus(it) === 'Rework' ? 'border-purple-300 bg-purple-50/20' : (getAssemblyStageStatus(it) === 'Scrap' ? 'border-slate-300 bg-slate-100/40' : 'border-slate-200 bg-white')))"
+                    :class="getAssemblyStageStatus(it) === 'RU' ? 'border-indigo-300 bg-indigo-50/20' : (getAssemblyStageStatus(it) === 'Hold' ? 'border-amber-300 bg-amber-50/20' : (getAssemblyStageStatus(it) === 'Scrap' ? 'border-slate-300 bg-slate-100/40' : 'border-slate-200 bg-white'))"
                     class="p-3.5 rounded-xl border shadow-xs transition hover:shadow-sm flex flex-col justify-between h-full">
                     <div class="space-y-2.5">
                       <!-- Top set line -->
@@ -421,7 +417,7 @@
                   <tr v-for="(it, idx) in pagedAssemblyResults" :key="it.assembly_id || idx"
                     class="hover:bg-slate-50/80 transition-colors">
                     <td class="py-2.5 px-3.5 text-center text-slate-400 font-mono text-[11px]">
-                      {{ (pgState.assemblyResults.page - 1) * pgState.assemblyResults.size + idx + 1 }}
+                      {{ (((pgState?.assemblyResults?.page || 1) - 1) * (pgState?.assemblyResults?.size || 10)) + idx + 1 }}
                     </td>
                     <td class="py-2.5 px-3.5 font-mono font-bold text-slate-900">
                       <span class="bg-slate-100 text-slate-800 px-2 py-0.5 rounded-md border border-slate-200">{{
@@ -488,7 +484,7 @@
               </table>
 
               <!-- Pagination: assemblyResults Table View -->
-              <div
+              <div v-if="pgState?.assemblyResults"
                 class="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50/70 select-none no-print flex-wrap gap-2">
                 <div class="flex items-center gap-2">
                   <span class="text-xs text-slate-500 font-semibold">
@@ -619,7 +615,7 @@
               </div>
 
               <!-- Pagination: assemblyResults Card View -->
-              <div
+              <div v-if="pgState?.assemblyResults"
                 class="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl shadow-xs select-none no-print flex-wrap gap-2">
                 <div class="flex items-center gap-2">
                   <span class="text-xs text-slate-500 font-semibold">

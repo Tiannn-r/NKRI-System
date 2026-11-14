@@ -157,6 +157,8 @@ Route::prefix('reports')->group(function () {
 // ==========================================
 Route::prefix('delivery-orders')->group(function () {
     Route::get('/', [DeliveryOrderController::class, 'index']);
+    Route::get('/dashboard-stats', [DeliveryOrderController::class, 'dashboardStats']);
+    Route::get('/check-unique', [DeliveryOrderController::class, 'checkUniqueDocNumber']);
     Route::get('/track-sn', [DeliveryOrderController::class, 'trackSerialNumber']);
     Route::post('/', [DeliveryOrderController::class, 'store']);
     Route::get('/detail', [DeliveryOrderController::class, 'detail']);
@@ -188,6 +190,7 @@ Route::prefix('customers')->group(function () {
     Route::post('/', [DeliveryOrderController::class, 'createCustomer']);
     Route::post('/update', [DeliveryOrderController::class, 'updateCustomer']);
     Route::post('/delete', [DeliveryOrderController::class, 'deleteCustomer']);
+    Route::delete('/{id}', [DeliveryOrderController::class, 'deleteCustomer']);
 });
 
 // Testing Points (17 Parameter TF 1)

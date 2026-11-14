@@ -8,6 +8,7 @@
   'use strict';
 
   window.createTF1Module = function (deps) {
+    const ctx = deps || {};
     const {
       Vue,
       fetchAPI,
@@ -389,6 +390,36 @@
           } catch (_) { }
         };
 
+        // Otomatis bersihkan draft lama/kadaluarsa saat tray/slots dimuat
+        if (typeof watch === 'function' && traySlots) {
+          watch(traySlots, (newSlots) => {
+            if (!Array.isArray(newSlots)) return;
+            let changed = false;
+            newSlots.forEach(slot => {
+              if (!slot) return;
+              const trayId = slot.tray_id || (currentTray.value ? currentTray.value.id : null);
+              const key = `${trayId}_${slot.set_number}`;
+              const draft = assyDraftProgress.value[key];
+              if (!draft) return;
+
+              const isTested = isSlotTested(slot);
+              const vSt = String(slot.verified_status || '').toUpperCase();
+              const snMismatch = draft.part15_sn && slot.part15_sn && draft.part15_sn !== slot.part15_sn;
+              const idMismatch = draft.assembly_id && slot.id && draft.assembly_id !== slot.id;
+              const newlyApproved = (vSt === 'APPROVED_PROCEED_TF1' || vSt === 'APPROVED_PROCEED') && !draft.saved_after_verified;
+              const legacyStale = !draft.part15_sn && !draft.assembly_id && (vSt === 'APPROVED_PROCEED_TF1' || vSt === 'APPROVED_PROCEED' || (!slot.assy_tested_at && !slot.assy_test_checklist));
+
+              if (isTested || snMismatch || idMismatch || newlyApproved || legacyStale) {
+                delete assyDraftProgress.value[key];
+                changed = true;
+              }
+            });
+            if (changed) {
+              saveAssyDraftToStorage();
+            }
+          }, { immediate: true });
+        }
+
         const hasSlotTestingHistory = (s) => {
           if (!s) return false;
           if (s.assy_doc_number) return true;
@@ -481,7 +512,41 @@
           if (!slot || isSlotTested(slot)) return null;
           const trayId = slot.tray_id || (currentTray.value ? currentTray.value.id : null);
           const key = `${trayId}_${slot.set_number}`;
-          return assyDraftProgress.value[key] || null;
+          const draft = assyDraftProgress.value[key];
+          if (!draft) return null;
+
+          // 1. Validasi identitas part: jika draft tidak cocok dengan SN atau ID slot, bersihkan!
+          if (draft.part15_sn && slot.part15_sn && draft.part15_sn !== slot.part15_sn) {
+            delete assyDraftProgress.value[key];
+            saveAssyDraftToStorage();
+            return null;
+          }
+          if (draft.assembly_id && slot.id && draft.assembly_id !== slot.id) {
+            delete assyDraftProgress.value[key];
+            saveAssyDraftToStorage();
+            return null;
+          }
+
+          // 2. Set yang baru diverifikasi Admin untuk lanjut ke TF 1:
+          // Status: APPROVED_PROCEED_TF1 atau APPROVED_PROCEED
+          // Harus mulai dari 0% (belum ada test berjalan). Bersihkan draft warisan lama jika bukan disimpan setelah verifikasi.
+          const vSt = String(slot.verified_status || '').toUpperCase();
+          if ((vSt === 'APPROVED_PROCEED_TF1' || vSt === 'APPROVED_PROCEED') && !draft.saved_after_verified) {
+            delete assyDraftProgress.value[key];
+            saveAssyDraftToStorage();
+            return null;
+          }
+
+          // 3. Draft warisan tanpa data SN / ID: jika status slot PENDING dan belum pernah dites di TF 1, bersihkan
+          if (!draft.part15_sn && !draft.assembly_id) {
+            if (vSt === 'APPROVED_PROCEED_TF1' || vSt === 'APPROVED_PROCEED' || (!slot.assy_tested_at && !slot.assy_test_checklist)) {
+              delete assyDraftProgress.value[key];
+              saveAssyDraftToStorage();
+              return null;
+            }
+          }
+
+          return draft;
         };
 
         const initialSessionSnapshot = ref(null);
@@ -526,11 +591,14 @@
 
           if (shouldSave) {
             assyDraftProgress.value[key] = {
+              assembly_id: form.assembly_id,
+              part15_sn: form.part15_sn,
               step: assyTestStep.value,
               totalSteps: assyTotalSteps.value,
               checklist: JSON.parse(JSON.stringify(form.checklist || [])),
               notes: form.notes || '',
-              savedAt: getNowLocalDateTimeStr()
+              savedAt: getNowLocalDateTimeStr(),
+              saved_after_verified: true
             };
             saveAssyDraftToStorage();
             triggerToast('Progres Disimpan', `Progres pengujian Set #${form.set_number} berhasil disimpan.`, 'success');
@@ -601,7 +669,7 @@
 
           if (existingDraft && Array.isArray(existingDraft.checklist) && existingDraft.checklist.length) {
             initialChecklist = existingDraft.checklist;
-          } else if (slot.assy_test_checklist) {
+          } else if (slot.assy_test_checklist && slot.verified_status !== 'APPROVED_PROCEED_TF1' && slot.verified_status !== 'APPROVED_PROCEED') {
             let parsed = slot.assy_test_checklist;
             if (typeof parsed === 'string') {
               try { parsed = JSON.parse(parsed); } catch (_) { parsed = null; }
@@ -829,11 +897,11 @@
         });
 
         const countTestedGoodInTray = computed(() => {
-          return (testedGoodSlots.value || []).filter(s => s && s.assy_test_status === 'Good').length;
+          return (testedGoodSlots.value || []).filter(s => s && isSlotTF1Good(s)).length;
         });
 
         const countTestedHoldInTray = computed(() => {
-          return (testedGoodSlots.value || []).filter(s => s && (s.assy_test_status === 'Hold' || s.qc_status === 'HOLD_ASSY') && s.assy_test_status !== 'RU' && s.qc_status !== 'RU').length;
+          return (testedGoodSlots.value || []).filter(s => s && isSlotTF1Hold(s)).length;
         });
 
         const countTestedRUInTray = computed(() => {

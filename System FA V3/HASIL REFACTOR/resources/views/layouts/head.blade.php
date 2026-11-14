@@ -53,6 +53,10 @@
   <!-- Vue 3 CDN -->
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 
+  <!-- Chart.js (Local Bundle with CDN Fallback) -->
+  <script src="/chart.min.js"></script>
+  <script>if (typeof Chart === 'undefined') document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>')</script>
+
   <!-- ExcelJS for Rich Styled Excel Export (Colors, auto column width, A4 print ready) -->
   <script src="/exceljs.min.js"></script>
   <!-- SheetJS (xlsx) fallback -->
@@ -203,9 +207,16 @@
       margin: 0mm !important;
     }
 
+    /* Pastikan halaman cetak dokumen murni putih tanpa gradasi abu-abu */
+    body:has(#printable-area),
+    #app:has(#printable-area) {
+      background-color: #ffffff !important;
+      background: #ffffff !important;
+    }
+
     /* Screen: A4-proportioned document viewer */
     .doc-viewer-shell {
-      background: #cbd5e1;
+      background: #ffffff !important;
       padding: 24px 16px;
       min-height: 200px;
       display: flex;
@@ -214,7 +225,7 @@
     }
 
     .doc-paper {
-      background: white;
+      background: #ffffff !important;
       width: 100%;
       max-width: 794px;
       /* 210mm at 96dpi */
@@ -222,8 +233,8 @@
       min-height: 1123px;
       /* 297mm at 96dpi */
       box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
-      padding: 10mm 10mm 10mm 15mm;
-      /* Margin: Top 1cm (10mm), Right 1cm (10mm), Bottom 1cm (10mm), Left 1.5cm (15mm) */
+      padding: 10mm 10mm 10mm 10mm;
+      /* Margin simetris seimbang di layar: Top 10mm, Right 10mm, Bottom 10mm, Left 10mm */
       box-sizing: border-box;
       position: relative;
       display: flex;
@@ -239,6 +250,7 @@
       min-height: 100%;
       flex-grow: 1;
       width: 100%;
+      background: #ffffff !important;
     }
 
     .print-top-section {
@@ -246,15 +258,17 @@
       flex-direction: column;
       gap: 12px;
       width: 100%;
+      background: #ffffff !important;
     }
 
     .print-meta-box {
       border: 1.5px solid #0f172a;
-      background: white;
+      background: #ffffff !important;
     }
 
     .print-meta-cell {
-      border-right: 1px solid #94a3b8;
+      border-right: 1px solid #0f172a;
+      background: #ffffff !important;
     }
 
     .print-items-wrapper>table {
@@ -263,11 +277,12 @@
       table-layout: fixed !important;
       border-collapse: collapse !important;
       border: 1.5px solid #0f172a !important;
+      background: #ffffff !important;
     }
 
     .print-items-wrapper>table>thead>tr>th {
-      border: 1px solid #64748b !important;
-      background: #f1f5f9 !important;
+      border: 1px solid #0f172a !important;
+      background: #ffffff !important;
       color: #0f172a !important;
       font-weight: 700 !important;
       text-align: center !important;
@@ -275,7 +290,8 @@
     }
 
     .print-items-wrapper>table>tbody>tr>td {
-      border: 1px solid #64748b !important;
+      border: 1px solid #0f172a !important;
+      background: #ffffff !important;
       color: #0f172a !important;
       padding: 4px 4px !important;
       vertical-align: middle !important;
@@ -286,12 +302,14 @@
       width: 100% !important;
       table-layout: fixed !important;
       border-collapse: collapse !important;
-      border: 1px solid #64748b !important;
+      border: 1px solid #0f172a !important;
+      background: #ffffff !important;
       margin: 0 !important;
     }
 
     .print-items-wrapper table.nested-checklist-table td {
-      border: 1px solid #cbd5e1 !important;
+      border: 1px solid #0f172a !important;
+      background: #ffffff !important;
       padding: 1.5px 1px !important;
       font-size: 7px !important;
       line-height: 1.1 !important;
@@ -302,6 +320,7 @@
 
     .print-footer-signatures {
       border-top: 1.5px solid #0f172a;
+      background: #ffffff !important;
       margin-top: auto;
       padding-top: 12px;
       width: 100%;
@@ -506,7 +525,7 @@
         min-height: 150mm !important;
         max-height: 150mm !important;
         margin: 0 !important;
-        padding: 0 !important;
+        padding: 4.5mm !important;
         page-break-after: always !important;
         break-after: page !important;
         page-break-inside: avoid !important;
@@ -578,29 +597,41 @@
         visibility: visible !important;
       }
 
+      /* Pastikan saat cetak traveler tidak ada padding container luar yang menggeser dokumen ke kanan */
+      main:has(#printable-area),
+      #app:has(#printable-area) main {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+      }
+
       #printable-area {
         display: flex !important;
         flex-direction: column !important;
         justify-content: space-between !important;
         position: relative !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        height: 255mm !important;
-        min-height: 255mm !important;
-        max-height: 255mm !important;
-        margin: 0 !important;
+        width: calc(100% - 9.5mm) !important;
+        max-width: calc(100% - 9.5mm) !important;
+        height: 266mm !important;
+        min-height: 266mm !important;
+        max-height: 266mm !important;
+        margin-left: 2.5mm !important;
+        margin-right: auto !important;
+        margin-top: 2.5mm !important;
+        margin-bottom: 0 !important;
         padding: 0 !important;
         box-shadow: none !important;
         border: none !important;
         border-radius: 0 !important;
-        background: white !important;
+        background: #ffffff !important;
         box-sizing: border-box !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
       }
 
       .doc-viewer-shell {
-        background: white !important;
+        background: #ffffff !important;
         padding: 0 !important;
         display: block !important;
         height: auto !important;
@@ -608,13 +639,18 @@
 
       .doc-paper {
         box-shadow: none !important;
-        height: 255mm !important;
-        min-height: 255mm !important;
-        max-height: 255mm !important;
+        height: 266mm !important;
+        min-height: 266mm !important;
+        max-height: 266mm !important;
         padding: 0 !important;
-        max-width: 100% !important;
+        width: calc(100% - 9.5mm) !important;
+        max-width: calc(100% - 9.5mm) !important;
+        margin-left: 2.5mm !important;
+        margin-right: auto !important;
+        margin-top: 2.5mm !important;
+        margin-bottom: 0 !important;
         border: none !important;
-        background: white !important;
+        background: #ffffff !important;
         display: flex !important;
         flex-direction: column !important;
         justify-content: space-between !important;
@@ -630,6 +666,7 @@
         height: 100% !important;
         min-height: 100% !important;
         flex-grow: 1 !important;
+        background: #ffffff !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
       }
@@ -639,16 +676,23 @@
         flex-direction: column !important;
         gap: 10px !important;
         width: 100% !important;
+        background: #ffffff !important;
       }
 
       .print-meta-box {
         border: 1.5px solid #000 !important;
+        background: #ffffff !important;
         margin-top: 8px !important;
         margin-bottom: 10px !important;
       }
 
       .print-meta-cell {
         border-right: 1px solid #000 !important;
+        background: #ffffff !important;
+      }
+
+      .print-items-wrapper {
+        background: #ffffff !important;
       }
 
       .print-items-wrapper>table {
@@ -657,11 +701,12 @@
         width: 100% !important;
         max-width: 100% !important;
         table-layout: fixed !important;
+        background: #ffffff !important;
       }
 
       .print-items-wrapper>table>thead>tr>th {
         border: 1px solid #000 !important;
-        background: #f1f5f9 !important;
+        background: #ffffff !important;
         color: #000 !important;
         padding: 3px 2px !important;
         font-size: 9px !important;
@@ -669,6 +714,7 @@
 
       .print-items-wrapper>table>tbody>tr>td {
         border: 1px solid #000 !important;
+        background: #ffffff !important;
         color: #000 !important;
         padding: 3px 2px !important;
         font-size: 9px !important;
@@ -680,11 +726,13 @@
         table-layout: fixed !important;
         border-collapse: collapse !important;
         border: 1px solid #000 !important;
+        background: #ffffff !important;
         margin: 0 !important;
       }
 
       .print-items-wrapper table.nested-checklist-table td {
-        border: 1px solid #64748b !important;
+        border: 1px solid #000 !important;
+        background: #ffffff !important;
         padding: 1px 1px !important;
         font-size: 7px !important;
         line-height: 1 !important;
@@ -695,6 +743,7 @@
 
       .print-footer-signatures {
         border-top: 1.5px solid #000 !important;
+        background: #ffffff !important;
         margin-top: auto !important;
         padding-top: 8px !important;
         page-break-inside: avoid !important;
@@ -719,6 +768,81 @@
       width: 0 !important;
       height: 0 !important;
       background: transparent !important;
+    }
+
+    /* Full Viewport Modal Overlay with Deep Blur */
+    .modal-backdrop-full {
+      position: fixed !important;
+      inset: 0 !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      margin: 0 !important;
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+      z-index: 99995 !important;
+      background-color: rgba(2, 6, 23, 0.75) !important;
+      backdrop-filter: blur(12px) !important;
+      -webkit-backdrop-filter: blur(12px) !important;
+      overflow-y: auto !important;
+      box-sizing: border-box !important;
+    }
+
+    /* Nested or Secondary Detail Modal (Always above document/list modals) */
+    .modal-backdrop-nested {
+      z-index: 100000 !important;
+      background-color: rgba(2, 6, 23, 0.82) !important;
+    }
+
+    /* Prevent background scrolling when any modal overlay is active */
+    body:has(.modal-backdrop-full),
+    html:has(.modal-backdrop-full),
+    body:has([class*="modal-backdrop"]),
+    html:has([class*="modal-backdrop"]) {
+      overflow: hidden !important;
+    }
+
+    /* When a modal is open, ensure sticky header doesn't hover over or leak through the modal backdrop */
+    body:has(.modal-backdrop-full) header,
+    #app:has(.modal-backdrop-full) header,
+    body:has([class*="modal-backdrop"]) header,
+    #app:has([class*="modal-backdrop"]) header {
+      z-index: 10 !important;
+      pointer-events: none !important;
+    }
+    body:has(.modal-backdrop-full) main,
+    #app:has(.modal-backdrop-full) main,
+    body:has([class*="modal-backdrop"]) main,
+    #app:has([class*="modal-backdrop"]) main {
+      position: relative !important;
+      z-index: 99990 !important;
+    }
+
+    /* Smooth Accordion Step Transitions (Grid 0fr -> 1fr) */
+    .smooth-accordion {
+      display: grid !important;
+      grid-template-rows: 0fr !important;
+      transition: grid-template-rows 360ms cubic-bezier(0.4, 0, 0.2, 1), opacity 300ms ease !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+    .smooth-accordion.is-open {
+      grid-template-rows: 1fr !important;
+      opacity: 1 !important;
+      pointer-events: auto !important;
+      overflow: visible !important;
+    }
+    .smooth-accordion > .accordion-inner {
+      overflow: hidden !important;
+      min-height: 0 !important;
+    }
+    .smooth-accordion.is-open > .accordion-inner {
+      overflow: visible !important;
     }
   </style>
   <script src="/logo-data.js"></script>
