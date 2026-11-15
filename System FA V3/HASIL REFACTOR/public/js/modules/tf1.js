@@ -974,6 +974,160 @@
           return 'GOOD';
         };
 
+    // ===================================================================
+    // EXCEL EXPORT ENGINE FOR TF 1 (TEST FUNCTIONAL 1)
+    // ===================================================================
+    const exportTF1ToExcel = async () => {
+      try {
+        let rawItems = [];
+        const trayCode = (currentTray && currentTray.value) ? currentTray.value.tray_code : '';
+        const operatorStr = (currentTray && currentTray.value && currentTray.value.assigned_operator) ? getOperatorFullName(currentTray.value.assigned_operator) : '-';
+
+        // 1. Tentukan sumber data dari traySlots / testedGoodSlots
+        if (traySlots && traySlots.value && traySlots.value.length > 0) {
+          rawItems = (testedGoodSlots && testedGoodSlots.value && testedGoodSlots.value.length > 0)
+            ? testedGoodSlots.value
+            : traySlots.value.filter(s => s && s.id);
+        }
+
+        // Jika tray belum terpilih atau kosong, fetch data dari /assy-tests
+        if (rawItems.length === 0) {
+          try {
+            const res = await fetchAPI('/assy-tests');
+            if (res && res.ok && Array.isArray(res.data)) {
+              rawItems = res.data;
+            }
+          } catch (err) {
+            console.error('Fetch assy-tests error:', err);
+          }
+        }
+
+        if (rawItems.length === 0) {
+          triggerToast('Data Kosong', 'Tidak ada data pengujian TF 1 untuk diekspor ke Excel.', 'warn');
+          return;
+        }
+
+        const todayStr = (typeof window.utils !== 'undefined' && typeof window.utils.formatDateOnly === 'function')
+          ? window.utils.formatDateOnly(new Date()).replace(/\//g, '-')
+          : new Date().toISOString().substring(0, 10);
+        const filename = `Laporan_TF1_Operator_Assembly_${trayCode ? (trayCode.replace(/\//g, '_') + '_') : ''}${todayStr}.xlsx`;
+        const title = trayCode
+          ? `LAPORAN TEST FUNCTIONAL 1 (TF 1) - TRAY ${trayCode}`
+          : 'LAPORAN TEST FUNCTIONAL 1 (TF 1) - OPERATOR ASSEMBLY';
+
+        const columns = [
+          { header: 'No', width: 6, align: 'center' },
+          { header: 'No Dokumen TF 1', width: 22, align: 'center' },
+          { header: 'No Dokumen Asal / Tray', width: 20, align: 'center' },
+          { header: 'Set #', width: 8, align: 'center' },
+          { header: 'SN Part 15 (P9)', width: 20, align: 'center' },
+          { header: 'PN Part 1', width: 16, align: 'center' },
+          { header: 'PN Part 12', width: 16, align: 'center' },
+          { header: 'Operator Tester', width: 22, align: 'left' },
+          { header: 'Waktu Pengujian', width: 20, align: 'center' },
+          { header: 'Status Aktual', width: 20, align: 'center' },
+          { header: 'Hasil Parameter Uji', width: 26, align: 'left' },
+          { header: 'Kendala / Catatan', width: 30, align: 'left' }
+        ];
+
+        let countGood = 0;
+        let countHold = 0;
+        let countRU = 0;
+        let countPending = 0;
+
+        const rows = rawItems.map((slot, idx) => {
+          // Status aktual TF 1
+          let statusAktual = 'BELUM DIUJI';
+          if (typeof isSlotTF1Good === 'function' && isSlotTF1Good(slot)) {
+            statusAktual = 'LULUS (GOOD)';
+            countGood++;
+          } else if (typeof isSlotTF1Hold === 'function' && isSlotTF1Hold(slot)) {
+            statusAktual = 'HOLD TF 1';
+            countHold++;
+          } else if ((typeof isReassemblySet === 'function' && isReassemblySet(slot)) || slot.assy_test_status === 'RU' || slot.qc_status === 'RU') {
+            statusAktual = 'DIRAKIT ULANG (RU)';
+            countRU++;
+          } else if (slot.status === 'Good' || slot.assy_test_status === 'Good' || slot.status === 'LULUS' || slot.status === 'OK') {
+            statusAktual = 'LULUS (GOOD)';
+            countGood++;
+          } else if (slot.status === 'Hold' || slot.assy_test_status === 'Hold' || slot.status === 'HOLD_TF1') {
+            statusAktual = 'HOLD TF 1';
+            countHold++;
+          } else {
+            countPending++;
+          }
+
+          // Format Dokumen TF 1
+          let docTF1 = slot.doc_number || slot.assy_doc_number;
+          const tc = slot.tray_code || trayCode;
+          if (!docTF1 && tc) {
+            const suffix = tc.split('/').pop();
+            docTF1 = tc.startsWith('ASSY/QC/') ? tc : `ASSY/QC/${suffix}`;
+          }
+
+          // Format Dokumen Asal / Tray
+          const originDoc = slot.tray_code || trayCode || '-';
+
+          // Parameter checklist info
+          let paramInfo = '-';
+          let cl = slot.test_checklist || slot.assy_test_checklist;
+          if (typeof cl === 'string') {
+            try { cl = JSON.parse(cl); } catch (_) { cl = null; }
+          }
+          if (Array.isArray(cl) && cl.length > 0) {
+            const passedCount = cl.filter(c => c && (c.status === 'GOOD' || c.status === 'OK' || c.status === 'PASS')).length;
+            const failedItems = cl.filter(c => c && (c.status === 'NOT_GOOD' || c.status === 'HOLD' || c.status === 'FAIL' || c.status === 'REWORK'));
+            if (failedItems.length > 0) {
+              paramInfo = `${passedCount}/${cl.length} OK (Gagal: ${failedItems.map(f => '#' + (f.test_num || f.id)).join(', ')})`;
+            } else {
+              paramInfo = `${passedCount}/${cl.length} Parameter Lolos`;
+            }
+          } else if (statusAktual === 'LULUS (GOOD)') {
+            paramInfo = 'Semua Parameter Lolos';
+          }
+
+          const tester = getOperatorFullName(slot.assy_tester_username || slot.tester_username || slot.pic_assembly || operatorStr) || '-';
+          const testTime = (typeof window.utils !== 'undefined' && typeof window.utils.formatDateTime === 'function')
+            ? window.utils.formatDateTime(slot.assy_tested_at || slot.tested_at || slot.created_at || slot.finished_at)
+            : (slot.assy_tested_at || slot.tested_at || slot.created_at || slot.finished_at || '-');
+
+          const catatan = slot.assy_failure_reasons || slot.failure_reasons || slot.reason || slot.notes || '-';
+
+          return [
+            idx + 1,
+            docTF1 || '-',
+            originDoc,
+            slot.set_number ? ('#' + slot.set_number) : ('#' + (idx + 1)),
+            slot.part15_sn || slot.sn || '-',
+            slot.part1_sn || '-',
+            slot.part12_sn || '-',
+            tester,
+            testTime,
+            statusAktual,
+            paramInfo,
+            catatan
+          ];
+        });
+
+        const summaryText = `Total Set: ${rawItems.length}   |   Lulus (Good): ${countGood}   |   Hold Uji: ${countHold}   |   Dirakit Ulang (RU): ${countRU}   |   Belum Diuji: ${countPending}`;
+
+        if (window.utils && typeof window.utils.exportToExcel === 'function') {
+          await window.utils.exportToExcel({
+            filename,
+            sheetName: 'TF 1 Testing',
+            title,
+            subtitle: `Dicetak dari Menu Test Functional 1 (TF 1) • Tanggal: ${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB`,
+            summary: summaryText,
+            columns,
+            rows,
+            triggerToast
+          });
+        }
+      } catch (err) {
+        console.error('exportTF1ToExcel error:', err);
+        triggerToast('Gagal Ekspor', err.message || 'Terjadi kesalahan saat mengekspor Excel.', 'error');
+      }
+    };
 
     // ===================================================================
     // TAB INITIALIZATION HELPER
@@ -1052,7 +1206,8 @@
       getTestingTrayCounts,
       getTestingSetProgress,
       selectAndPrintAssyQC,
-      getTestItemParamStatus
+      getTestItemParamStatus,
+      exportTF1ToExcel
     };
   };
 

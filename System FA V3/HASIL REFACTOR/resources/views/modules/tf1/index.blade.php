@@ -18,6 +18,13 @@
                   <span class="text-[10px] font-bold text-slate-400 uppercase">Total Set Uji:</span>
                   <span class="text-xs font-black text-indigo-700 font-mono">{{ testedGoodSlots.length }} Set</span>
                 </div>
+                <!-- Tombol Cetak Laporan Excel TF 1 -->
+                <button type="button" @click="exportTF1ToExcel"
+                  class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-xl font-bold text-xs flex items-center space-x-1.5 shadow-xs active:scale-95 transition cursor-pointer min-h-[34px]"
+                  title="Cetak Laporan Excel Hasil Pengujian TF 1 dengan Status Aktual">
+                  <i class="fa-solid fa-file-excel text-xs"></i>
+                  <span>Cetak Excel</span>
+                </button>
               </div>
             </div>
 
