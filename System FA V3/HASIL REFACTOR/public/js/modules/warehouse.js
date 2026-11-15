@@ -1586,12 +1586,12 @@
         const columns = [
           { header: 'No', width: 6, align: 'center' },
           { header: 'No Dokumen Penerimaan (WH/GR)', width: 24, align: 'center' },
-          { header: 'No Dokumen QC', width: 22, align: 'center' },
-          { header: 'No Dokumen Tray', width: 20, align: 'center' },
           { header: 'Set #', width: 8, align: 'center' },
           { header: 'SN Part 15 (P9)', width: 20, align: 'center' },
           { header: 'PN Part 1', width: 16, align: 'center' },
           { header: 'PN Part 12', width: 16, align: 'center' },
+          { header: 'Operator Assembly', width: 22, align: 'left' },
+          { header: 'Tester TF 1', width: 22, align: 'left' },
           { header: 'Inspector QC', width: 22, align: 'left' },
           { header: 'Petugas Gudang', width: 22, align: 'left' },
           { header: 'Waktu Verifikasi', width: 20, align: 'center' },
@@ -1618,17 +1618,17 @@
             countPending++;
           }
 
-          // Format Dokumen WH/GR & QC
+          // Format Dokumen Penerimaan WH/GR (Hanya nomor dokumen WH/GR saja)
           let docGR = it.warehouse_doc_number;
           if (!docGR && it.tray_code) {
             const suffix = it.tray_code.split('/').pop();
             docGR = it.tray_code.startsWith('WH/GR/') ? it.tray_code : `WH/GR/${suffix}`;
           }
-          let docQC = it.qc_doc_number;
-          if (!docQC && it.tray_code) {
-            const suffix = it.tray_code.split('/').pop();
-            docQC = it.tray_code.startsWith('WH/QC/') ? it.tray_code : `WH/QC/${suffix}`;
-          }
+
+          const opAssembly = getOperatorFullName(it.pic_assembly_name || it.pic_assembly || it.assigned_operator) || it.pic_assembly || '-';
+          const testerTF1 = getOperatorFullName(it.tf1_tester_name || it.assy_tester_username || it.pic_assembly_name || it.pic_assembly) || it.assy_tester_username || it.pic_assembly || '-';
+          const inspectorQC = getOperatorFullName(it.qc_tested_by || it.qc_tester_name || it.pic_qc || it.qc_inspector_username) || it.qc_tested_by || it.pic_qc || '-';
+          const petugasGudang = getOperatorFullName(it.warehouse_receipt_by_name || it.warehouse_receipt_by || it.verified_by_user || it.pic_warehouse) || it.warehouse_receipt_by || '-';
 
           const receiptTime = (typeof window.utils !== 'undefined' && typeof window.utils.formatDateTime === 'function')
             ? window.utils.formatDateTime(it.warehouse_receipt_at || it.qc_tested_at || it.finished_at)
@@ -1639,14 +1639,14 @@
           return [
             idx + 1,
             docGR || '-',
-            docQC || '-',
-            it.tray_code || '-',
             it.set_number ? ('#' + it.set_number) : ('#' + (idx + 1)),
             it.part15_sn || it.sn || '-',
             it.part1_sn || '-',
             it.part12_sn || '-',
-            getOperatorFullName(it.pic_qc || it.qc_tested_by) || '-',
-            getOperatorFullName(it.warehouse_receipt_by_name || it.warehouse_receipt_by || it.verified_by_user || it.pic_warehouse) || '-',
+            opAssembly,
+            testerTF1,
+            inspectorQC,
+            petugasGudang,
             receiptTime,
             statusAktual,
             notes
