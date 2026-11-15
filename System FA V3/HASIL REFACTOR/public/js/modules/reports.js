@@ -1482,91 +1482,134 @@
         });
       } else if (sub === 'assy_test') {
         filename = `Laporan_Test_Functional_1_${getTodayDateStr()}.xlsx`;
-        title = 'LAPORAN TEST FUNCTIONAL 1 (TF 1 - ASSY/QC)';
+        title = 'LAPORAN TEST FUNCTIONAL 1 (TF 1)';
         columns = [
           { header: 'No', width: 6 },
           { header: 'No Dokumen TF 1', width: 24 },
-          { header: 'No Dokumen Perakitan', width: 22 },
           { header: 'Set #', width: 8 },
           { header: 'SN P9 Part 15', width: 20 },
           { header: 'PN P9 Part 1', width: 16 },
           { header: 'PN P9 Part 12', width: 16 },
+          { header: 'Operator Assembly', width: 22 },
           { header: 'Operator Penguji (TF1)', width: 22 },
           { header: 'Waktu Pengujian', width: 20 },
           { header: 'Status Uji', width: 14 },
           { header: 'Detail Kendala / Failure', width: 32 }
         ];
-        rawData = (filteredAssyTestReport.value || []).map((t, idx) => [
-          idx + 1,
-          t.doc_number || getFormattedDocCode(t.tray_code, 'tf1'),
-          t.assy_doc_number || getFormattedDocCode(t.tray_code, 'assy'),
-          t.set_number || (idx + 1),
-          t.part15_sn || t.sn || '-',
-          t.part1_sn || '-',
-          t.part12_sn || '-',
-          getOperatorFullName(t.tester_full_name || t.tester_username) || t.tester_username || '-',
-          t.created_at || t.tested_at || '-',
-          t.status || 'OK',
-          t.failure_reasons || t.notes || '-'
-        ]);
+        rawData = (filteredAssyTestReport.value || []).map((t, idx) => {
+          let docTF1 = t.doc_number || t.tf1_doc_number || t.assy_doc_number;
+          const suffix = (docTF1 || t.tray_code || '').split('/').pop();
+          docTF1 = suffix ? `ASSY/QC/${suffix}` : '-';
+
+          const opAssy = getOperatorFullName(t.pic_assembly_name || t.pic_assembly) || t.pic_assembly || '-';
+          const tester = getOperatorFullName(t.tester_full_name || t.tester_username || t.pic_assembly) || t.tester_username || opAssy || '-';
+
+          return [
+            idx + 1,
+            docTF1,
+            t.set_number || (idx + 1),
+            t.part15_sn || t.sn || '-',
+            t.part1_sn || '-',
+            t.part12_sn || '-',
+            opAssy,
+            tester,
+            t.created_at || t.tested_at || '-',
+            t.status || 'OK',
+            t.failure_reasons || t.notes || '-'
+          ];
+        });
       } else if (sub === 'qc_test') {
         filename = `Laporan_Test_Functional_2_QC_${getTodayDateStr()}.xlsx`;
-        title = 'LAPORAN TEST FUNCTIONAL 2 (TF 2 - WH/QC)';
+        title = 'LAPORAN TEST FUNCTIONAL 2 (TF 2 - ASSY/QC)';
         columns = [
           { header: 'No', width: 6 },
-          { header: 'No Dokumen TF 2 (QC)', width: 24 },
-          { header: 'No Dokumen TF 1', width: 22 },
+          { header: 'No Dokumen QC (ASSY/QC)', width: 24 },
           { header: 'Set #', width: 8 },
           { header: 'SN P9 Part 15', width: 20 },
           { header: 'PN P9 Part 1', width: 16 },
           { header: 'PN P9 Part 12', width: 16 },
-          { header: 'Petugas QC', width: 22 },
+          { header: 'Operator Assembly', width: 22 },
+          { header: 'Inspector QC', width: 22 },
           { header: 'Waktu Uji QC', width: 20 },
           { header: 'Status QC', width: 14 },
           { header: 'Detail Kendala / Failure', width: 32 }
         ];
-        rawData = (filteredQCTestReport.value || []).map((t, idx) => [
-          idx + 1,
-          t.doc_number || getFormattedDocCode(t.tray_code, 'qc'),
-          t.tf1_doc_number || getFormattedDocCode(t.tray_code, 'tf1'),
-          t.set_number || (idx + 1),
-          t.part15_sn || t.sn || '-',
-          t.part1_sn || '-',
-          t.part12_sn || '-',
-          getOperatorFullName(t.qc_tester_name || t.tester_full_name || t.tester_username || t.pic_qc) || '-',
-          t.created_at || t.qc_tested_at || '-',
-          t.status || 'Good',
-          t.failure_reasons || t.notes || '-'
-        ]);
+        rawData = (filteredQCTestReport.value || []).map((t, idx) => {
+          let docQC = t.assy_doc_number || t.doc_number || t.qc_doc_number;
+          const suffix = (docQC || t.tray_code || '').split('/').pop();
+          docQC = suffix ? `ASSY/QC/${suffix}` : '-';
+
+          const rawInspector = t.qc_tested_by || t.qc_tester_name || t.tester_full_name || t.tester_username || t.pic_qc || t.qc_inspector_username;
+          const inspector = getOperatorFullName(rawInspector) || rawInspector || '-';
+
+          const rawOp = t.pic_assembly_name || t.pic_assembly;
+          const op = getOperatorFullName(rawOp) || rawOp || '-';
+
+          return [
+            idx + 1,
+            docQC,
+            t.set_number || (idx + 1),
+            t.part15_sn || t.sn || '-',
+            t.part1_sn || '-',
+            t.part12_sn || '-',
+            op,
+            inspector,
+            t.created_at || t.qc_tested_at || '-',
+            t.status || 'Good',
+            t.failure_reasons || t.notes || '-'
+          ];
+        });
       } else if (sub === 'warehouse_receipt') {
         filename = `Laporan_Penerimaan_Gudang_GR_${getTodayDateStr()}.xlsx`;
         title = 'LAPORAN PENERIMAAN BARANG GUDANG (WH/GR)';
         columns = [
           { header: 'No', width: 6 },
-          { header: 'No Dokumen Penerimaan (GR)', width: 24 },
-          { header: 'No Dokumen QC / Tray', width: 22 },
+          { header: 'No Dokumen Penerimaan (WH/GR)', width: 24 },
           { header: 'Set #', width: 8 },
           { header: 'SN P9 Part 15', width: 20 },
           { header: 'PN P9 Part 1', width: 16 },
           { header: 'PN P9 Part 12', width: 16 },
+          { header: 'Operator Assembly', width: 22 },
+          { header: 'Tester TF 1', width: 22 },
+          { header: 'Inspector QC', width: 22 },
           { header: 'Petugas Gudang', width: 22 },
           { header: 'Waktu Verifikasi', width: 20 },
           { header: 'Status Verifikasi Fisik', width: 18 },
           { header: 'Catatan Gudang', width: 28 }
         ];
-        rawData = (filteredWarehouseReport.value || []).map((w, idx) => [
-          idx + 1,
-          w.warehouse_doc_number || getFormattedDocCode(w.tray_code, 'wh_gr'),
-          w.qc_doc_number || getFormattedDocCode(w.tray_code, 'qc'),
-          w.set_number || (idx + 1),
-          w.part15_sn || '-',
-          w.part1_sn || '-',
-          w.part12_sn || '-',
-          getOperatorFullName(w.warehouse_receipt_by_name || w.warehouse_receipt_by || w.verified_by_user) || '-',
-          w.warehouse_receipt_at || w.qc_tested_at || w.finished_at || '-',
-          w.warehouse_receipt_status || w.status || 'Verified',
-          w.notes || '-'
-        ]);
+        rawData = (filteredWarehouseReport.value || []).map((w, idx) => {
+          let docGR = w.warehouse_doc_number;
+          const suffix = (docGR || w.tray_code || '').split('/').pop();
+          docGR = suffix ? `WH/GR/${suffix}` : '-';
+
+          const rawOp = w.pic_assembly_name || w.pic_assembly;
+          const op = getOperatorFullName(rawOp) || rawOp || '-';
+
+          const rawTester = w.tf1_tester_name || w.assy_tester_username;
+          const tester = getOperatorFullName(rawTester) || rawTester || '-';
+
+          const rawInspector = w.qc_tested_by || w.qc_tester_name || w.pic_qc;
+          const inspector = getOperatorFullName(rawInspector) || rawInspector || '-';
+
+          const rawWH = w.warehouse_receipt_by_name || w.warehouse_receipt_by || w.verified_by_user;
+          const whStaff = getOperatorFullName(rawWH) || rawWH || '-';
+
+          return [
+            idx + 1,
+            docGR,
+            w.set_number || (idx + 1),
+            w.part15_sn || '-',
+            w.part1_sn || '-',
+            w.part12_sn || '-',
+            op,
+            tester,
+            inspector,
+            whStaff,
+            w.warehouse_receipt_at || w.qc_tested_at || w.finished_at || '-',
+            w.warehouse_receipt_status || w.status || 'Verified',
+            w.notes || '-'
+          ];
+        });
       }
 
       if (rawData.length === 0) {
