@@ -977,28 +977,41 @@
     // ===================================================================
     // EXCEL EXPORT ENGINE FOR TF 1 (TEST FUNCTIONAL 1)
     // ===================================================================
-    const exportTF1ToExcel = async () => {
+    const showTF1ExcelDropdown = ref(false);
+
+    const exportTF1ToExcel = async (scope = 'auto') => {
+      showTF1ExcelDropdown.value = false;
       try {
         let rawItems = [];
         const trayCode = (currentTray && currentTray.value) ? currentTray.value.tray_code : '';
         const operatorStr = (currentTray && currentTray.value && currentTray.value.assigned_operator) ? getOperatorFullName(currentTray.value.assigned_operator) : '-';
 
-        // 1. Tentukan sumber data dari traySlots / testedGoodSlots
-        if (traySlots && traySlots.value && traySlots.value.length > 0) {
-          rawItems = (testedGoodSlots && testedGoodSlots.value && testedGoodSlots.value.length > 0)
-            ? testedGoodSlots.value
-            : traySlots.value.filter(s => s && s.id);
-        }
+        const isAllScope = (scope === 'all') || (!trayCode && scope === 'auto');
 
-        // Jika tray belum terpilih atau kosong, fetch data dari /assy-tests
-        if (rawItems.length === 0) {
+        if (isAllScope) {
+          // Cetak seluruh dokumen: fetch dari /assy-tests
           try {
             const res = await fetchAPI('/assy-tests');
             if (res && res.ok && Array.isArray(res.data)) {
               rawItems = res.data;
             }
           } catch (err) {
-            console.error('Fetch assy-tests error:', err);
+            console.error('Fetch all assy-tests error:', err);
+          }
+        } else {
+          // Cetak dokumen ini saja (tray yang sedang aktif)
+          if (traySlots && traySlots.value && traySlots.value.length > 0) {
+            rawItems = (testedGoodSlots && testedGoodSlots.value && testedGoodSlots.value.length > 0)
+              ? testedGoodSlots.value
+              : traySlots.value.filter(s => s && s.id);
+          }
+          if (rawItems.length === 0 && trayCode) {
+            try {
+              const res = await fetchAPI(`/assy-tests?tray_code=${encodeURIComponent(trayCode)}`);
+              if (res && res.ok && Array.isArray(res.data)) {
+                rawItems = res.data;
+              }
+            } catch (_) {}
           }
         }
 
@@ -1010,15 +1023,19 @@
         const todayStr = (typeof window.utils !== 'undefined' && typeof window.utils.formatDateOnly === 'function')
           ? window.utils.formatDateOnly(new Date()).replace(/\//g, '-')
           : new Date().toISOString().substring(0, 10);
-        const filename = `Laporan_TF1_Operator_Assembly_${trayCode ? (trayCode.replace(/\//g, '_') + '_') : ''}${todayStr}.xlsx`;
-        const title = trayCode
-          ? `LAPORAN TEST FUNCTIONAL 1 (TF 1) - TRAY ${trayCode}`
-          : 'LAPORAN TEST FUNCTIONAL 1 (TF 1) - OPERATOR ASSEMBLY';
 
+        const filename = isAllScope
+          ? `Laporan_TF1_Semua_Dokumen_${todayStr}.xlsx`
+          : `Laporan_TF1_${trayCode ? (trayCode.replace(/\//g, '_') + '_') : ''}${todayStr}.xlsx`;
+
+        const title = isAllScope
+          ? 'LAPORAN TEST FUNCTIONAL 1 (TF 1) - SELURUH DOKUMEN TRAY'
+          : `LAPORAN TEST FUNCTIONAL 1 (TF 1) - DOKUMEN ${trayCode.startsWith('ASSY/QC/') ? trayCode : ('ASSY/QC/' + trayCode.split('/').pop())}`;
+
+        // Format kolom: Samakan dengan QC (HANYA No Dokumen TF 1 saja)
         const columns = [
           { header: 'No', width: 6, align: 'center' },
           { header: 'No Dokumen TF 1', width: 22, align: 'center' },
-          { header: 'No Dokumen Asal / Tray', width: 20, align: 'center' },
           { header: 'Set #', width: 8, align: 'center' },
           { header: 'SN Part 15 (P9)', width: 20, align: 'center' },
           { header: 'PN Part 1', width: 16, align: 'center' },
@@ -1057,16 +1074,13 @@
             countPending++;
           }
 
-          // Format Dokumen TF 1
+          // Format Dokumen TF 1 (Hanya nomor dokumen TF 1 saja)
           let docTF1 = slot.doc_number || slot.assy_doc_number;
           const tc = slot.tray_code || trayCode;
           if (!docTF1 && tc) {
             const suffix = tc.split('/').pop();
             docTF1 = tc.startsWith('ASSY/QC/') ? tc : `ASSY/QC/${suffix}`;
           }
-
-          // Format Dokumen Asal / Tray
-          const originDoc = slot.tray_code || trayCode || '-';
 
           // Parameter checklist info
           let paramInfo = '-';
@@ -1086,7 +1100,7 @@
             paramInfo = 'Semua Parameter Lolos';
           }
 
-          const tester = getOperatorFullName(slot.assy_tester_username || slot.tester_username || slot.pic_assembly || operatorStr) || '-';
+          const tester = getOperatorFullName(slot.assy_tester_username || slot.tester_username || slot.pic_assembly || operatorStr) || slot.assy_tester_username || slot.tester_username || slot.pic_assembly || '-';
           const testTime = (typeof window.utils !== 'undefined' && typeof window.utils.formatDateTime === 'function')
             ? window.utils.formatDateTime(slot.assy_tested_at || slot.tested_at || slot.created_at || slot.finished_at)
             : (slot.assy_tested_at || slot.tested_at || slot.created_at || slot.finished_at || '-');
@@ -1096,7 +1110,6 @@
           return [
             idx + 1,
             docTF1 || '-',
-            originDoc,
             slot.set_number ? ('#' + slot.set_number) : ('#' + (idx + 1)),
             slot.part15_sn || slot.sn || '-',
             slot.part1_sn || '-',
@@ -1116,7 +1129,7 @@
             filename,
             sheetName: 'TF 1 Testing',
             title,
-            subtitle: `Dicetak dari Menu Test Functional 1 (TF 1) • Tanggal: ${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB`,
+            subtitle: `Dicetak dari Menu Test Functional 1 (TF 1) • Cakupan: ${isAllScope ? 'Seluruh Dokumen' : ('Dokumen ' + trayCode)} • Tanggal: ${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB`,
             summary: summaryText,
             columns,
             rows,
@@ -1207,6 +1220,7 @@
       getTestingSetProgress,
       selectAndPrintAssyQC,
       getTestItemParamStatus,
+      showTF1ExcelDropdown,
       exportTF1ToExcel
     };
   };
