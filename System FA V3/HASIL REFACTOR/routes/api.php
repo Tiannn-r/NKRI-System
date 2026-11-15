@@ -146,6 +146,9 @@ Route::post('/admin/approve-hold-item', [QcController::class, 'approveHoldItem']
 // 6. LAPORAN & AUDIT TRAIL (4 MODUL LAPORAN)
 // ==========================================
 Route::get('/laporan', [ReportController::class, 'traveler']); // 1. Laporan WO Traveler
+Route::get('/assy-tests', [ReportController::class, 'assyTests']); // Alias Laporan Uji Fungsional 1 (TF 1)
+Route::get('/qc-tests', [ReportController::class, 'qcTests']); // Alias Laporan Uji Mutu QC (TF 2)
+Route::get('/warehouse-receipts', [ReportController::class, 'warehouseReceipts']); // Alias Laporan Penerimaan Fisik Gudang
 Route::prefix('reports')->group(function () {
     Route::get('/assy-tests', [ReportController::class, 'assyTests']); // 2. Laporan Uji Fungsional 1 (TF 1)
     Route::get('/qc-tests', [ReportController::class, 'qcTests']); // 3. Laporan Uji Mutu QC (TF 2)
