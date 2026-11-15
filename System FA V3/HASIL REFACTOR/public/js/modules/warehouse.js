@@ -1570,6 +1570,19 @@
         }
 
         if (rawItems.length === 0) {
+          try {
+            const qp = isTrayScoped ? `?tray_code=${encodeURIComponent(selectedReceiptTrayCode.value)}` : '';
+            let res = await fetchAPI(`/reports/warehouse-receipts${qp}`);
+            if (!res || !res.ok || !Array.isArray(res.data) || res.data.length === 0) {
+              res = await fetchAPI(`/warehouse-receipts${qp}`);
+            }
+            if (res && res.ok && Array.isArray(res.data)) {
+              rawItems = res.data;
+            }
+          } catch (_) { }
+        }
+
+        if (rawItems.length === 0) {
           triggerToast('Data Kosong', 'Tidak ada data Penerimaan Fisik Gudang untuk diekspor ke Excel.', 'warn');
           return;
         }
@@ -1619,16 +1632,29 @@
           }
 
           // Format Dokumen Penerimaan WH/GR (Hanya nomor dokumen WH/GR saja)
-          let docGR = it.warehouse_doc_number;
-          if (!docGR && it.tray_code) {
-            const suffix = it.tray_code.split('/').pop();
-            docGR = it.tray_code.startsWith('WH/GR/') ? it.tray_code : `WH/GR/${suffix}`;
+          let docGR = it.warehouse_doc_number || it.doc_number;
+          const tc = it.tray_code || (selectedReceiptTrayCode && selectedReceiptTrayCode.value) || '';
+          if (docGR) {
+            const suffix = docGR.split('/').pop();
+            docGR = `WH/GR/${suffix}`;
+          } else if (tc) {
+            const suffix = tc.split('/').pop();
+            docGR = `WH/GR/${suffix}`;
+          } else {
+            docGR = '-';
           }
 
-          const opAssembly = getOperatorFullName(it.pic_assembly_name || it.pic_assembly || it.assigned_operator) || it.pic_assembly || '-';
-          const testerTF1 = getOperatorFullName(it.tf1_tester_name || it.assy_tester_username || it.pic_assembly_name || it.pic_assembly) || it.assy_tester_username || it.pic_assembly || '-';
-          const inspectorQC = getOperatorFullName(it.qc_tested_by || it.qc_tester_name || it.pic_qc || it.qc_inspector_username) || it.qc_tested_by || it.pic_qc || '-';
-          const petugasGudang = getOperatorFullName(it.warehouse_receipt_by_name || it.warehouse_receipt_by || it.verified_by_user || it.pic_warehouse) || it.warehouse_receipt_by || '-';
+          const rawOpAssy = it.pic_assembly_name || it.pic_assembly || it.assigned_operator;
+          const opAssembly = (typeof getOperatorFullName === 'function' ? getOperatorFullName(rawOpAssy) : rawOpAssy) || rawOpAssy || '-';
+
+          const rawTester = it.tf1_tester_name || it.assy_tester_username || it.pic_assembly_name || it.pic_assembly;
+          const testerTF1 = (typeof getOperatorFullName === 'function' ? getOperatorFullName(rawTester) : rawTester) || rawTester || '-';
+
+          const rawInspector = it.qc_tested_by || it.qc_tester_name || it.pic_qc || it.qc_inspector_username;
+          const inspectorQC = (typeof getOperatorFullName === 'function' ? getOperatorFullName(rawInspector) : rawInspector) || rawInspector || '-';
+
+          const rawWH = it.warehouse_receipt_by_name || it.warehouse_receipt_by || it.verified_by_user || it.pic_warehouse;
+          const petugasGudang = (typeof getOperatorFullName === 'function' ? getOperatorFullName(rawWH) : rawWH) || rawWH || '-';
 
           const receiptTime = (typeof window.utils !== 'undefined' && typeof window.utils.formatDateTime === 'function')
             ? window.utils.formatDateTime(it.warehouse_receipt_at || it.qc_tested_at || it.finished_at)
