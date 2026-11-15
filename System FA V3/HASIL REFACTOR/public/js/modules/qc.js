@@ -511,6 +511,19 @@
         }
 
         if (rawItems.length === 0) {
+          try {
+            const qp = isTrayScoped ? `?tray_code=${encodeURIComponent(selectedQCTrayCode.value)}` : '';
+            let res = await fetchAPI(`/reports/qc-tests${qp}`);
+            if (!res || !res.ok || !Array.isArray(res.data) || res.data.length === 0) {
+              res = await fetchAPI(`/qc/items${qp}`);
+            }
+            if (res && res.ok) {
+              rawItems = res.data || res.all_data || [];
+            }
+          } catch (_) { }
+        }
+
+        if (rawItems.length === 0) {
           triggerToast('Data Kosong', 'Tidak ada data pengujian QC untuk diekspor ke Excel.', 'warn');
           return;
         }
@@ -526,7 +539,7 @@
 
         const columns = [
           { header: 'No', width: 6, align: 'center' },
-          { header: 'No Dokumen QC', width: 22, align: 'center' },
+          { header: 'No Dokumen QC (ASSY/QC)', width: 24, align: 'center' },
           { header: 'Set #', width: 8, align: 'center' },
           { header: 'SN Part 15 (P9)', width: 20, align: 'center' },
           { header: 'PN Part 1', width: 16, align: 'center' },
@@ -570,15 +583,24 @@
             countPending++;
           }
 
-          // Format Dokumen QC (Hanya nomor dokumen QC saja)
-          let docQC = it.qc_doc_number || it.doc_number;
-          if (!docQC && it.tray_code) {
-            const suffix = it.tray_code.split('/').pop();
-            docQC = it.tray_code.startsWith('WH/QC/') ? it.tray_code : `WH/QC/${suffix}`;
+          // Format Dokumen QC (Hanya 1 nomor dokumen QC, berformat ASSY/QC)
+          let docQC = it.assy_doc_number || it.qc_doc_number || it.doc_number;
+          const tc = it.tray_code || (selectedQCTrayCode && selectedQCTrayCode.value) || '';
+          if (docQC) {
+            const suffix = docQC.split('/').pop();
+            docQC = `ASSY/QC/${suffix}`;
+          } else if (tc) {
+            const suffix = tc.split('/').pop();
+            docQC = `ASSY/QC/${suffix}`;
+          } else {
+            docQC = '-';
           }
 
-          const inspectorQC = getOperatorFullName(it.qc_tested_by || it.pic_qc || it.qc_tester_fullname || it.qc_tester_name || it.qc_tester_username || it.qc_inspector_username)
-            || it.qc_tested_by || it.pic_qc || it.qc_tester_name || it.qc_inspector_username || '-';
+          const rawInspector = it.qc_tested_by || it.qc_tester_name || it.qc_tester_fullname || it.pic_qc || it.tester_full_name || it.tester_username || it.qc_inspector_username;
+          const inspectorQC = (typeof getOperatorFullName === 'function' ? getOperatorFullName(rawInspector) : rawInspector) || rawInspector || '-';
+
+          const rawOpAssy = it.pic_assembly_name || it.pic_assembly || it.assigned_operator;
+          const opAssembly = (typeof getOperatorFullName === 'function' ? getOperatorFullName(rawOpAssy) : rawOpAssy) || rawOpAssy || '-';
 
           const qcTime = (typeof window.utils !== 'undefined' && typeof window.utils.formatDateTime === 'function')
             ? window.utils.formatDateTime(it.qc_test_tested_at || it.qc_tested_at || it.finished_at || it.created_at)
@@ -593,7 +615,7 @@
             it.part15_sn || it.sn || '-',
             it.part1_sn || '-',
             it.part12_sn || '-',
-            getOperatorFullName(it.pic_assembly || it.assigned_operator) || it.pic_assembly || '-',
+            opAssembly,
             inspectorQC,
             qcTime,
             statusAktual,
