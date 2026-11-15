@@ -977,10 +977,18 @@
     // ===================================================================
     // EXCEL EXPORT ENGINE FOR TF 1 (TEST FUNCTIONAL 1)
     // ===================================================================
-    const showTF1ExcelDropdown = ref(false);
+    const showTF1ExcelModal = ref(false);
+
+    const openTF1ExportModal = () => {
+      showTF1ExcelModal.value = true;
+    };
+
+    const closeTF1ExportModal = () => {
+      showTF1ExcelModal.value = false;
+    };
 
     const exportTF1ToExcel = async (scope = 'auto') => {
-      showTF1ExcelDropdown.value = false;
+      showTF1ExcelModal.value = false;
       try {
         let rawItems = [];
         const trayCode = (currentTray && currentTray.value) ? currentTray.value.tray_code : '';
@@ -989,9 +997,12 @@
         const isAllScope = (scope === 'all') || (!trayCode && scope === 'auto');
 
         if (isAllScope) {
-          // Cetak seluruh dokumen: fetch dari /assy-tests
+          triggerToast('Memuat Data', 'Mengambil seluruh data pengujian TF 1 untuk diekspor...', 'info');
           try {
-            const res = await fetchAPI('/assy-tests');
+            let res = await fetchAPI('/reports/assy-tests');
+            if (!res || !res.ok || !Array.isArray(res.data) || res.data.length === 0) {
+              res = await fetchAPI('/assy-tests');
+            }
             if (res && res.ok && Array.isArray(res.data)) {
               rawItems = res.data;
             }
@@ -1007,7 +1018,10 @@
           }
           if (rawItems.length === 0 && trayCode) {
             try {
-              const res = await fetchAPI(`/assy-tests?tray_code=${encodeURIComponent(trayCode)}`);
+              let res = await fetchAPI(`/reports/assy-tests?tray_code=${encodeURIComponent(trayCode)}`);
+              if (!res || !res.ok || !Array.isArray(res.data) || res.data.length === 0) {
+                res = await fetchAPI(`/assy-tests?tray_code=${encodeURIComponent(trayCode)}`);
+              }
               if (res && res.ok && Array.isArray(res.data)) {
                 rawItems = res.data;
               }
@@ -1055,31 +1069,32 @@
         const rows = rawItems.map((slot, idx) => {
           // Status aktual TF 1
           let statusAktual = 'BELUM DIUJI';
-          if (typeof isSlotTF1Good === 'function' && isSlotTF1Good(slot)) {
+          const st = String(slot.status || slot.assy_test_status || '').toUpperCase();
+          if (st === 'GOOD' || st === 'OK' || st === 'PASSED' || st === 'LULUS' || (typeof isSlotTF1Good === 'function' && isSlotTF1Good(slot))) {
             statusAktual = 'LULUS (GOOD)';
             countGood++;
-          } else if (typeof isSlotTF1Hold === 'function' && isSlotTF1Hold(slot)) {
+          } else if (st === 'HOLD' || st === 'HOLD_TF1' || st === 'HOLD_ASSY' || (typeof isSlotTF1Hold === 'function' && isSlotTF1Hold(slot))) {
             statusAktual = 'HOLD TF 1';
             countHold++;
-          } else if ((typeof isReassemblySet === 'function' && isReassemblySet(slot)) || slot.assy_test_status === 'RU' || slot.qc_status === 'RU') {
+          } else if (st === 'RU' || st === 'DIRAKIT ULANG' || slot.assembly_status === 'Dirakit Ulang' || (typeof isReassemblySet === 'function' && isReassemblySet(slot))) {
             statusAktual = 'DIRAKIT ULANG (RU)';
             countRU++;
-          } else if (slot.status === 'Good' || slot.assy_test_status === 'Good' || slot.status === 'LULUS' || slot.status === 'OK') {
-            statusAktual = 'LULUS (GOOD)';
-            countGood++;
-          } else if (slot.status === 'Hold' || slot.assy_test_status === 'Hold' || slot.status === 'HOLD_TF1') {
-            statusAktual = 'HOLD TF 1';
+          } else if (st === 'REWORK' || st === 'REWORK_ASSY') {
+            statusAktual = 'REWORK TF 1';
             countHold++;
           } else {
+            statusAktual = st || 'BELUM DIUJI';
             countPending++;
           }
 
           // Format Dokumen TF 1 (Hanya nomor dokumen TF 1 saja)
-          let docTF1 = slot.doc_number || slot.assy_doc_number;
+          let docTF1 = slot.doc_number || slot.tf1_doc_number || slot.assy_doc_number;
           const tc = slot.tray_code || trayCode;
           if (!docTF1 && tc) {
             const suffix = tc.split('/').pop();
             docTF1 = tc.startsWith('ASSY/QC/') ? tc : `ASSY/QC/${suffix}`;
+          } else if (docTF1 && docTF1.toUpperCase().startsWith('WH/ASSY/')) {
+            docTF1 = 'ASSY/QC/' + docTF1.split('/').pop();
           }
 
           // Parameter checklist info
@@ -1100,10 +1115,12 @@
             paramInfo = 'Semua Parameter Lolos';
           }
 
-          const tester = getOperatorFullName(slot.assy_tester_username || slot.tester_username || slot.pic_assembly || operatorStr) || slot.assy_tester_username || slot.tester_username || slot.pic_assembly || '-';
+          const tester = getOperatorFullName(slot.tester_full_name || slot.tester_username || slot.assy_tester_username || slot.pic_assembly_name || slot.pic_assembly || operatorStr)
+            || slot.tester_username || slot.assy_tester_username || slot.pic_assembly || operatorStr || '-';
+
           const testTime = (typeof window.utils !== 'undefined' && typeof window.utils.formatDateTime === 'function')
-            ? window.utils.formatDateTime(slot.assy_tested_at || slot.tested_at || slot.created_at || slot.finished_at)
-            : (slot.assy_tested_at || slot.tested_at || slot.created_at || slot.finished_at || '-');
+            ? window.utils.formatDateTime(slot.created_at || slot.assy_tested_at || slot.tested_at || slot.finished_at)
+            : (slot.created_at || slot.assy_tested_at || slot.tested_at || slot.finished_at || '-');
 
           const catatan = slot.assy_failure_reasons || slot.failure_reasons || slot.reason || slot.notes || '-';
 
@@ -1129,7 +1146,7 @@
             filename,
             sheetName: 'TF 1 Testing',
             title,
-            subtitle: `Dicetak dari Menu Test Functional 1 (TF 1) • Cakupan: ${isAllScope ? 'Seluruh Dokumen' : ('Dokumen ' + trayCode)} • Tanggal: ${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB`,
+            subtitle: `Dicetak dari Menu Test Functional 1 (TF 1) • Cakupan: ${isAllScope ? 'Seluruh Dokumen' : ('Dokumen ' + (trayCode || 'Aktif'))} • Tanggal: ${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB`,
             summary: summaryText,
             columns,
             rows,
@@ -1220,7 +1237,9 @@
       getTestingSetProgress,
       selectAndPrintAssyQC,
       getTestItemParamStatus,
-      showTF1ExcelDropdown,
+      showTF1ExcelModal,
+      openTF1ExportModal,
+      closeTF1ExportModal,
       exportTF1ToExcel
     };
   };
