@@ -1554,6 +1554,126 @@
     };
 
     // ===================================================================
+    // EXCEL EXPORT ENGINE FOR GOOD RECEIPTS (WH/GR - WAREHOUSE RECEIPTS)
+    // ===================================================================
+    const exportGoodReceiptsToExcel = async () => {
+      try {
+        let rawItems = [];
+        const isTrayScoped = Boolean(selectedReceiptTrayCode.value);
+
+        if (isTrayScoped && activeReceiptTrayItems.value && activeReceiptTrayItems.value.length > 0) {
+          rawItems = activeReceiptTrayItems.value;
+        } else {
+          rawItems = (filteredWarehouseReceiptList.value && filteredWarehouseReceiptList.value.length > 0)
+            ? filteredWarehouseReceiptList.value
+            : (warehouseReceiptReports.value || []);
+        }
+
+        if (rawItems.length === 0) {
+          triggerToast('Data Kosong', 'Tidak ada data Penerimaan Fisik Gudang untuk diekspor ke Excel.', 'warn');
+          return;
+        }
+
+        const todayStr = (typeof window.utils !== 'undefined' && typeof window.utils.formatDateOnly === 'function')
+          ? window.utils.formatDateOnly(new Date()).replace(/\//g, '-')
+          : new Date().toISOString().substring(0, 10);
+
+        const filename = `Laporan_Penerimaan_Fisik_Gudang_GR_${isTrayScoped ? (selectedReceiptTrayCode.value.replace(/\//g, '_') + '_') : ''}${todayStr}.xlsx`;
+        const title = isTrayScoped
+          ? `LAPORAN PENERIMAAN FISIK GUDANG (WH/GR) - TRAY ${selectedReceiptTrayCode.value}`
+          : 'LAPORAN PENERIMAAN FISIK GUDANG (WH/GR - GOOD RECEIPTS)';
+
+        const columns = [
+          { header: 'No', width: 6, align: 'center' },
+          { header: 'No Dokumen Penerimaan (WH/GR)', width: 24, align: 'center' },
+          { header: 'No Dokumen QC', width: 22, align: 'center' },
+          { header: 'No Dokumen Tray', width: 20, align: 'center' },
+          { header: 'Set #', width: 8, align: 'center' },
+          { header: 'SN Part 15 (P9)', width: 20, align: 'center' },
+          { header: 'PN Part 1', width: 16, align: 'center' },
+          { header: 'PN Part 12', width: 16, align: 'center' },
+          { header: 'Inspector QC', width: 22, align: 'left' },
+          { header: 'Petugas Gudang', width: 22, align: 'left' },
+          { header: 'Waktu Verifikasi', width: 20, align: 'center' },
+          { header: 'Status Aktual', width: 22, align: 'center' },
+          { header: 'Catatan Penerimaan / Alasan', width: 32, align: 'left' }
+        ];
+
+        let countAccepted = 0;
+        let countDeclined = 0;
+        let countPending = 0;
+
+        const rows = rawItems.map((it, idx) => {
+          // Status aktual Good Receipts
+          let statusAktual = 'MENUNGGU VERIFIKASI';
+          const wst = String(it.warehouse_receipt_status || it.status || '').toUpperCase();
+          if (wst === 'ACCEPTED' || wst === 'ACC' || wst === 'VERIFIED') {
+            statusAktual = 'DITERIMA (ACC)';
+            countAccepted++;
+          } else if (wst === 'DECLINED' || it.is_declined || wst === 'DECLINE') {
+            statusAktual = 'DITOLAK (DECLINED)';
+            countDeclined++;
+          } else {
+            statusAktual = 'MENUNGGU VERIFIKASI';
+            countPending++;
+          }
+
+          // Format Dokumen WH/GR & QC
+          let docGR = it.warehouse_doc_number;
+          if (!docGR && it.tray_code) {
+            const suffix = it.tray_code.split('/').pop();
+            docGR = it.tray_code.startsWith('WH/GR/') ? it.tray_code : `WH/GR/${suffix}`;
+          }
+          let docQC = it.qc_doc_number;
+          if (!docQC && it.tray_code) {
+            const suffix = it.tray_code.split('/').pop();
+            docQC = it.tray_code.startsWith('WH/QC/') ? it.tray_code : `WH/QC/${suffix}`;
+          }
+
+          const receiptTime = (typeof window.utils !== 'undefined' && typeof window.utils.formatDateTime === 'function')
+            ? window.utils.formatDateTime(it.warehouse_receipt_at || it.qc_tested_at || it.finished_at)
+            : (it.warehouse_receipt_at || it.qc_tested_at || it.finished_at || '-');
+
+          const notes = it.warehouse_receipt_notes || it.declined_reason || it.notes || '-';
+
+          return [
+            idx + 1,
+            docGR || '-',
+            docQC || '-',
+            it.tray_code || '-',
+            it.set_number ? ('#' + it.set_number) : ('#' + (idx + 1)),
+            it.part15_sn || it.sn || '-',
+            it.part1_sn || '-',
+            it.part12_sn || '-',
+            getOperatorFullName(it.pic_qc || it.qc_tested_by) || '-',
+            getOperatorFullName(it.warehouse_receipt_by_name || it.warehouse_receipt_by || it.verified_by_user || it.pic_warehouse) || '-',
+            receiptTime,
+            statusAktual,
+            notes
+          ];
+        });
+
+        const summaryText = `Total Unit: ${rawItems.length}   |   Diterima (ACC): ${countAccepted}   |   Ditolak (Declined): ${countDeclined}   |   Menunggu Verifikasi: ${countPending}`;
+
+        if (window.utils && typeof window.utils.exportToExcel === 'function') {
+          await window.utils.exportToExcel({
+            filename,
+            sheetName: 'Penerimaan Fisik',
+            title,
+            subtitle: `Dicetak dari Menu Penerimaan Fisik Gudang (WH/GR) • Tanggal: ${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB`,
+            summary: summaryText,
+            columns,
+            rows,
+            triggerToast
+          });
+        }
+      } catch (err) {
+        console.error('exportGoodReceiptsToExcel error:', err);
+        triggerToast('Gagal Ekspor', err.message || 'Terjadi kesalahan saat mengekspor Excel.', 'error');
+      }
+    };
+
+    // ===================================================================
     // TAB INITIALIZATION HELPERS
     // ===================================================================
     const initWarehouseTab = () => {
@@ -1695,7 +1815,8 @@
       openTravelerWHGRDoc,
       isCurrentTravelerWHQCVerified,
       isCurrentTravelerQCDone,
-      batchAcceptWarehouseReceipt
+      batchAcceptWarehouseReceipt,
+      exportGoodReceiptsToExcel
     };
   };
 })(window);

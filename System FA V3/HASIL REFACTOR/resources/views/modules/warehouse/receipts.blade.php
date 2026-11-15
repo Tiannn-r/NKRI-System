@@ -18,11 +18,18 @@
                 </div>
               </div>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
               <button @click="loadWarehouseReceiptReports"
                 class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2 rounded-xl font-bold text-xs border border-slate-300 flex items-center space-x-1.5 min-h-[36px] active:scale-95 transition cursor-pointer">
                 <i class="fa-solid fa-arrows-rotate text-slate-500"></i>
                 <span>Muat Ulang</span>
+              </button>
+              <!-- Tombol Cetak Laporan Excel Good Receipts -->
+              <button type="button" @click="exportGoodReceiptsToExcel"
+                class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl font-bold text-xs flex items-center space-x-1.5 min-h-[36px] shadow-sm active:scale-95 transition cursor-pointer"
+                title="Cetak Laporan Excel Penerimaan Fisik Gudang dengan Status Aktual">
+                <i class="fa-solid fa-file-excel text-xs"></i>
+                <span>Cetak Excel</span>
               </button>
             </div>
           </div>
@@ -298,7 +305,7 @@
                   <i class="fa-solid fa-arrow-left"></i>
                   <span>Kembali ke Daftar Dokumen</span>
                 </button>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 flex-wrap">
                   <span class="text-xs text-slate-500 font-medium">Dokumen:</span>
                   <span class="text-xs font-mono font-black px-3 py-1 rounded-xl bg-slate-900 text-white shadow-xs">
                     {{ activeReceiptTraySummary?.qc_doc_number || selectedReceiptTrayCode }}
@@ -341,13 +348,20 @@
                   title="Cetak Label SN (Semua Unit dalam Dokumen Ini)">
                   <i class="fa-solid fa-tags"></i>
                 </button>
+                <!-- Tombol Cetak Laporan Excel Dokumen Tray Ini -->
+                <button type="button" @click="exportGoodReceiptsToExcel"
+                  class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-3.5 rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 active:scale-95 transition cursor-pointer"
+                  title="Cetak Laporan Excel Penerimaan Dokumen Tray Ini">
+                  <i class="fa-solid fa-file-excel text-xs"></i>
+                  <span>Cetak Excel Tray Ini</span>
+                </button>
               </div>
             </div>
 
             <!-- Summary Meta Box -->
             <div
               class="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-3.5 text-xs text-emerald-950 flex flex-wrap items-center justify-between gap-3">
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-2 flex-wrap">
                 <i class="fa-solid fa-circle-info text-emerald-700 text-sm"></i>
                 <span>Verifikasi fisik barang unit hasil uji mutu QC sebelum dicatat resmi ke dokumen serah terima dan
                   stok gudang.</span>
