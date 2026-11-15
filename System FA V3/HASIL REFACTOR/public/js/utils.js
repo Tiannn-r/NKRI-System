@@ -288,6 +288,199 @@
         return Promise.resolve(true);
       }
       return navigator.clipboard.writeText(text);
+    },
+
+    /**
+     * Enterprise Excel Exporter menggunakan ExcelJS (dengan fallback XLSX)
+     * Mendukung auto-column width, styled dark header, zebra rows, border grid,
+     * dan highlighting badge warna pada kolom Status Aktual.
+     */
+    exportToExcel: async function (config) {
+      config = config || {};
+      var filename = config.filename || ('Laporan_' + Date.now() + '.xlsx');
+      var sheetName = config.sheetName || 'Laporan';
+      var title = config.title || 'LAPORAN SISTEM FINAL ASSEMBLY';
+      var subtitle = config.subtitle || ('Dicetak otomatis oleh Sistem Final Assembly & Traceability NKRI • Tanggal: ' + new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }) + ' WIB');
+      var summary = config.summary || null;
+      var columns = config.columns || [];
+      var rawData = config.rows || [];
+      var triggerToast = config.triggerToast || (window.utils && window.utils.triggerToast) || function () {};
+
+      if (!rawData || rawData.length === 0) {
+        if (typeof triggerToast === 'function') {
+          triggerToast('Ekspor Dibatalkan', 'Tidak ada data untuk diekspor ke Excel.', 'warn');
+        }
+        return false;
+      }
+
+      // Fallback jika ExcelJS tidak tersedia
+      if (typeof ExcelJS === 'undefined') {
+        if (typeof XLSX !== 'undefined') {
+          var headerRow = columns.map(function (c) { return c.header; });
+          var wsData = [headerRow].concat(rawData);
+          var ws = XLSX.utils.aoa_to_sheet(wsData);
+          var wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, sheetName);
+          XLSX.writeFile(wb, filename);
+          if (typeof triggerToast === 'function') {
+            triggerToast('Ekspor Selesai', 'File ' + filename + ' berhasil diunduh.', 'success');
+          }
+          return true;
+        } else {
+          if (typeof triggerToast === 'function') {
+            triggerToast('Error Ekspor', 'Library ExcelJS / XLSX tidak ditemukan.', 'error');
+          }
+          return false;
+        }
+      }
+
+      var workbook = new ExcelJS.Workbook();
+      workbook.creator = 'Sistem Final Assembly P9';
+      workbook.created = new Date();
+      var sheet = workbook.addWorksheet(sheetName, {
+        pageSetup: { orientation: 'landscape', paperSize: 9 }
+      });
+
+      var colCount = columns.length;
+
+      // 1. Title Row
+      sheet.mergeCells(1, 1, 1, colCount);
+      var titleCell = sheet.getCell(1, 1);
+      titleCell.value = title;
+      titleCell.font = { name: 'Arial', size: 14, bold: true, color: { argb: 'FF1E293B' } };
+      titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      sheet.getRow(1).height = 28;
+
+      // 2. Subtitle Row
+      sheet.mergeCells(2, 1, 2, colCount);
+      var subTitleCell = sheet.getCell(2, 1);
+      subTitleCell.value = subtitle;
+      subTitleCell.font = { name: 'Arial', size: 9, italic: true, color: { argb: 'FF64748B' } };
+      subTitleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      sheet.getRow(2).height = 18;
+
+      var curRowIdx = 3;
+
+      // 3. Optional Summary Box
+      if (summary) {
+        var summaryText = typeof summary === 'string' ? summary : summary.join('   |   ');
+        sheet.mergeCells(curRowIdx, 1, curRowIdx, colCount);
+        var sumCell = sheet.getCell(curRowIdx, 1);
+        sumCell.value = summaryText;
+        sumCell.font = { name: 'Arial', size: 9.5, bold: true, color: { argb: 'FF0F172A' } };
+        sumCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+        sumCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        sheet.getRow(curRowIdx).height = 20;
+        curRowIdx++;
+      }
+
+      // Empty separator row
+      sheet.addRow([]);
+      curRowIdx++;
+
+      // 4. Header Row
+      var headerVals = columns.map(function (c) { return c.header; });
+      var headerRow = sheet.addRow(headerVals);
+      headerRow.height = 25;
+      headerRow.eachCell(function (cell) {
+        cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FF0F172A' } },
+          left: { style: 'thin', color: { argb: 'FF0F172A' } },
+          bottom: { style: 'medium', color: { argb: 'FF0F172A' } },
+          right: { style: 'thin', color: { argb: 'FF0F172A' } }
+        };
+      });
+
+      var colLengths = columns.map(function (c) { return String(c.header || '').length; });
+
+      // 5. Data Rows
+      rawData.forEach(function (rowVals, rIdx) {
+        var row = sheet.addRow(rowVals);
+        row.height = 20;
+        var isZebra = rIdx % 2 === 1;
+
+        row.eachCell(function (cell, colNum) {
+          var valStr = String(cell.value || '');
+          if (valStr.length > (colLengths[colNum - 1] || 0)) {
+            colLengths[colNum - 1] = valStr.length;
+          }
+
+          cell.font = { name: 'Arial', size: 9.5, color: { argb: 'FF334155' } };
+          cell.border = {
+            top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+            left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+            bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+            right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+          };
+
+          // Alignment logic
+          var colDef = columns[colNum - 1] || {};
+          if (colDef.align) {
+            cell.alignment = { horizontal: colDef.align, vertical: 'middle' };
+          } else {
+            var h = String(colDef.header || '').toLowerCase();
+            if (h === 'no' || h.includes('set') || h.includes('sn') || h.includes('waktu') || h.includes('status') || h.includes('tanggal')) {
+              cell.alignment = { horizontal: 'center', vertical: 'middle' };
+            } else {
+              cell.alignment = { horizontal: 'left', vertical: 'middle' };
+            }
+          }
+
+          // Zebra striping
+          if (isZebra) {
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
+          }
+
+          // Status Badge Coloring
+          var upperVal = valStr.toUpperCase();
+          var colHeader = String(colDef.header || '').toLowerCase();
+          var isStatusCol = colHeader.includes('status');
+
+          if (isStatusCol) {
+            if ((upperVal.includes('GOOD') || upperVal.includes('LULUS') || upperVal.includes('ACC') || upperVal.includes('VERIFIED') || upperVal.includes('OK') || upperVal.includes('SELESAI')) && !upperVal.includes('NOT')) {
+              cell.font = { name: 'Arial', size: 9.5, bold: true, color: { argb: 'FF047857' } };
+              cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD1FAE5' } };
+            } else if (upperVal.includes('HOLD') || upperVal.includes('TERTAHAN')) {
+              cell.font = { name: 'Arial', size: 9.5, bold: true, color: { argb: 'FFB45309' } };
+              cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
+            } else if (upperVal.includes('DECLINE') || upperVal.includes('TOLAK') || upperVal.includes('NOT GOOD') || upperVal.includes('SCRAP') || upperVal.includes('FAIL')) {
+              cell.font = { name: 'Arial', size: 9.5, bold: true, color: { argb: 'FFB91C1C' } };
+              cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } };
+            } else if (upperVal.includes('MENUNGGU') || upperVal.includes('PENDING') || upperVal.includes('BELUM DIUJI') || upperVal.includes('BELUM')) {
+              cell.font = { name: 'Arial', size: 9.5, bold: true, color: { argb: 'FF3730A3' } };
+              cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEEF2FF' } };
+            } else if (upperVal.includes('RU') || upperVal.includes('DIRAKIT ULANG') || upperVal.includes('REWORK')) {
+              cell.font = { name: 'Arial', size: 9.5, bold: true, color: { argb: 'FF6D28D9' } };
+              cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEDE9FE' } };
+            }
+          }
+        });
+      });
+
+      // 6. Set calculated column widths
+      columns.forEach(function (col, idx) {
+        var baseW = col.width || 12;
+        var len = (colLengths[idx] || 10) + 4;
+        sheet.getColumn(idx + 1).width = Math.min(Math.max(baseW, len), 48);
+      });
+
+      // 7. Write to buffer and trigger download
+      var buffer = await workbook.xlsx.writeBuffer();
+      var blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      var link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      if (typeof triggerToast === 'function') {
+        triggerToast('Ekspor Excel Berhasil', 'File ' + filename + ' berhasil diunduh.', 'success');
+      }
+      return true;
     }
   };
 
