@@ -527,8 +527,6 @@
         const columns = [
           { header: 'No', width: 6, align: 'center' },
           { header: 'No Dokumen QC', width: 22, align: 'center' },
-          { header: 'No Dokumen TF 1', width: 22, align: 'center' },
-          { header: 'No Dokumen Tray', width: 20, align: 'center' },
           { header: 'Set #', width: 8, align: 'center' },
           { header: 'SN Part 15 (P9)', width: 20, align: 'center' },
           { header: 'PN Part 1', width: 16, align: 'center' },
@@ -572,17 +570,15 @@
             countPending++;
           }
 
-          // Format Dokumen QC & TF1
+          // Format Dokumen QC (Hanya nomor dokumen QC saja)
           let docQC = it.qc_doc_number || it.doc_number;
           if (!docQC && it.tray_code) {
             const suffix = it.tray_code.split('/').pop();
             docQC = it.tray_code.startsWith('WH/QC/') ? it.tray_code : `WH/QC/${suffix}`;
           }
-          let docTF1 = it.tf1_doc_number || it.assy_doc_number;
-          if (!docTF1 && it.tray_code) {
-            const suffix = it.tray_code.split('/').pop();
-            docTF1 = it.tray_code.startsWith('ASSY/QC/') ? it.tray_code : `ASSY/QC/${suffix}`;
-          }
+
+          const inspectorQC = getOperatorFullName(it.qc_tested_by || it.pic_qc || it.qc_tester_fullname || it.qc_tester_name || it.qc_tester_username || it.qc_inspector_username)
+            || it.qc_tested_by || it.pic_qc || it.qc_tester_name || it.qc_inspector_username || '-';
 
           const qcTime = (typeof window.utils !== 'undefined' && typeof window.utils.formatDateTime === 'function')
             ? window.utils.formatDateTime(it.qc_test_tested_at || it.qc_tested_at || it.finished_at || it.created_at)
@@ -593,14 +589,12 @@
           return [
             idx + 1,
             docQC || '-',
-            docTF1 || '-',
-            it.tray_code || '-',
             it.set_number ? ('#' + it.set_number) : ('#' + (idx + 1)),
             it.part15_sn || it.sn || '-',
             it.part1_sn || '-',
             it.part12_sn || '-',
-            getOperatorFullName(it.pic_assembly || it.assigned_operator) || '-',
-            getOperatorFullName(it.qc_tester_fullname || it.qc_tester_username || it.pic_qc || it.qc_tested_by) || '-',
+            getOperatorFullName(it.pic_assembly || it.assigned_operator) || it.pic_assembly || '-',
+            inspectorQC,
             qcTime,
             statusAktual,
             notes
