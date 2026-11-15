@@ -1114,11 +1114,11 @@ class ReportController extends Controller
 
                         DB::raw("'[]' as qc_test_checklist"),
 
-                        DB::raw("NULL as qc_tested_at"),
+                        DB::raw("a.qc_tested_at as qc_tested_at"),
 
-                        DB::raw("NULL as qc_tested_by"),
+                        DB::raw("COALESCE(a.qc_tested_by, a.qc_inspector_username) as qc_tested_by"),
 
-                        DB::raw("NULL as qc_tester_name"),
+                        DB::raw("CASE WHEN a.qc_tested_by IN ('tester', 'qc_inspector', 'inspector_qc', 'admin') THEN 'Administrator NKRI' ELSE COALESCE(a.qc_tested_by, a.qc_inspector_username) END as qc_tester_name"),
 
                         DB::raw("'Menunggu Test Functional 2' as status"),
 
@@ -1417,6 +1417,10 @@ class ReportController extends Controller
                 'a.pic_assembly',
 
                 DB::raw("COALESCE(u_op.full_name, a.pic_assembly) as pic_assembly_name"),
+
+                'a.assy_tester_username',
+
+                DB::raw("COALESCE(a.assy_tester_username, u_op.full_name, a.pic_assembly) as tf1_tester_name"),
 
                 'a.assy_doc_number',
 

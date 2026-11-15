@@ -88,6 +88,14 @@ class QcController extends Controller
 
                 'a.qc_inspector_username',
 
+                'a.qc_tested_by',
+
+                DB::raw("COALESCE(a.qc_tested_by, a.qc_inspector_username) as pic_qc"),
+
+                DB::raw("COALESCE(a.qc_tested_by, a.qc_inspector_username) as qc_tester_name"),
+
+                DB::raw("COALESCE(a.qc_tested_by, a.qc_inspector_username) as qc_tester_fullname"),
+
                 'a.qc_tested_at',
 
                 'a.qc_doc_number',
