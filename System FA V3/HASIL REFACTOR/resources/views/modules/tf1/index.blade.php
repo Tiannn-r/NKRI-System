@@ -18,58 +18,13 @@
                   <span class="text-[10px] font-bold text-slate-400 uppercase">Total Set Uji:</span>
                   <span class="text-xs font-black text-indigo-700 font-mono">{{ testedGoodSlots.length }} Set</span>
                 </div>
-                <!-- Tombol Cetak Laporan Excel TF 1 dengan Dropdown Opsi -->
-                <div class="relative inline-block text-left">
-                  <div class="inline-flex rounded-xl shadow-xs">
-                    <!-- Tombol Utama -->
-                    <button type="button" @click="currentTray ? exportTF1ToExcel('current') : exportTF1ToExcel('all')"
-                      class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-l-xl font-bold text-xs flex items-center space-x-1.5 active:scale-95 transition cursor-pointer min-h-[34px]"
-                      :title="currentTray ? 'Cetak Laporan Excel Dokumen Ini Saja (' + currentTray.tray_code + ')' : 'Cetak Seluruh Dokumen TF 1'">
-                      <i class="fa-solid fa-file-excel text-xs"></i>
-                      <span>Cetak Excel</span>
-                    </button>
-                    <!-- Tombol Panah Pilihan Opsi -->
-                    <button type="button" @click="showTF1ExcelDropdown = !showTF1ExcelDropdown"
-                      class="bg-emerald-700 hover:bg-emerald-800 text-white px-2 py-1.5 rounded-r-xl border-l border-emerald-500 font-bold text-xs flex items-center justify-center active:scale-95 transition cursor-pointer min-h-[34px]"
-                      title="Pilih Opsi Cetak Excel (Dokumen Ini atau Seluruh Dokumen)">
-                      <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-200" :class="{ 'rotate-180': showTF1ExcelDropdown }"></i>
-                    </button>
-                  </div>
-
-                  <!-- Dropdown Menu Opsi Cetak -->
-                  <div v-if="showTF1ExcelDropdown"
-                    class="absolute right-0 mt-1.5 w-60 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-2 space-y-1">
-                    <div class="px-2 py-1 text-[10px] font-black uppercase tracking-wider text-slate-400 border-b border-slate-100">
-                      Opsi Cetak Laporan TF 1
-                    </div>
-                    <!-- Opsi 1: Dokumen Ini Saja -->
-                    <button type="button" @click="exportTF1ToExcel('current'); showTF1ExcelDropdown = false"
-                      :disabled="!currentTray"
-                      class="w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:bg-emerald-50 text-slate-800 hover:text-emerald-900">
-                      <i class="fa-solid fa-file-lines text-emerald-600"></i>
-                      <div class="flex-1 min-w-0">
-                        <div class="truncate">Cetak Dokumen Ini Saja</div>
-                        <div class="text-[9.5px] font-normal text-slate-400 font-mono truncate" v-if="currentTray">
-                          Tray: {{ currentTray.tray_code }}
-                        </div>
-                        <div class="text-[9.5px] font-normal text-amber-500" v-else>
-                          (Pilih tray terlebih dahulu)
-                        </div>
-                      </div>
-                    </button>
-                    <!-- Opsi 2: Seluruh Dokumen -->
-                    <button type="button" @click="exportTF1ToExcel('all'); showTF1ExcelDropdown = false"
-                      class="w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition cursor-pointer hover:bg-indigo-50 text-slate-800 hover:text-indigo-900">
-                      <i class="fa-solid fa-layer-group text-indigo-600"></i>
-                      <div class="flex-1 min-w-0">
-                        <div class="truncate">Cetak Seluruh Dokumen</div>
-                        <div class="text-[9.5px] font-normal text-slate-400">
-                          Semua hasil uji TF 1
-                        </div>
-                      </div>
-                    </button>
-                  </div>
-                </div>
+                <!-- Tombol Cetak Laporan Excel TF 1 (Buka Modal Pilihan) -->
+                <button type="button" @click="openTF1ExportModal"
+                  class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl font-bold text-xs flex items-center space-x-1.5 shadow-sm active:scale-95 transition cursor-pointer min-h-[36px]"
+                  title="Cetak Laporan Excel Hasil Pengujian TF 1">
+                  <i class="fa-solid fa-file-excel text-xs"></i>
+                  <span>Cetak Excel</span>
+                </button>
               </div>
             </div>
 
@@ -1430,6 +1385,90 @@
               <span>Simpan & Selesaikan</span>
             </button>
           </div>
+        </div>
+      </div>
+
+      <!-- ================= MODAL PILIHAN OPSI CETAK EXCEL TF 1 ================= -->
+      <div v-if="showTF1ExcelModal"
+        class="modal-backdrop-full !m-0 !top-0 !left-0 !right-0 !bottom-0 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fadeIn z-50">
+        <div class="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-5 my-auto animate-scaleIn">
+
+          <!-- Header Modal -->
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div class="flex items-center space-x-2.5">
+              <div class="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center text-lg shadow-2xs">
+                <i class="fa-solid fa-file-excel"></i>
+              </div>
+              <div>
+                <h3 class="text-base font-black text-slate-900 leading-tight">Cetak Laporan Excel TF 1</h3>
+                <p class="text-xs text-slate-500 font-medium mt-0.5">Pilih cakupan dokumen yang ingin dicetak</p>
+              </div>
+            </div>
+            <button type="button" @click="closeTF1ExportModal"
+              class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition cursor-pointer">
+              <i class="fa-solid fa-xmark text-sm"></i>
+            </button>
+          </div>
+
+          <!-- Pilihan Opsi Cetak Cards -->
+          <div class="space-y-3">
+            <!-- Opsi 1: Dokumen Ini Saja -->
+            <div @click="currentTray ? exportTF1ToExcel('current') : null"
+              :class="currentTray ? 'border-emerald-300 hover:border-emerald-500 hover:bg-emerald-50/50 cursor-pointer shadow-xs' : 'border-slate-200 opacity-50 cursor-not-allowed bg-slate-50'"
+              class="border rounded-2xl p-4 transition-all duration-200 flex items-start space-x-3.5 group">
+              <div :class="currentTray ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-500'"
+                class="w-10 h-10 rounded-xl flex items-center justify-center text-base shrink-0 transition-colors">
+                <i class="fa-solid fa-file-lines"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2">
+                  <h4 class="text-xs sm:text-sm font-black text-slate-900 group-hover:text-emerald-950 transition-colors">
+                    Cetak Dokumen Ini Saja
+                  </h4>
+                  <span v-if="currentTray"
+                    class="px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-800 text-[10px] font-bold font-mono">
+                    Tray Aktif
+                  </span>
+                </div>
+                <p v-if="currentTray" class="text-xs text-slate-500 font-medium mt-1">
+                  Mengekspor hanya data pada Tray <strong class="text-slate-800 font-mono">{{ currentTray.tray_code }}</strong> ({{ testedGoodSlots.length }} Set)
+                </p>
+                <p v-else class="text-xs text-amber-600 font-medium mt-1">
+                  <i class="fa-solid fa-circle-exclamation mr-1"></i>Pilih nomor tray pada menu utama terlebih dahulu.
+                </p>
+              </div>
+            </div>
+
+            <!-- Opsi 2: Seluruh Dokumen -->
+            <div @click="exportTF1ToExcel('all')"
+              class="border border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50/50 rounded-2xl p-4 transition-all duration-200 flex items-start space-x-3.5 cursor-pointer group shadow-xs">
+              <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-800 flex items-center justify-center text-base shrink-0 group-hover:bg-indigo-200 transition-colors">
+                <i class="fa-solid fa-layer-group"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2">
+                  <h4 class="text-xs sm:text-sm font-black text-slate-900 group-hover:text-indigo-950 transition-colors">
+                    Cetak Seluruh Dokumen
+                  </h4>
+                  <span class="px-2 py-0.5 rounded-lg bg-indigo-100 text-indigo-800 text-[10px] font-bold">
+                    Semua Tray
+                  </span>
+                </div>
+                <p class="text-xs text-slate-500 font-medium mt-1">
+                  Mengekspor seluruh riwayat pengujian TF 1 dari seluruh nomor tray ke dalam satu file Excel.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer Modal -->
+          <div class="border-t border-slate-100 pt-3 flex justify-end">
+            <button type="button" @click="closeTF1ExportModal"
+              class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl font-bold text-xs transition cursor-pointer">
+              Batal
+            </button>
+          </div>
+
         </div>
       </div>
 
