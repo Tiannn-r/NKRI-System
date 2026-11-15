@@ -6,7 +6,7 @@
             <div>
               <h2 class="text-lg sm:text-xl font-black text-slate-900 leading-tight">Quality Control (QC)</h2>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
               <span
                 class="text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 font-mono">
                 Menunggu QC: <strong class="text-amber-700">{{ qcOverallPendingCount }}</strong> item
@@ -15,6 +15,13 @@
                 class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl font-bold text-xs border border-slate-300 flex items-center space-x-1.5 min-h-[38px] active:scale-95 transition cursor-pointer">
                 <i class="fa-solid fa-arrows-rotate text-slate-500"></i>
                 <span>Muat Ulang</span>
+              </button>
+              <!-- Tombol Cetak Laporan Excel QC -->
+              <button type="button" @click="exportQCToExcel"
+                class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl font-bold text-xs flex items-center space-x-1.5 min-h-[38px] shadow-sm active:scale-95 transition cursor-pointer"
+                title="Cetak Laporan Excel Hasil Pengujian QC dengan Status Aktual">
+                <i class="fa-solid fa-file-excel text-xs"></i>
+                <span>Cetak Excel</span>
               </button>
             </div>
           </div>
@@ -238,8 +245,14 @@
                 </div>
               </div>
 
-              <div class="text-xs font-mono font-bold text-slate-600 flex items-center gap-2">
+              <div class="text-xs font-mono font-bold text-slate-600 flex items-center gap-2 flex-wrap">
                 <span>Menampilkan <strong class="text-slate-900">{{ filteredQCList.length }}</strong> Card</span>
+                <button type="button" @click="exportQCToExcel"
+                  class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-xl font-bold text-xs flex items-center space-x-1.5 shadow-xs active:scale-95 transition cursor-pointer"
+                  title="Cetak Laporan Excel Pengujian Tray Ini">
+                  <i class="fa-solid fa-file-excel text-xs"></i>
+                  <span>Cetak Excel Tray Ini</span>
+                </button>
               </div>
             </div>
 

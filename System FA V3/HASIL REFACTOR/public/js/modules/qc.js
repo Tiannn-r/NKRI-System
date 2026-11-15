@@ -491,6 +491,142 @@
       return Math.max(1, Math.ceil((qcTraySummaryList.value || []).length / s.size));
     });
 
+    // ===================================================================
+    // EXCEL EXPORT ENGINE FOR TF 2 (QUALITY CONTROL - QC)
+    // ===================================================================
+    const exportQCToExcel = async () => {
+      try {
+        let rawItems = [];
+        const isTrayScoped = Boolean(selectedQCTrayCode.value);
+
+        if (isTrayScoped) {
+          rawItems = (filteredQCList.value || []).filter(i => i.tray_code === selectedQCTrayCode.value);
+          if (rawItems.length === 0) {
+            rawItems = (qcAllList.value || []).filter(i => i.tray_code === selectedQCTrayCode.value);
+          }
+        } else {
+          rawItems = (filteredQCList.value && filteredQCList.value.length > 0)
+            ? filteredQCList.value
+            : (qcAllList.value || []);
+        }
+
+        if (rawItems.length === 0) {
+          triggerToast('Data Kosong', 'Tidak ada data pengujian QC untuk diekspor ke Excel.', 'warn');
+          return;
+        }
+
+        const todayStr = (typeof window.utils !== 'undefined' && typeof window.utils.formatDateOnly === 'function')
+          ? window.utils.formatDateOnly(new Date()).replace(/\//g, '-')
+          : new Date().toISOString().substring(0, 10);
+
+        const filename = `Laporan_TF2_Quality_Control_${isTrayScoped ? (selectedQCTrayCode.value.replace(/\//g, '_') + '_') : ''}${todayStr}.xlsx`;
+        const title = isTrayScoped
+          ? `LAPORAN TEST FUNCTIONAL 2 (QC) - TRAY ${selectedQCTrayCode.value}`
+          : 'LAPORAN TEST FUNCTIONAL 2 (TF 2 - QUALITY CONTROL)';
+
+        const columns = [
+          { header: 'No', width: 6, align: 'center' },
+          { header: 'No Dokumen QC', width: 22, align: 'center' },
+          { header: 'No Dokumen TF 1', width: 22, align: 'center' },
+          { header: 'No Dokumen Tray', width: 20, align: 'center' },
+          { header: 'Set #', width: 8, align: 'center' },
+          { header: 'SN Part 15 (P9)', width: 20, align: 'center' },
+          { header: 'PN Part 1', width: 16, align: 'center' },
+          { header: 'PN Part 12', width: 16, align: 'center' },
+          { header: 'Operator Assembly', width: 22, align: 'left' },
+          { header: 'Inspector QC', width: 22, align: 'left' },
+          { header: 'Waktu Uji QC', width: 20, align: 'center' },
+          { header: 'Status Aktual', width: 20, align: 'center' },
+          { header: 'Catatan / Detail Kendala', width: 32, align: 'left' }
+        ];
+
+        let countGood = 0;
+        let countHold = 0;
+        let countPending = 0;
+        let countOther = 0;
+
+        const rows = rawItems.map((it, idx) => {
+          // Status aktual QC
+          let statusAktual = 'MENUNGGU QC';
+          const qs = String(it.qc_status || '').toUpperCase();
+          if (qs === 'GOOD' || qs === 'GOOD_QC' || qs === 'PASS' || qs === 'ACC' || qs === 'ACCEPTED') {
+            statusAktual = 'LOLOS QC (GOOD)';
+            countGood++;
+          } else if (typeof isQCHoldItem === 'function' && isQCHoldItem(it)) {
+            statusAktual = 'HOLD QC';
+            countHold++;
+          } else if (qs === 'REWORK_QC' || qs === 'REWORK') {
+            statusAktual = 'REWORK QC';
+            countHold++;
+          } else if (qs === 'SCRAP' || qs === 'NOT_GOOD') {
+            statusAktual = 'NOT GOOD (QC)';
+            countOther++;
+          } else if (typeof isQCPendingItem === 'function' && isQCPendingItem(it)) {
+            statusAktual = 'MENUNGGU QC';
+            countPending++;
+          } else if (it.status === 'Dirakit Ulang') {
+            statusAktual = 'DIRAKIT ULANG (RU)';
+            countOther++;
+          } else {
+            statusAktual = qs || 'MENUNGGU QC';
+            countPending++;
+          }
+
+          // Format Dokumen QC & TF1
+          let docQC = it.qc_doc_number || it.doc_number;
+          if (!docQC && it.tray_code) {
+            const suffix = it.tray_code.split('/').pop();
+            docQC = it.tray_code.startsWith('WH/QC/') ? it.tray_code : `WH/QC/${suffix}`;
+          }
+          let docTF1 = it.tf1_doc_number || it.assy_doc_number;
+          if (!docTF1 && it.tray_code) {
+            const suffix = it.tray_code.split('/').pop();
+            docTF1 = it.tray_code.startsWith('ASSY/QC/') ? it.tray_code : `ASSY/QC/${suffix}`;
+          }
+
+          const qcTime = (typeof window.utils !== 'undefined' && typeof window.utils.formatDateTime === 'function')
+            ? window.utils.formatDateTime(it.qc_test_tested_at || it.qc_tested_at || it.finished_at || it.created_at)
+            : (it.qc_test_tested_at || it.qc_tested_at || it.finished_at || it.created_at || '-');
+
+          const notes = it.qc_failure_reasons || it.failure_reasons || it.rework_reason || it.qc_notes || it.notes || '-';
+
+          return [
+            idx + 1,
+            docQC || '-',
+            docTF1 || '-',
+            it.tray_code || '-',
+            it.set_number ? ('#' + it.set_number) : ('#' + (idx + 1)),
+            it.part15_sn || it.sn || '-',
+            it.part1_sn || '-',
+            it.part12_sn || '-',
+            getOperatorFullName(it.pic_assembly || it.assigned_operator) || '-',
+            getOperatorFullName(it.qc_tester_fullname || it.qc_tester_username || it.pic_qc || it.qc_tested_by) || '-',
+            qcTime,
+            statusAktual,
+            notes
+          ];
+        });
+
+        const summaryText = `Total Unit: ${rawItems.length}   |   Lolos QC (Good): ${countGood}   |   Hold QC: ${countHold}   |   Menunggu QC: ${countPending}${countOther > 0 ? ('   |   Lainnya: ' + countOther) : ''}`;
+
+        if (window.utils && typeof window.utils.exportToExcel === 'function') {
+          await window.utils.exportToExcel({
+            filename,
+            sheetName: 'QC Testing',
+            title,
+            subtitle: `Dicetak dari Menu Quality Control (TF 2) • Filter: ${qcStatusFilter.value || 'SEMUA'} • Tanggal: ${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB`,
+            summary: summaryText,
+            columns,
+            rows,
+            triggerToast
+          });
+        }
+      } catch (err) {
+        console.error('exportQCToExcel error:', err);
+        triggerToast('Gagal Ekspor', err.message || 'Terjadi kesalahan saat mengekspor Excel.', 'error');
+      }
+    };
+
     // Lifecycle / Tab Initializer
     const initQCTab = async () => {
       if (typeof window.logger !== 'undefined') {
@@ -540,7 +676,8 @@
       filteredQCPendingList,
       submitQCTest,
       openQCHoldReasonModal,
-      confirmQCHold
+      confirmQCHold,
+      exportQCToExcel
     };
   };
 });
