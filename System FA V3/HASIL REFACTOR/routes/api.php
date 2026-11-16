@@ -27,6 +27,7 @@ Route::post('/logout', [AuthController::class, 'logout']);
 Route::get('/auth/me', [AuthController::class, 'me']);
 Route::get('/operators', [AuthController::class, 'getOperators']);
 Route::get('/users/lookup', [AuthController::class, 'lookup']);
+Route::get('/badge-counts', [DiagnosticController::class, 'getBadgeCounts']);
 
 // Kelola Pengguna & Verifikasi Admin
 Route::prefix('admin')->group(function () {
