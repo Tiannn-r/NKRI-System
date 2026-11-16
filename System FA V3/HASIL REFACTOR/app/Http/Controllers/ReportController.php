@@ -171,9 +171,9 @@ class ReportController extends Controller
 
                 'a.qc_status_history',
 
-                DB::raw("COALESCE(a.assy_test_checklist, '[]') as assy_test_checklist"),
+                DB::raw("'[]' as assy_test_checklist"),
 
-                DB::raw("COALESCE(a.assy_test_checklist, '[]') as test_checklist"),
+                DB::raw("'[]' as test_checklist"),
 
                 'a.assy_failure_reasons',
 
@@ -1026,9 +1026,9 @@ class ReportController extends Controller
 
                 'a.assy_failure_reasons as tf1_failure_reasons',
 
-                'a.assy_test_checklist',
+                DB::raw("'[]' as assy_test_checklist"),
 
-                'a.assy_test_checklist as tf1_test_checklist',
+                DB::raw("'[]' as tf1_test_checklist"),
 
                 'a.pic_assembly',
 
@@ -1141,9 +1141,9 @@ class ReportController extends Controller
 
                         'a.assy_failure_reasons as tf1_failure_reasons',
 
-                        'a.assy_test_checklist',
+                        DB::raw("'[]' as assy_test_checklist"),
 
-                        'a.assy_test_checklist as tf1_test_checklist',
+                        DB::raw("'[]' as tf1_test_checklist"),
 
                         'a.pic_assembly',
 
@@ -1426,9 +1426,9 @@ class ReportController extends Controller
 
                 'a.assy_doc_number as tf1_doc_number',
 
-                DB::raw("COALESCE(a.assy_test_checklist, '[]') as assy_test_checklist"),
+                DB::raw("'[]' as assy_test_checklist"),
 
-                DB::raw("COALESCE(a.assy_test_checklist, '[]') as tf1_test_checklist"),
+                DB::raw("'[]' as tf1_test_checklist"),
 
                 DB::raw("COALESCE(a.assy_test_status, 'Good') as assy_test_status"),
 
