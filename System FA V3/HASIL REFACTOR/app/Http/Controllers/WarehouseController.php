@@ -74,20 +74,7 @@ class WarehouseController extends Controller
 
 
 
-        $query = Tray::withCount([
-            'parts',
-            'assemblies' => function ($q) {
-                $q->where(function ($w) {
-                    $w->where('is_declined', 0)->orWhereNull('is_declined');
-                })->where(function ($w) {
-                    $w->whereNull('status')->orWhereNotIn('status', ['Decline', 'DECLINED']);
-                });
-            }
-        ])
-
-
-
-            ->orderBy('id', 'desc');
+        $query = Tray::orderBy('id', 'desc');
 
 
 
@@ -133,20 +120,16 @@ class WarehouseController extends Controller
 
         $trayIds = $trayList->pluck('id')->all();
 
-
+        $partsCounts = DB::table('parts')
+            ->whereIn('tray_id', $trayIds)
+            ->select('tray_id', DB::raw('COUNT(*) as total'))
+            ->groupBy('tray_id')
+            ->pluck('total', 'tray_id');
 
         $stats = DB::table('assemblies')
-
-
-
             ->whereIn('tray_id', $trayIds)
-
-
-
             ->select('tray_id',
-
-
-
+                DB::raw('COUNT(CASE WHEN (is_declined = 0 OR is_declined IS NULL) AND (status IS NULL OR status NOT IN ("Decline", "DECLINED")) THEN 1 END) as assemblies_count'),
                 DB::raw('COUNT(CASE WHEN (status IS NULL OR status NOT IN ("Decline", "DECLINED")) AND (finished_at IS NOT NULL OR (status IS NOT NULL AND status != "" AND status NOT IN ("TERSUPPLY", "Dikembalikan ke Gudang", "RETURNED"))) THEN 1 END) as finished_count'),
 
                 DB::raw('COUNT(CASE WHEN COALESCE(original_assembly_status, status) = "Good" AND (is_reregistered IS NULL OR is_reregistered = 0) THEN 1 END) as good_count'),
@@ -195,7 +178,7 @@ class WarehouseController extends Controller
 
 
 
-        $trays = $trayList->map(function ($tray) use ($stats) {
+        $trays = $trayList->map(function ($tray) use ($stats, $partsCounts) {
 
 
 
@@ -228,10 +211,11 @@ class WarehouseController extends Controller
 
             $ruCount = $stat ? (int)$stat->ru_count : 0;
 
-            $partsCount = (int)($tray->parts_count ?: 0);
+            $partsCount = (int)($partsCounts->get($tray->id) ?: 0);
+            $assembliesCount = $stat ? (int)$stat->assemblies_count : 0;
             $partsTotalSets = (int)ceil($partsCount / 3);
             $maxSet = $stat ? (int)$stat->max_set_number : 0;
-            $computedTotalSets = max($partsTotalSets, (int)$tray->assemblies_count, $maxSet, ($stat ? (int)$stat->finished_count : 0));
+            $computedTotalSets = max($partsTotalSets, $assembliesCount, $maxSet, ($stat ? (int)$stat->finished_count : 0));
             $isSessionCompleted = ($computedTotalSets > 0 && $finishedCount >= $computedTotalSets && !in_array($tray->session_status, ['COMPLETED_SHIFT', 'RETURNED_TO_WAREHOUSE']));
 
             return [
@@ -259,8 +243,8 @@ class WarehouseController extends Controller
                 'verified_by_user' => $tray->verified_by_user,
 
                 'total_sets' => $computedTotalSets > 0 ? $computedTotalSets : 22,
-                'assemblies_count' => (int)$tray->assemblies_count,
-                'parts_count' => (int)$tray->parts_count,
+                'assemblies_count' => $assembliesCount,
+                'parts_count' => $partsCount,
 
 
 
