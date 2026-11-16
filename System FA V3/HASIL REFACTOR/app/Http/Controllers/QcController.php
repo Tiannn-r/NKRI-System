@@ -72,8 +72,6 @@ class QcController extends Controller
 
                 'a.rework_reason',
 
-                'a.assy_test_checklist', // Rekap hasil 17 checklist TF 1 untuk ditampilkan Read-Only di TF 2
-
                 'a.notes as assy_notes',
 
                 'a.assy_tester_username',
@@ -122,78 +120,55 @@ class QcController extends Controller
 
 
 
-        $items = $query->orderBy('a.id', 'desc')->get()->map(function ($item) {
-
-            $item->assy_test_checklist = json_decode($item->assy_test_checklist ?: '[]');
-
-            return $item;
-
-        });
-
-
-
-        $pendingItems = $items->filter(function ($i) {
-
-            $st = strtoupper($i->qc_status ?? '');
-
-            return ($st === 'PENDING_QC' || $st === 'PENDING' || empty($st)) 
-
-                && $i->assembly_status === 'Good' 
-
-                && strtoupper($i->assy_test_status ?? '') === 'GOOD'
-
-                && !empty($i->assy_doc_number);
-
-        })->values();
-
-
-
-        $historyItems = $items->filter(function ($i) {
-
-            $st = strtoupper($i->qc_status ?? '');
-
-            return in_array($st, ['GOOD', 'HOLD_QC', 'REWORK_QC', 'HOLD', 'RU']) || !empty($i->qc_doc_number) || !empty($i->qc_tested_at);
-
-        })->values();
-
-
-
-        $responseData = $items;
-
         if ($status === 'pending') {
-
-            $responseData = $pendingItems;
-
-        } elseif ($status === 'history') {
-
-            $responseData = $historyItems;
-
-        } else {
-
-            // Default untuk pending-items: data = pending, history_data = history, all_data = all
-
-            $responseData = $pendingItems;
-
+            $query->where('a.assy_test_status', 'GOOD')
+                  ->whereNotNull('a.assy_doc_number')
+                  ->where(function ($q) {
+                      $q->where('a.qc_status', 'PENDING_QC')
+                        ->orWhere('a.qc_status', 'PENDING')
+                        ->orWhereNull('a.qc_status');
+                  });
         }
 
+        $items = $query->orderBy('a.id', 'desc')->get();
 
+        $pendingItems = $items->filter(function ($i) {
+            $st = strtoupper($i->qc_status ?? '');
+            return ($st === 'PENDING_QC' || $st === 'PENDING' || empty($st)) 
+                && $i->assembly_status === 'Good' 
+                && strtoupper($i->assy_test_status ?? '') === 'GOOD'
+                && !empty($i->assy_doc_number);
+        })->values();
+
+        $historyItems = $items->filter(function ($i) {
+            $st = strtoupper($i->qc_status ?? '');
+            return in_array($st, ['GOOD', 'HOLD_QC', 'REWORK_QC', 'HOLD', 'RU']) || !empty($i->qc_doc_number) || !empty($i->qc_tested_at);
+        })->values();
+
+        // Lampirkan 17 checklist TF 1 HANYA untuk pending items (beban payload ringan < 5 KB)
+        $pendingIds = $pendingItems->pluck('id')->all();
+        if (!empty($pendingIds)) {
+            $checklists = DB::table('assemblies')->whereIn('id', $pendingIds)->pluck('assy_test_checklist', 'id');
+            foreach ($pendingItems as $p) {
+                $p->assy_test_checklist = json_decode($checklists[$p->id] ?? '[]');
+            }
+        }
+
+        $responseData = $pendingItems;
+        if ($status === 'history') {
+            $responseData = $historyItems;
+        } elseif ($status === 'all') {
+            $responseData = $items;
+        }
 
         return response()->json([
-
             'ok' => true,
-
             'message' => 'Success',
-
             'data' => $responseData,
-
             'pending' => $pendingItems,
-
             'history' => $historyItems,
-
             'history_data' => $historyItems,
-
-            'all_data' => $items,
-
+            'all_data' => [], // Cegah duplikasi 50 MB; frontend otomatis menggabungkan data + history_data
         ]);
 
     }
