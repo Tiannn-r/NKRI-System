@@ -1,5 +1,13 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/wwwnangg/public_html
-    - /bin/cp -a "System FA V3/HASIL REFACTOR/." $DEPLOYPATH/
+    - export BACKENDPATH=/home/wwwnangg/finalassyV4
+    - export PUBLICPATH=/home/wwwnangg/public_html/finalassy
+    - /bin/cp -a "System FA V3/HASIL REFACTOR/app" $BACKENDPATH/
+    - /bin/cp -a "System FA V3/HASIL REFACTOR/bootstrap" $BACKENDPATH/
+    - /bin/cp -a "System FA V3/HASIL REFACTOR/config" $BACKENDPATH/
+    - /bin/cp -a "System FA V3/HASIL REFACTOR/database" $BACKENDPATH/
+    - /bin/cp -a "System FA V3/HASIL REFACTOR/resources" $BACKENDPATH/
+    - /bin/cp -a "System FA V3/HASIL REFACTOR/routes" $BACKENDPATH/
+    - /bin/cp -a "System FA V3/HASIL REFACTOR/public/js" $PUBLICPATH/
+    - /bin/cp -a "System FA V3/HASIL REFACTOR/public/." $BACKENDPATH/public/
