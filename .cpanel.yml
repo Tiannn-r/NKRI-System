@@ -1,0 +1,5 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/wwwnangg/public_html
+    - /bin/cp -a "System FA V3/HASIL REFACTOR/." $DEPLOYPATH/
