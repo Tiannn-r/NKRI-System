@@ -3296,7 +3296,27 @@
           batchAcceptWarehouseReceipt
         } = warehouseModule;
 
+        const sidebarBadgeCounts = ref({
+          qc_pending: 0,
+          assembly_notif: 0,
+          hold_active: 0,
+          returns_pending: 0,
+          wh_receipt_pending: 0,
+          pending_reassembly: 0,
+          admin_pending_requests: 0,
+          admin_pending_sets: 0,
+          admin_pending_replacements: 0,
+          admin_pending_total: 0
+        });
+
         const gudangTotalBadgeCount = computed(() => {
+          if (sidebarBadgeCounts.value) {
+            return (sidebarBadgeCounts.value.wh_receipt_pending || 0) +
+                   (sidebarBadgeCounts.value.returns_pending || 0) +
+                   (sidebarBadgeCounts.value.hold_active || 0) +
+                   (sidebarBadgeCounts.value.assembly_notif || 0) +
+                   (sidebarBadgeCounts.value.pending_reassembly || 0);
+          }
           return (warehouseReceiptCounts.value?.pending || 0) +
                  (pendingReturnsCount.value || 0) +
                  (productionHoldCounts.value?.active_hold || 0) +
@@ -3314,15 +3334,10 @@
           if (!isInitial && ((showStatusDrillModal && showStatusDrillModal.value) || (showMasterPartTrackingModal && showMasterPartTrackingModal.value))) return;
 
           try {
-            await Promise.allSettled([
-              loadProductionHoldItems(true),
-              loadPendingVerifications(),
-              loadQCPendingItems(),
-              loadWarehouseReceiptReports(),
-              loadReturnedTrays(),
-              loadPendingReassembly(true),
-              loadAssemblyResults(true)
-            ]);
+            const res = await fetchAPI('/badge-counts');
+            if (res && res.ok && res.counts) {
+              sidebarBadgeCounts.value = res.counts;
+            }
           } catch (e) {
             console.error('Error in refreshAllMenuBadges:', e);
           }
@@ -3350,7 +3365,7 @@
                 loadTrays();
               }
             }
-          }, 10000);
+          }, 15000);
         };
 
         // -------------------------------------------------------------------
@@ -3625,16 +3640,8 @@
 
             if (currentTab.value === 'delivery_order') {
               if (deliveryModule && typeof deliveryModule.initDeliveryTab === 'function') {
-                deliveryModule.initDeliveryTab(initialRoute.subTab);
+                deliveryModule.initDeliveryTab(initialRoute?.subTab);
               }
-            }
-            if (currentTab.value === 'warehouse') {
-              loadTrays();
-              loadOperatorsList();
-            } else if (currentTab.value === 'assembly' || currentTab.value === 'assy_testing') {
-              loadTrays().then(() => {
-                if (selectedTrayCode.value) loadAssemblyTray();
-              });
             }
 
             // Mulai polling dan muat notifikasi badge menu secara instan tanpa jeda
@@ -3741,6 +3748,7 @@
           isTF1ResultCardVisible, isWarehouseReceiptVisible, isQCResultCardVisible, getQCReportStatus,
 
           // Global Badges & Polling
+          sidebarBadgeCounts,
           assemblyOverallCounts, tf1OverallCounts, gudangTotalBadgeCount,
           refreshAllMenuBadges, onOperatorFilterChange, defaultQCTestItems,
           pagedGudangVerif, totalPgGudangVerif

@@ -132,10 +132,10 @@
                       <span>Hasil Perakitan</span>
                     </div>
                     <div class="flex items-center gap-1.5">
-                      <span v-if="assemblyResultsSummary.notifCount > 0"
+                      <span v-if="(sidebarBadgeCounts?.assembly_notif ?? assemblyResultsSummary.notifCount) > 0"
                         class="px-1.5 py-0.5 bg-amber-400 text-slate-950 font-black text-[9px] rounded-full"
                         title="Total unit Not Good (Hold, Scrap)">
-                        {{ assemblyResultsSummary.notifCount }}
+                        {{ sidebarBadgeCounts?.assembly_notif ?? assemblyResultsSummary.notifCount }}
                       </span>
                       <i v-if="currentTab === 'production_hold'"
                         class="fa-solid fa-chevron-right text-[10px] text-white"></i>
@@ -153,9 +153,9 @@
                       <span>Hasil Test Functional 1 dan 2</span>
                     </div>
                     <div class="flex items-center gap-1.5">
-                      <span v-if="productionHoldCounts.active_hold > 0"
+                      <span v-if="(sidebarBadgeCounts?.hold_active ?? productionHoldCounts.active_hold) > 0"
                         class="px-1.5 py-0.5 bg-rose-500 text-white font-black text-[9px] rounded-full">
-                        {{ productionHoldCounts.active_hold }}
+                        {{ sidebarBadgeCounts?.hold_active ?? productionHoldCounts.active_hold }}
                       </span>
                       <i v-if="currentTab === 'functional_hold'"
                         class="fa-solid fa-chevron-right text-[10px] text-white"></i>
@@ -171,9 +171,9 @@
                         :class="currentTab === 'returns' ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'"></i>
                       <span>Pengembalian Barang</span>
                     </div>
-                    <span v-if="pendingReturnsCount > 0"
+                    <span v-if="(sidebarBadgeCounts?.returns_pending ?? pendingReturnsCount) > 0"
                       class="px-1.5 py-0.5 bg-amber-400 text-slate-950 font-black text-[9px] rounded-full">
-                      {{ pendingReturnsCount }}
+                      {{ sidebarBadgeCounts?.returns_pending ?? pendingReturnsCount }}
                     </span>
                     <i v-else-if="currentTab === 'returns'"
                       class="fa-solid fa-chevron-right text-[10px] text-white"></i>
@@ -190,9 +190,9 @@
                       <span>Good Receipts (WH/GR)</span>
                     </div>
                     <div class="flex items-center gap-1.5">
-                      <span v-if="warehouseReceiptCounts.pending > 0"
+                      <span v-if="(sidebarBadgeCounts?.wh_receipt_pending ?? warehouseReceiptCounts.pending) > 0"
                         class="px-1.5 py-0.5 bg-amber-400 text-slate-950 font-black text-[9px] rounded-full">
-                        {{ warehouseReceiptCounts.pending }}
+                        {{ sidebarBadgeCounts?.wh_receipt_pending ?? warehouseReceiptCounts.pending }}
                       </span>
                       <i v-if="currentTab === 'warehouse_receipt'"
                         class="fa-solid fa-chevron-right text-[10px] text-white"></i>
@@ -209,9 +209,9 @@
                       <span>Perakitan Ulang</span>
                     </div>
                     <div class="flex items-center gap-1.5">
-                      <span v-if="pendingReassemblyCount > 0"
+                      <span v-if="(sidebarBadgeCounts?.pending_reassembly ?? pendingReassemblyCount) > 0"
                         class="px-1.5 py-0.5 bg-amber-400 text-slate-950 font-black text-[9px] rounded-full">
-                        {{ pendingReassemblyCount }}
+                        {{ sidebarBadgeCounts?.pending_reassembly ?? pendingReassemblyCount }}
                       </span>
                       <i v-if="currentTab === 'reassembly'"
                         class="fa-solid fa-chevron-right text-[10px] text-white"></i>
@@ -320,9 +320,9 @@
                     <span class="text-xs font-black uppercase tracking-wider text-slate-800">Quality Control</span>
                   </div>
                   <div class="flex items-center space-x-1.5">
-                    <span v-if="qcPendingCount > 0"
+                    <span v-if="(sidebarBadgeCounts?.qc_pending ?? qcPendingCount) > 0"
                       class="px-1.5 py-0.5 bg-emerald-500 text-white font-black text-[9px] rounded-full">
-                      {{ qcPendingCount }}
+                      {{ sidebarBadgeCounts?.qc_pending ?? qcPendingCount }}
                     </span>
                     <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform duration-200"
                       :class="{ 'rotate-180': sidebarOpen.qc }"></i>
@@ -340,9 +340,9 @@
                         :class="currentTab === 'qc' ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'"></i>
                       <span>Test Functional 2 (QC)</span>
                     </div>
-                    <span v-if="qcPendingCount > 0"
+                    <span v-if="(sidebarBadgeCounts?.qc_pending ?? qcPendingCount) > 0"
                       class="px-1.5 py-0.5 bg-emerald-500 text-white font-black text-[9px] rounded-full">
-                      {{ qcPendingCount }}
+                      {{ sidebarBadgeCounts?.qc_pending ?? qcPendingCount }}
                     </span>
                     <i v-else-if="currentTab === 'qc'" class="fa-solid fa-chevron-right text-[10px] text-white"></i>
                   </button>
@@ -443,9 +443,9 @@
                     <span class="text-xs font-black uppercase tracking-wider text-slate-800">Administrator</span>
                   </div>
                   <div class="flex items-center space-x-1.5">
-                    <span v-if="adminPendingCount > 0"
+                    <span v-if="(sidebarBadgeCounts?.admin_pending_total ?? adminPendingCount) > 0"
                       class="px-1.5 py-0.5 bg-amber-400 text-slate-950 font-black text-[9px] rounded-full">
-                      {{ adminPendingCount }}
+                      {{ sidebarBadgeCounts?.admin_pending_total ?? adminPendingCount }}
                     </span>
                     <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform duration-200"
                       :class="{ 'rotate-180': sidebarOpen.admin }"></i>
@@ -466,9 +466,9 @@
                       <span>Verifikasi Hasil Rakitan dan Test</span>
                     </div>
                     <div class="flex items-center gap-1">
-                      <span v-if="adminPendingSetsTotalCount > 0"
+                      <span v-if="(sidebarBadgeCounts?.admin_pending_sets ?? adminPendingSetsTotalCount) > 0"
                         class="bg-amber-100 text-amber-900 border border-amber-300 font-black text-[10px] px-1.5 py-0.2 rounded-full shadow-xs">
-                        {{ adminPendingSetsTotalCount }}
+                        {{ sidebarBadgeCounts?.admin_pending_sets ?? adminPendingSetsTotalCount }}
                       </span>
                       <i v-if="currentTab === 'users' && adminSubTab === 'verify_set'"
                         class="fa-solid fa-chevron-right text-[10px] text-white"></i>
@@ -486,9 +486,9 @@
                       <span>Verifikasi Status Part</span>
                     </div>
                     <div class="flex items-center gap-1">
-                      <span v-if="adminPendingRequestsCount > 0"
+                      <span v-if="(sidebarBadgeCounts?.admin_pending_requests ?? adminPendingRequestsCount) > 0"
                         class="bg-amber-100 text-amber-900 border border-amber-300 font-black text-[10px] px-1.5 py-0.2 rounded-full shadow-xs">
-                        {{ adminPendingRequestsCount }}
+                        {{ sidebarBadgeCounts?.admin_pending_requests ?? adminPendingRequestsCount }}
                       </span>
                       <i v-if="currentTab === 'users' && adminSubTab === 'verify_part'"
                         class="fa-solid fa-chevron-right text-[10px] text-white"></i>
@@ -506,9 +506,9 @@
                       <span>Verifikasi Pergantian Part</span>
                     </div>
                     <div class="flex items-center gap-1">
-                      <span v-if="adminPendingReplacementsCount > 0"
+                      <span v-if="(sidebarBadgeCounts?.admin_pending_replacements ?? adminPendingReplacementsCount) > 0"
                         class="bg-amber-100 text-amber-900 border border-amber-300 font-black text-[10px] px-1.5 py-0.2 rounded-full shadow-xs">
-                        {{ adminPendingReplacementsCount }}
+                        {{ sidebarBadgeCounts?.admin_pending_replacements ?? adminPendingReplacementsCount }}
                       </span>
                       <i v-if="currentTab === 'users' && adminSubTab === 'verify_replacement'"
                         class="fa-solid fa-chevron-right text-[10px] text-white"></i>
