@@ -244,8 +244,9 @@ class AdminCmsController extends Controller
                 'm.is_replaced_from_assy'
             ]);
 
-        if ($request->filled('status') && $request->status !== 'ALL') {
-            $query->where('r.status', $request->status);
+        $statusParam = $request->input('status', 'PENDING');
+        if ($statusParam !== 'ALL') {
+            $query->where('r.status', $statusParam);
         }
 
         $items = $query->orderBy('r.id', 'desc')->limit(300)->get();
@@ -334,8 +335,41 @@ class AdminCmsController extends Controller
 
     public function getPendingAssemblies(Request $request)
     {
-        // 1. Assemblies dari Perakitan, TF1, dan Pengembalian/Receipts (Declined)
+        // 1. Cek cepat apakah ada unit yang membutuhkan verifikasi admin sebelum melakukan query multi-join
+        $matchingAssyIds = DB::table('assemblies as a')
+            ->where(function ($w) {
+                $w->where(function ($dec) {
+                    $dec->where('a.is_declined', true)
+                        ->orWhere('a.status', 'Decline')
+                        ->orWhere('a.verified_status', 'DECLINED')
+                        ->orWhere('a.verified_status', 'RESOLVED_RESTORED')
+                        ->orWhere('a.warehouse_receipt_status', 'DECLINED');
+                })
+                ->orWhereIn('a.verified_status', ['PENDING_ADMIN', 'PENDING_ADMIN_ASSY_REREG', 'PENDING_ADMIN_TF1', 'PENDING_ADMIN_PROCEED_TF1', 'PENDING_ADMIN_PROCEED_QC'])
+                ->orWhere('a.is_reregistered', true);
+            })
+            ->where(function ($w) {
+                $w->whereNull('a.verified_status')
+                  ->orWhereNotIn('a.verified_status', ['ACC', 'APPROVED', 'APPROVED_QC', 'APPROVED_REREG', 'APPROVED_REASSEMBLY', 'COMPLETED_PU', 'APPROVED_PROCEED_TF1', 'APPROVED_PROCEED_TF2', 'REJECTED_PROCEED']);
+            })
+            ->where(function ($w) {
+                $w->whereNull('a.warehouse_receipt_status')
+                  ->orWhere('a.warehouse_receipt_status', '!=', 'ACCEPTED');
+            })
+            ->pluck('a.id');
+
+        if ($matchingAssyIds->isEmpty()) {
+            return response()->json([
+                'ok' => true,
+                'data' => [],
+                'qc_data' => [],
+                'replacement_data' => []
+            ]);
+        }
+
+        // Assemblies dari Perakitan, TF1, dan Pengembalian/Receipts (Declined)
         $assyQuery = DB::table('assemblies as a')
+            ->whereIn('a.id', $matchingAssyIds)
             ->join('trays as t', 'a.tray_id', '=', 't.id')
             ->leftJoin('users as u_assy', function ($join) {
                 $join->on('a.pic_assembly', '=', 'u_assy.username')
@@ -378,27 +412,6 @@ class AdminCmsController extends Controller
                 DB::raw("COALESCE(u_qc.full_name, a.qc_tested_by) as pic_qc"),
                 't.created_at as tray_created_at',
             ])
-            ->where(function ($w) {
-                // a. Unit Declined (dari Penerimaan Fisik Gudang / Receipts)
-                $w->where(function ($dec) {
-                    $dec->where('a.is_declined', true)
-                        ->orWhere('a.status', 'Decline')
-                        ->orWhere('a.verified_status', 'DECLINED')
-                        ->orWhere('a.verified_status', 'RESOLVED_RESTORED')
-                        ->orWhere('a.warehouse_receipt_status', 'DECLINED');
-                })
-                // b. Unit yang diajukan untuk Verifikasi / Perakitan Ulang oleh Operator
-                ->orWhereIn('a.verified_status', ['PENDING_ADMIN', 'PENDING_ADMIN_ASSY_REREG', 'PENDING_ADMIN_TF1', 'PENDING_ADMIN_PROCEED_TF1', 'PENDING_ADMIN_PROCEED_QC'])
-                ->orWhere('a.is_reregistered', true);
-            })
-            ->where(function ($w) {
-                $w->whereNull('a.verified_status')
-                  ->orWhereNotIn('a.verified_status', ['ACC', 'APPROVED', 'APPROVED_QC', 'APPROVED_REREG', 'APPROVED_REASSEMBLY', 'COMPLETED_PU', 'APPROVED_PROCEED_TF1', 'APPROVED_PROCEED_TF2', 'REJECTED_PROCEED']);
-            })
-            ->where(function ($w) {
-                $w->whereNull('a.warehouse_receipt_status')
-                  ->orWhere('a.warehouse_receipt_status', '!=', 'ACCEPTED');
-            })
             ->orderBy('a.id', 'desc')
             ->get()
             ->map(function ($row) {
