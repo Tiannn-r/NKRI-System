@@ -1462,7 +1462,7 @@
                         Tidak ada data tray produksi pada periode ini.
                       </td>
                     </tr>
-                    <tr v-for="t in activePeriodTrays" :key="t.id" class="hover:bg-slate-50/70 transition">
+                    <tr v-for="t in pagedActivePeriodTrays" :key="t.id" class="hover:bg-slate-50/70 transition">
                       <td class="p-3.5 pl-5 font-bold font-mono text-slate-900">
                         <span class="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-800">{{ t.tray_code }}</span>
                       </td>
@@ -1484,6 +1484,22 @@
                     </tr>
                   </tbody>
                 </table>
+              </div>
+
+              <!-- Paginasi Tabel Laporan Produksi -->
+              <div v-if="activePeriodTrays.length > reportTraysPageSize" class="px-5 py-3 bg-slate-50/70 border-t border-slate-200/80 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div class="text-slate-500 font-medium">
+                  Menampilkan <span class="font-bold text-slate-800">{{ ((reportTraysPage - 1) * reportTraysPageSize) + 1 }}</span> - <span class="font-bold text-slate-800">{{ Math.min(reportTraysPage * reportTraysPageSize, activePeriodTrays.length) }}</span> dari <span class="font-bold text-slate-800">{{ activePeriodTrays.length }}</span> tray aktif
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <button @click="reportTraysPage = Math.max(1, reportTraysPage - 1)" :disabled="reportTraysPage <= 1" class="px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed font-medium shadow-xs transition">
+                    <i class="fa-solid fa-chevron-left mr-1"></i> Prev
+                  </button>
+                  <span class="px-2 font-bold text-slate-700">Halaman {{ reportTraysPage }} dari {{ reportTraysTotalPages }}</span>
+                  <button @click="reportTraysPage = Math.min(reportTraysTotalPages, reportTraysPage + 1)" :disabled="reportTraysPage >= reportTraysTotalPages" class="px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed font-medium shadow-xs transition">
+                    Next <i class="fa-solid fa-chevron-right ml-1"></i>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -2541,21 +2557,48 @@
         });
 
         // Helper to check if a tray was active in the selected period (created, assembled, or updated)
-        const isTrayActiveInPeriod = (t, p) => {
-          if (!t) return false;
-          if (checkDateByPeriod(t.created_at, p)) return true;
-          if (t.latest_assembly_at && checkDateByPeriod(t.latest_assembly_at, p)) return true;
-          if (t.earliest_assembly_at && checkDateByPeriod(t.earliest_assembly_at, p)) return true;
-          if (t.updated_at && checkDateByPeriod(t.updated_at, p)) return true;
-          const hasAssy = (rawAssyTestsList.value || []).some(i => (i.tray_id === t.id || i.tray_code === t.tray_code) && checkDateByPeriod(i.finished_at || i.started_at || i.created_at, p));
-          if (hasAssy) return true;
-          return false;
-        };
+        // Optimasi O(1): Pre-index tray IDs & tray codes yang aktif di periode terpilih
+        const activeTrayKeysInPeriod = computed(() => {
+          const p = reportPeriod.value;
+          const keys = new Set();
+          (rawAssyTestsList.value || []).forEach(i => {
+            if (checkDateByPeriod(i.finished_at || i.started_at || i.created_at, p)) {
+              if (i.tray_id) keys.add(i.tray_id);
+              if (i.tray_code) keys.add(i.tray_code);
+            }
+          });
+          return keys;
+        });
 
         const activePeriodTrays = computed(() => {
           const p = reportPeriod.value;
-          return rawTraysList.value.filter(t => isTrayActiveInPeriod(t, p));
+          const keys = activeTrayKeysInPeriod.value;
+          return (rawTraysList.value || []).filter(t => {
+            if (!t) return false;
+            if (checkDateByPeriod(t.created_at, p)) return true;
+            if (t.latest_assembly_at && checkDateByPeriod(t.latest_assembly_at, p)) return true;
+            if (t.earliest_assembly_at && checkDateByPeriod(t.earliest_assembly_at, p)) return true;
+            if (t.updated_at && checkDateByPeriod(t.updated_at, p)) return true;
+            if (keys.has(t.id) || keys.has(t.tray_code)) return true;
+            return false;
+          });
         });
+
+        // Client-side pagination untuk tabel Laporan Produksi (mencegah freeze/lag DOM)
+        const reportTraysPage = ref(1);
+        const reportTraysPageSize = ref(15);
+        const reportTraysTotalPages = computed(() => Math.max(1, Math.ceil(activePeriodTrays.value.length / reportTraysPageSize.value)));
+        const pagedActivePeriodTrays = computed(() => {
+          const start = (reportTraysPage.value - 1) * reportTraysPageSize.value;
+          return activePeriodTrays.value.slice(start, start + reportTraysPageSize.value);
+        });
+        watch(reportPeriod, () => { reportTraysPage.value = 1; });
+        watch(reportDailyDate, () => { reportTraysPage.value = 1; });
+        watch(reportWeeklyDate, () => { reportTraysPage.value = 1; });
+        watch(reportMonthlyMonth, () => { reportTraysPage.value = 1; });
+        watch(reportMonthlyYear, () => { reportTraysPage.value = 1; });
+        watch(reportCustomStart, () => { reportTraysPage.value = 1; });
+        watch(reportCustomEnd, () => { reportTraysPage.value = 1; });
 
         const activePeriodStats = computed(() => {
           const p = reportPeriod.value;
@@ -4269,6 +4312,10 @@
           activePeriodDateRangeLabel,
           activePeriodStats,
           activePeriodTrays,
+          reportTraysPage,
+          reportTraysPageSize,
+          reportTraysTotalPages,
+          pagedActivePeriodTrays,
           countDeptUsers,
           formatDateTime,
           renderTimeTrendsChart,
