@@ -638,7 +638,7 @@ class ReportController extends Controller
 
                 't.tester_username',
 
-                't.test_checklist',
+                DB::raw("'[]' as test_checklist"),
 
                 't.status',
 
@@ -672,21 +672,8 @@ class ReportController extends Controller
             ->join('trays as tr_check', 't.tray_id', '=', 'tr_check.id')
             ->leftJoin('assemblies as a', 't.assembly_id', '=', 'a.id')
 
-            ->leftJoin('users as u', function ($j) {
-
-                $j->on('t.tester_username', '=', 'u.username')
-
-                  ->orOn('t.tester_username', '=', 'u.full_name');
-
-            })
-
-            ->leftJoin('users as u_assy_op', function ($j) {
-
-                $j->on('a.pic_assembly', '=', 'u_assy_op.username')
-
-                  ->orOn('a.pic_assembly', '=', 'u_assy_op.full_name');
-
-            })
+            ->leftJoin('users as u', 't.tester_username', '=', 'u.username')
+            ->leftJoin('users as u_assy_op', 'a.pic_assembly', '=', 'u_assy_op.username')
 
             ->where('t.stage', 'ASSY')
 
@@ -698,13 +685,7 @@ class ReportController extends Controller
 
                     ->join('trays as tr', 'a.tray_id', '=', 'tr.id')
 
-                    ->leftJoin('users as u_op', function ($j) {
-
-                        $j->on('tr.assigned_operator', '=', 'u_op.username')
-
-                          ->orOn('tr.assigned_operator', '=', 'u_op.full_name');
-
-                    })
+                    ->leftJoin('users as u_op', 'tr.assigned_operator', '=', 'u_op.username')
 
                     ->select([
 
@@ -731,7 +712,7 @@ class ReportController extends Controller
 
                         DB::raw("COALESCE(a.assy_tester_username, tr.assigned_operator, a.pic_assembly, '-') as tester_username"),
 
-                        DB::raw("COALESCE(a.assy_test_checklist, '[]') as test_checklist"),
+                        DB::raw("'[]' as test_checklist"),
 
                         DB::raw("CASE 
                             WHEN a.assy_test_status IS NOT NULL AND a.assy_test_status != 'PENDING' AND a.assy_test_status != '' THEN a.assy_test_status 
@@ -995,7 +976,7 @@ class ReportController extends Controller
 
                 't.tester_username',
 
-                't.test_checklist',
+                DB::raw("'[]' as test_checklist"),
 
                 't.test_checklist as qc_test_checklist',
 
@@ -1048,21 +1029,8 @@ class ReportController extends Controller
             ->join('trays as tr_check', 't.tray_id', '=', 'tr_check.id')
             ->leftJoin('assemblies as a', 't.assembly_id', '=', 'a.id')
 
-            ->leftJoin('users as u', function ($j) {
-
-                $j->on('t.tester_username', '=', 'u.username')
-
-                  ->orOn('t.tester_username', '=', 'u.full_name');
-
-            })
-
-            ->leftJoin('users as u_op', function ($j) {
-
-                $j->on('a.pic_assembly', '=', 'u_op.username')
-
-                  ->orOn('a.pic_assembly', '=', 'u_op.full_name');
-
-            })
+            ->leftJoin('users as u', 't.tester_username', '=', 'u.username')
+            ->leftJoin('users as u_op', 'a.pic_assembly', '=', 'u_op.username')
 
             ->where('t.stage', 'QC')
 
@@ -1074,13 +1042,7 @@ class ReportController extends Controller
 
                     ->join('trays as tr', 'a.tray_id', '=', 'tr.id')
 
-                    ->leftJoin('users as u_op', function ($j) {
-
-                        $j->on('a.pic_assembly', '=', 'u_op.username')
-
-                          ->orOn('a.pic_assembly', '=', 'u_op.full_name');
-
-                    })
+                    ->leftJoin('users as u_op', 'a.pic_assembly', '=', 'u_op.username')
 
                     ->select([
 

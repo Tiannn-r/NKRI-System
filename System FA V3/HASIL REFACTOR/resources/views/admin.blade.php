@@ -3397,10 +3397,10 @@
         const startAutoUpdate = () => {
           if (autoUpdateTimer) clearInterval(autoUpdateTimer);
           autoUpdateTimer = setInterval(() => {
-            if (isCmsAuthenticated.value && document.visibilityState === 'visible' && (activeTab.value === 'dashboard' || activeTab.value === 'reports_kpi')) {
+            if (isCmsAuthenticated.value && document.visibilityState === 'visible' && !dashboardStats.value.loading && (activeTab.value === 'dashboard' || activeTab.value === 'reports_kpi')) {
               loadDashboardStats(true);
             }
-          }, 10000);
+          }, 30000);
         };
 
         const stopAutoUpdate = () => {
@@ -3619,7 +3619,6 @@
         const fetchActiveTabData = () => {
           if (activeTab.value === 'dashboard') {
             loadDashboardStats();
-            scanAnomalies(true);
             if (lastDailyTrendsData && lastDailyTrendsData.length > 0) {
               renderTimeTrendsChart(lastDailyTrendsData);
             }
@@ -3656,9 +3655,6 @@
               loadDashboardStats(false);
               startAutoUpdate();
               fetchUsers();
-              fetchErrorLogs();
-              fetchSlowQueries();
-              scanAnomalies(true);
             } catch (e) {
               sessionStorage.removeItem('cms_admin_token');
               sessionStorage.removeItem('cms_admin_user');
@@ -3705,9 +3701,6 @@
               loadDashboardStats(false);
               startAutoUpdate();
               fetchUsers();
-              fetchErrorLogs();
-              fetchSlowQueries();
-              scanAnomalies(true);
               triggerToast('Login Berhasil', 'Selamat datang di Portal Administrator CMS.', 'success');
             } else {
               loginError.value = data.error || 'Autentikasi gagal. Periksa username dan password.';
