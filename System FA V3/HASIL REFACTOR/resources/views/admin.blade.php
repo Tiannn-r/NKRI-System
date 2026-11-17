@@ -572,6 +572,46 @@
         <!-- MAIN SCROLLABLE CONTENT BODY -->
         <main class="flex-grow p-5 sm:p-8 space-y-6">
 
+          <!-- PROGRESS BAR PENGAMBILAN DATA CMS (REALTIME PROGRESS MONITOR) -->
+          <div v-if="loadingProgress.active" class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border border-slate-700/80 rounded-2xl p-4 shadow-xl text-white transition-all duration-300">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-2.5">
+              <div class="flex items-center gap-3">
+                <span class="relative flex h-3 w-3">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                </span>
+                <div>
+                  <div class="text-xs font-bold tracking-wide flex items-center gap-2">
+                    <span>Sinkronisasi Data Dashboard CMS</span>
+                    <span class="px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 text-[10px] font-mono border border-red-500/30">
+                      @{{ loadingProgress.completedSteps }}/@{{ loadingProgress.totalSteps }} Proses Selesai
+                    </span>
+                  </div>
+                  <div class="text-[11px] text-slate-300 mt-0.5 flex items-center gap-1.5">
+                    <i class="fa-solid fa-cloud-arrow-down text-slate-400 text-[10px]"></i>
+                    <span>@{{ loadingProgress.detail || 'Menghubungkan ke server hosting...' }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-4">
+                <div class="text-right">
+                  <span class="text-lg font-black font-mono text-red-400">@{{ loadingProgress.percent }}%</span>
+                  <div class="text-[10px] text-slate-400">
+                    <span v-if="loadingProgress.recordsLoaded > 0">@{{ loadingProgress.recordsLoaded.toLocaleString() }} baris data</span>
+                    <span v-else>Memproses query...</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Animated Gradient Progress Bar -->
+            <div class="w-full bg-slate-700/60 rounded-full h-2.5 overflow-hidden p-0.5 border border-slate-600/50">
+              <div class="bg-gradient-to-r from-red-500 via-amber-400 to-emerald-400 h-full rounded-full transition-all duration-300 ease-out shadow-sm"
+                   :style="{ width: loadingProgress.percent + '%' }"></div>
+            </div>
+          </div>
+
           <!-- ================================================================= -->
           <!-- TOP 4 KPI STATS SUMMARY CARDS ROW (LAPORAN HARIAN & PIPELINE)     -->
           <!-- ================================================================= -->
@@ -2418,6 +2458,16 @@
           }
         });
 
+        // Real-time Progress Monitor Pengambilan Data CMS
+        const loadingProgress = ref({
+          active: false,
+          percent: 0,
+          completedSteps: 0,
+          totalSteps: 6,
+          detail: '',
+          recordsLoaded: 0
+        });
+
         // Date Period Comparison Helpers (Supporting Backdate & Custom Ranges)
         const checkDateByPeriod = (dateStr, period = reportPeriod.value) => {
           const d = parseDateSafe(dateStr);
@@ -3150,15 +3200,61 @@
         const loadDashboardStats = async (isSilent = false) => {
           if (!isSilent) {
             dashboardStats.value.loading = true;
+            loadingProgress.value = {
+              active: true,
+              percent: 5,
+              completedSteps: 0,
+              totalSteps: 6,
+              detail: 'Menghubungkan ke server database...',
+              recordsLoaded: 0
+            };
           }
+
+          let completed = 0;
+          let totalRecords = 0;
+          const onStepDone = (name, count = 0) => {
+            completed++;
+            totalRecords += count;
+            const pct = Math.min(95, Math.round((completed / 6) * 100));
+            if (!isSilent) {
+              loadingProgress.value.completedSteps = completed;
+              loadingProgress.value.percent = pct;
+              loadingProgress.value.recordsLoaded = totalRecords;
+              loadingProgress.value.detail = `${name} (${count > 0 ? count.toLocaleString() + ' data dimuat' : 'selesai'})`;
+            }
+          };
+
           try {
             const [traysRes, assyRes, qcRes, whRes, ruRes, doRes] = await Promise.allSettled([
-              fetch('/api/assembly/trays').then(r => r.json()).catch(() => ({})),
-              fetch('/api/reports/assy-tests').then(r => r.json()).catch(() => ({})),
-              fetch('/api/reports/qc-tests').then(r => r.json()).catch(() => ({})),
-              fetch('/api/reports/warehouse-receipts').then(r => r.json()).catch(() => ({})),
-              fetch('/api/assembly/pending-reassembly').then(r => r.json()).catch(() => ({})),
-              fetch('/api/delivery-orders?all=1').then(r => r.json()).catch(() => ({}))
+              fetch('/api/assembly/trays')
+                .then(r => r.json())
+                .then(d => { onStepDone('Baki Perakitan', Array.isArray(d?.data) ? d.data.length : 0); return d; })
+                .catch(() => { onStepDone('Baki Perakitan (timeout)', 0); return {}; }),
+
+              fetch('/api/reports/assy-tests')
+                .then(r => r.json())
+                .then(d => { onStepDone('Hasil Uji Test Functional 1 (TF 1)', Array.isArray(d?.data) ? d.data.length : 0); return d; })
+                .catch(() => { onStepDone('Hasil Uji TF 1 (timeout)', 0); return {}; }),
+
+              fetch('/api/reports/qc-tests')
+                .then(r => r.json())
+                .then(d => { onStepDone('Hasil Quality Control (TF 2)', Array.isArray(d?.data) ? d.data.length : 0); return d; })
+                .catch(() => { onStepDone('Hasil QC (timeout)', 0); return {}; }),
+
+              fetch('/api/reports/warehouse-receipts')
+                .then(r => r.json())
+                .then(d => { onStepDone('Penerimaan Fisik Gudang', Array.isArray(d?.data) ? d.data.length : 0); return d; })
+                .catch(() => { onStepDone('Penerimaan Gudang (timeout)', 0); return {}; }),
+
+              fetch('/api/assembly/pending-reassembly')
+                .then(r => r.json())
+                .then(d => { onStepDone('Antrean Perakitan Ulang (RU)', Array.isArray(d?.data) ? d.data.length : 0); return d; })
+                .catch(() => { onStepDone('Perakitan Ulang (timeout)', 0); return {}; }),
+
+              fetch('/api/delivery-orders?all=1')
+                .then(r => r.json())
+                .then(d => { onStepDone('Dokumen Delivery Order', Array.isArray(d?.data) ? d.data.length : 0); return d; })
+                .catch(() => { onStepDone('Delivery Order (timeout)', 0); return {}; })
             ]);
 
             // Store raw lists
@@ -3391,6 +3487,13 @@
             const now = new Date();
             const pad = (n) => String(n).padStart(2, '0');
             lastSyncTimeStr.value = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+            if (!isSilent) {
+              loadingProgress.value.percent = 100;
+              loadingProgress.value.detail = `Sinkronisasi selesai (${totalRecords.toLocaleString()} baris data berhasil dimuat)!`;
+              setTimeout(() => {
+                loadingProgress.value.active = false;
+              }, 1200);
+            }
           }
         };
 
@@ -4155,6 +4258,7 @@
 
           // Dashboard stats & Reporting
           dashboardStats,
+          loadingProgress,
           loadDashboardStats,
           lastSyncTimeStr,
           startAutoUpdate,
