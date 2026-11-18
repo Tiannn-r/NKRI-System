@@ -581,11 +581,8 @@
                   <span class="relative inline-flex rounded-full h-3 w-3 bg-red-600"></span>
                 </span>
                 <div>
-                  <div class="text-xs font-bold tracking-wide text-slate-900 flex items-center gap-2">
+                  <div class="text-xs font-bold tracking-wide text-slate-900">
                     <span>Sinkronisasi Data Dashboard CMS</span>
-                    <span class="px-2.5 py-0.5 rounded-full bg-red-50 text-red-700 text-[10px] font-bold font-mono border border-red-200">
-                      Proses {{ loadingProgress.completedSteps }} dari {{ loadingProgress.totalSteps }} Selesai
-                    </span>
                   </div>
                   <div class="text-[11px] text-slate-500 mt-1 flex items-center gap-1.5 font-medium">
                     <i class="fa-solid fa-cloud-arrow-down text-red-500 text-[10px]"></i>
