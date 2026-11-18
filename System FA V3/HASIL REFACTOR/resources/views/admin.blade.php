@@ -2592,13 +2592,9 @@
           const start = (reportTraysPage.value - 1) * reportTraysPageSize.value;
           return activePeriodTrays.value.slice(start, start + reportTraysPageSize.value);
         });
-        watch(reportPeriod, () => { reportTraysPage.value = 1; });
-        watch(reportDailyDate, () => { reportTraysPage.value = 1; });
-        watch(reportWeeklyDate, () => { reportTraysPage.value = 1; });
-        watch(reportMonthlyMonth, () => { reportTraysPage.value = 1; });
-        watch(reportMonthlyYear, () => { reportTraysPage.value = 1; });
-        watch(reportCustomStart, () => { reportTraysPage.value = 1; });
-        watch(reportCustomEnd, () => { reportTraysPage.value = 1; });
+        watch(activePeriodTrays, () => {
+          reportTraysPage.value = 1;
+        });
 
         const activePeriodStats = computed(() => {
           const p = reportPeriod.value;
