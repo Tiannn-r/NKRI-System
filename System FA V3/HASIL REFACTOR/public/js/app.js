@@ -77,30 +77,63 @@
         // ===================================================================
         // REALTIME DATA LOADING PROGRESS MONITOR (HALAMAN OPERASIONAL USER)
         // ===================================================================
+        const formatProgressTitle = (path, fallback) => {
+          if (!path) return fallback || 'Data Operasional';
+          const p = String(path).toLowerCase();
+          if (p.includes('assembly/tray') || p.includes('assembly/trays')) return 'Data Perakitan & Baki';
+          if (p.includes('assembly')) return 'Data Perakitan';
+          if (p.includes('qc')) return 'Quality Control (QC)';
+          if (p.includes('tf1') || p.includes('assy-test')) return 'Uji Fungsional (TF 1)';
+          if (p.includes('warehouse') || p.includes('gudang')) return 'Logistik & Gudang';
+          if (p.includes('returns')) return 'Pengembalian Barang';
+          if (p.includes('reassembly')) return 'Perakitan Ulang';
+          if (p.includes('delivery')) return 'Delivery Order';
+          if (p.includes('report') || p.includes('laporan')) return 'Laporan Produksi';
+          return fallback || 'Data Operasional';
+        };
+
         const userLoadingProgress = ref({
-          active: true,
-          percent: 25,
+          active: false,
+          percent: 0,
           title: 'Data Operasional',
           detail: 'Memuat data dari server...',
           recordsLoaded: 0
         });
 
-        let activeReqCount = 1;
+        let activeReqCount = 0;
+        let progressInterval = null;
         let progressHideTimeout = null;
-        let progressInterval = setInterval(() => {
-          if (userLoadingProgress.value.percent < 90) {
-            userLoadingProgress.value.percent += Math.floor(Math.random() * 8) + 4;
+        let progressFailsafeTimeout = null;
+
+        const completeProgress = () => {
+          if (progressInterval) {
+            clearInterval(progressInterval);
+            progressInterval = null;
           }
-        }, 120);
+          if (progressFailsafeTimeout) {
+            clearTimeout(progressFailsafeTimeout);
+            progressFailsafeTimeout = null;
+          }
+          activeReqCount = 0;
+          userLoadingProgress.value.percent = 100;
+          clearTimeout(progressHideTimeout);
+          progressHideTimeout = setTimeout(() => {
+            userLoadingProgress.value.active = false;
+            userLoadingProgress.value.percent = 0;
+            userLoadingProgress.value.recordsLoaded = 0;
+          }, 650);
+        };
 
         const onApiStart = (e) => {
           activeReqCount++;
           clearTimeout(progressHideTimeout);
+          clearTimeout(progressFailsafeTimeout);
+
           const detail = e.detail || {};
-          const modTitle = detail.actionLabel || detail.module || 'Data Operasional';
+          const cleanTitle = formatProgressTitle(detail.path, detail.module);
 
           userLoadingProgress.value.active = true;
-          userLoadingProgress.value.title = modTitle;
+          userLoadingProgress.value.title = cleanTitle;
           userLoadingProgress.value.detail = 'Menghubungkan ke server database...';
 
           if (userLoadingProgress.value.percent === 0 || userLoadingProgress.value.percent >= 100) {
@@ -110,10 +143,17 @@
           if (!progressInterval) {
             progressInterval = setInterval(() => {
               if (userLoadingProgress.value.percent < 90) {
-                userLoadingProgress.value.percent += Math.floor(Math.random() * 10) + 5;
+                userLoadingProgress.value.percent += Math.floor(Math.random() * 8) + 4;
               }
-            }, 120);
+            }, 100);
           }
+
+          // Global Failsafe: Jika proses memakan waktu lebih dari 5 detik, paksa tuntaskan agar bar tidak macet
+          progressFailsafeTimeout = setTimeout(() => {
+            if (userLoadingProgress.value.active) {
+              completeProgress();
+            }
+          }, 5000);
         };
 
         const onApiFinish = (e) => {
@@ -121,20 +161,19 @@
           const detail = e.detail || {};
           if (detail.count && detail.count > 0) {
             userLoadingProgress.value.recordsLoaded += detail.count;
-            userLoadingProgress.value.detail = `${detail.count.toLocaleString()} baris data dimuat`;
+            userLoadingProgress.value.detail = `${detail.count.toLocaleString()} baris data selesai dimuat`;
           }
 
           if (activeReqCount === 0) {
-            if (progressInterval) {
-              clearInterval(progressInterval);
-              progressInterval = null;
-            }
-            userLoadingProgress.value.percent = 100;
-            progressHideTimeout = setTimeout(() => {
-              userLoadingProgress.value.active = false;
-              userLoadingProgress.value.percent = 0;
-              userLoadingProgress.value.recordsLoaded = 0;
-            }, 850);
+            completeProgress();
+          } else {
+            // Debounce Failsafe: Jika request lain tak kunjung datang/selesai dalam 800ms, tuntaskan
+            clearTimeout(progressFailsafeTimeout);
+            progressFailsafeTimeout = setTimeout(() => {
+              if (userLoadingProgress.value.active) {
+                completeProgress();
+              }
+            }, 800);
           }
         };
 
@@ -3776,6 +3815,7 @@
           }
           if (progressInterval) clearInterval(progressInterval);
           if (progressHideTimeout) clearTimeout(progressHideTimeout);
+          if (progressFailsafeTimeout) clearTimeout(progressFailsafeTimeout);
         });
 
         // =========================================================
