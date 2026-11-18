@@ -9,8 +9,6 @@
     <!-- MAIN CONTAINER -->
     <main class="flex-grow max-w-7xl w-full mx-auto p-3 sm:p-6 lg:p-8 space-y-4 sm:space-y-6">
 
-      @include('layouts.progress-monitor')
-
       @include('modules.assembly.index')
       @include('modules.tf1.index')
       @include('modules.warehouse.returns')

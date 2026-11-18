@@ -74,114 +74,6 @@
           }
         };
 
-        // ===================================================================
-        // REALTIME DATA LOADING PROGRESS MONITOR (HALAMAN OPERASIONAL USER)
-        // ===================================================================
-        const formatProgressTitle = (path, fallback) => {
-          if (!path) return fallback || 'Data Operasional';
-          const p = String(path).toLowerCase();
-          if (p.includes('assembly/tray') || p.includes('assembly/trays')) return 'Data Perakitan & Baki';
-          if (p.includes('assembly')) return 'Data Perakitan';
-          if (p.includes('qc')) return 'Quality Control (QC)';
-          if (p.includes('tf1') || p.includes('assy-test')) return 'Uji Fungsional (TF 1)';
-          if (p.includes('warehouse') || p.includes('gudang')) return 'Logistik & Gudang';
-          if (p.includes('returns')) return 'Pengembalian Barang';
-          if (p.includes('reassembly')) return 'Perakitan Ulang';
-          if (p.includes('delivery')) return 'Delivery Order';
-          if (p.includes('report') || p.includes('laporan')) return 'Laporan Produksi';
-          return fallback || 'Data Operasional';
-        };
-
-        const userLoadingProgress = ref({
-          active: false,
-          percent: 0,
-          title: 'Data Operasional',
-          detail: 'Memuat data dari server...',
-          recordsLoaded: 0
-        });
-
-        let activeReqCount = 0;
-        let progressInterval = null;
-        let progressHideTimeout = null;
-        let progressFailsafeTimeout = null;
-
-        const completeProgress = () => {
-          if (progressInterval) {
-            clearInterval(progressInterval);
-            progressInterval = null;
-          }
-          if (progressFailsafeTimeout) {
-            clearTimeout(progressFailsafeTimeout);
-            progressFailsafeTimeout = null;
-          }
-          activeReqCount = 0;
-          userLoadingProgress.value.percent = 100;
-          clearTimeout(progressHideTimeout);
-          progressHideTimeout = setTimeout(() => {
-            userLoadingProgress.value.active = false;
-            userLoadingProgress.value.percent = 0;
-            userLoadingProgress.value.recordsLoaded = 0;
-          }, 650);
-        };
-
-        const onApiStart = (e) => {
-          activeReqCount++;
-          clearTimeout(progressHideTimeout);
-          clearTimeout(progressFailsafeTimeout);
-
-          const detail = e.detail || {};
-          const cleanTitle = formatProgressTitle(detail.path, detail.module);
-
-          userLoadingProgress.value.active = true;
-          userLoadingProgress.value.title = cleanTitle;
-          userLoadingProgress.value.detail = 'Menghubungkan ke server database...';
-
-          if (userLoadingProgress.value.percent === 0 || userLoadingProgress.value.percent >= 100) {
-            userLoadingProgress.value.percent = 25;
-          }
-
-          if (!progressInterval) {
-            progressInterval = setInterval(() => {
-              if (userLoadingProgress.value.percent < 90) {
-                userLoadingProgress.value.percent += Math.floor(Math.random() * 8) + 4;
-              }
-            }, 100);
-          }
-
-          // Global Failsafe: Jika proses memakan waktu lebih dari 5 detik, paksa tuntaskan agar bar tidak macet
-          progressFailsafeTimeout = setTimeout(() => {
-            if (userLoadingProgress.value.active) {
-              completeProgress();
-            }
-          }, 5000);
-        };
-
-        const onApiFinish = (e) => {
-          activeReqCount = Math.max(0, activeReqCount - 1);
-          const detail = e.detail || {};
-          if (detail.count && detail.count > 0) {
-            userLoadingProgress.value.recordsLoaded += detail.count;
-            userLoadingProgress.value.detail = `${detail.count.toLocaleString()} baris data selesai dimuat`;
-          }
-
-          if (activeReqCount === 0) {
-            completeProgress();
-          } else {
-            // Debounce Failsafe: Jika request lain tak kunjung datang/selesai dalam 800ms, tuntaskan
-            clearTimeout(progressFailsafeTimeout);
-            progressFailsafeTimeout = setTimeout(() => {
-              if (userLoadingProgress.value.active) {
-                completeProgress();
-              }
-            }, 800);
-          }
-        };
-
-        if (typeof window !== 'undefined') {
-          window.addEventListener('app:api:start', onApiStart);
-          window.addEventListener('app:api:finish', onApiFinish);
-        }
-
         const managedMenuGroups = [
           {
             key: 'gudang',
@@ -1310,28 +1202,16 @@
 
           const method = (options.method || 'GET').toUpperCase();
           const cleanPath = String(path).startsWith('/') ? path : '/' + path;
-          const isSilent = cleanPath.includes('badge-counts') || cleanPath.includes('database-status') || (options && options.silent);
           const modName = getModuleFromApiPath(cleanPath);
 
           const actionLabel = (typeof window !== 'undefined' && window.logger && typeof logger.getActionLabel === 'function')
             ? logger.getActionLabel(method, cleanPath)
             : (method + ' ' + cleanPath);
 
-          if (!isSilent && typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('app:api:start', {
-              detail: { path: cleanPath, method: method, module: modName, actionLabel: actionLabel }
-            }));
-          }
-
           let res;
           try {
             res = await fetch('/api' + cleanPath, options);
           } catch (networkErr) {
-            if (!isSilent && typeof window !== 'undefined') {
-              window.dispatchEvent(new CustomEvent('app:api:finish', {
-                detail: { path: cleanPath, method: method, module: modName, count: 0, error: true }
-              }));
-            }
             if (retryCount < 1 && (!options.method || options.method === 'GET')) {
               await new Promise(r => setTimeout(r, 600));
               return fetchAPI(path, options, retryCount + 1);
@@ -1391,27 +1271,8 @@
               }
             }
 
-            if (!isSilent && typeof window !== 'undefined') {
-              let recordCount = 0;
-              if (json) {
-                if (Array.isArray(json.data)) recordCount = json.data.length;
-                else if (Array.isArray(json.items)) recordCount = json.items.length;
-                else if (Array.isArray(json.history_data)) recordCount = (json.data ? json.data.length : 0) + json.history_data.length;
-                else if (json.data && Array.isArray(json.data.assemblies)) recordCount = json.data.assemblies.length;
-                else if (json.data && Array.isArray(json.data.parts)) recordCount = json.data.parts.length;
-              }
-              window.dispatchEvent(new CustomEvent('app:api:finish', {
-                detail: { path: cleanPath, method: method, module: modName, count: recordCount }
-              }));
-            }
-
             return json;
           } catch (jsonErr) {
-            if (!isSilent && typeof window !== 'undefined') {
-              window.dispatchEvent(new CustomEvent('app:api:finish', {
-                detail: { path: cleanPath, method: method, module: modName, count: 0, error: true }
-              }));
-            }
             console.error('JSON parse error:', jsonErr);
             if (!res.ok) {
               throw new Error(`Kesalahan Server (${res.status}): Format data respon tidak dapat dibaca.`);
@@ -3809,13 +3670,6 @@
 
         onUnmounted(() => {
           window.removeEventListener('popstate', handleMobileBackNavigation);
-          if (typeof window !== 'undefined') {
-            window.removeEventListener('app:api:start', onApiStart);
-            window.removeEventListener('app:api:finish', onApiFinish);
-          }
-          if (progressInterval) clearInterval(progressInterval);
-          if (progressHideTimeout) clearTimeout(progressHideTimeout);
-          if (progressFailsafeTimeout) clearTimeout(progressFailsafeTimeout);
         });
 
         // =========================================================
@@ -3902,7 +3756,6 @@
 
           // Global Badges & Polling
           sidebarBadgeCounts,
-          userLoadingProgress,
           assemblyOverallCounts, tf1OverallCounts, gudangTotalBadgeCount,
           refreshAllMenuBadges, onOperatorFilterChange, defaultQCTestItems,
           pagedGudangVerif, totalPgGudangVerif
