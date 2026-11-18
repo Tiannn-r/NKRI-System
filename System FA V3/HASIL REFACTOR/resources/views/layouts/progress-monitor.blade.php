@@ -1,6 +1,6 @@
 @verbatim
       <!-- REALTIME DATA LOADING PROGRESS MONITOR (HALAMAN OPERASIONAL USER) -->
-      <div v-if="userLoadingProgress.active" class="no-print bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs text-slate-900 transition-all duration-300 animate-fadeIn mb-4">
+      <div v-if="userLoadingProgress && userLoadingProgress.active" class="no-print bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs text-slate-900 transition-all duration-300 animate-fadeIn mb-4">
         <div class="flex flex-wrap items-center justify-between gap-3 mb-2.5">
           <div class="flex items-center gap-3">
             <span class="relative flex h-3 w-3">

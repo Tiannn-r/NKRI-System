@@ -78,16 +78,20 @@
         // REALTIME DATA LOADING PROGRESS MONITOR (HALAMAN OPERASIONAL USER)
         // ===================================================================
         const userLoadingProgress = ref({
-          active: false,
-          percent: 0,
+          active: true,
+          percent: 25,
           title: 'Data Operasional',
           detail: 'Memuat data dari server...',
           recordsLoaded: 0
         });
 
-        let activeReqCount = 0;
-        let progressInterval = null;
+        let activeReqCount = 1;
         let progressHideTimeout = null;
+        let progressInterval = setInterval(() => {
+          if (userLoadingProgress.value.percent < 90) {
+            userLoadingProgress.value.percent += Math.floor(Math.random() * 8) + 4;
+          }
+        }, 120);
 
         const onApiStart = (e) => {
           activeReqCount++;
@@ -106,9 +110,9 @@
           if (!progressInterval) {
             progressInterval = setInterval(() => {
               if (userLoadingProgress.value.percent < 90) {
-                userLoadingProgress.value.percent += Math.floor(Math.random() * 12) + 5;
+                userLoadingProgress.value.percent += Math.floor(Math.random() * 10) + 5;
               }
-            }, 140);
+            }, 120);
           }
         };
 
@@ -121,14 +125,16 @@
           }
 
           if (activeReqCount === 0) {
-            clearInterval(progressInterval);
-            progressInterval = null;
+            if (progressInterval) {
+              clearInterval(progressInterval);
+              progressInterval = null;
+            }
             userLoadingProgress.value.percent = 100;
             progressHideTimeout = setTimeout(() => {
               userLoadingProgress.value.active = false;
               userLoadingProgress.value.percent = 0;
               userLoadingProgress.value.recordsLoaded = 0;
-            }, 750);
+            }, 850);
           }
         };
 
