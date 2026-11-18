@@ -89,8 +89,10 @@
       if (currentTab.value === 'assy_testing') {
         list = list.filter(t => (t.good_assembly_count || t.good_count || 0) > 0);
       }
-      if (selectedOperatorFilter.value && selectedOperatorFilter.value !== '' && selectedOperatorFilter.value !== 'Semua Operator Assembly') {
-        const op = selectedOperatorFilter.value.toLowerCase().trim();
+      const rawFilter = String(selectedOperatorFilter.value || '').trim();
+      const isAllOp = !rawFilter || rawFilter.toLowerCase().includes('semua');
+      if (!isAllOp) {
+        const op = rawFilter.toLowerCase();
         list = list.filter(t => {
           const assigned = (t.assigned_operator || '').toLowerCase().trim();
           const assignedFull = getOperatorFullName(t.assigned_operator).toLowerCase().trim();
@@ -327,8 +329,10 @@
     const loadTrays = async () => {
       try {
         let url = '/assembly/trays';
-        if (selectedOperatorFilter.value && (userRole.value === 'gudang' || userRole.value === 'admin' || userRole.value === 'Super Admin' || String(userRole.value || '').toLowerCase().includes('admin'))) {
-          url += `?operator=${encodeURIComponent(selectedOperatorFilter.value)}`;
+        const rawFilter = String(selectedOperatorFilter.value || '').trim();
+        const isAllOp = !rawFilter || rawFilter.toLowerCase().includes('semua');
+        if (!isAllOp && (userRole.value === 'gudang' || userRole.value === 'admin' || userRole.value === 'Super Admin' || String(userRole.value || '').toLowerCase().includes('admin'))) {
+          url += `?operator=${encodeURIComponent(rawFilter)}`;
         }
         const json = await fetchAPI(url);
         if (json.ok) {

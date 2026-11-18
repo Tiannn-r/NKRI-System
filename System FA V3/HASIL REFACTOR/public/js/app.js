@@ -128,7 +128,7 @@
               userLoadingProgress.value.active = false;
               userLoadingProgress.value.percent = 0;
               userLoadingProgress.value.recordsLoaded = 0;
-            }, 450);
+            }, 750);
           }
         };
 
@@ -1263,10 +1263,30 @@
           if (actFull) options.headers['X-Actor-Fullname'] = encodeURIComponent(actFull);
           if (actRole) options.headers['X-Actor-Role'] = actRole;
 
+          const method = (options.method || 'GET').toUpperCase();
+          const cleanPath = String(path).startsWith('/') ? path : '/' + path;
+          const isSilent = cleanPath.includes('badge-counts') || cleanPath.includes('database-status') || (options && options.silent);
+          const modName = getModuleFromApiPath(cleanPath);
+
+          const actionLabel = (typeof window !== 'undefined' && window.logger && typeof logger.getActionLabel === 'function')
+            ? logger.getActionLabel(method, cleanPath)
+            : (method + ' ' + cleanPath);
+
+          if (!isSilent && typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('app:api:start', {
+              detail: { path: cleanPath, method: method, module: modName, actionLabel: actionLabel }
+            }));
+          }
+
           let res;
           try {
-            res = await fetch('/api' + path, options);
+            res = await fetch('/api' + cleanPath, options);
           } catch (networkErr) {
+            if (!isSilent && typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('app:api:finish', {
+                detail: { path: cleanPath, method: method, module: modName, count: 0, error: true }
+              }));
+            }
             if (retryCount < 1 && (!options.method || options.method === 'GET')) {
               await new Promise(r => setTimeout(r, 600));
               return fetchAPI(path, options, retryCount + 1);
@@ -1308,19 +1328,13 @@
 
           try {
             const json = await res.json();
-            const method = (options.method || 'GET').toUpperCase();
-            const modName = getModuleFromApiPath(path);
-
-            const actionLabel = (typeof window !== 'undefined' && window.logger && typeof logger.getActionLabel === 'function')
-              ? logger.getActionLabel(method, path)
-              : (method + ' ' + path);
 
             if (!res.ok || (json && json.success === false)) {
               if (typeof window !== 'undefined' && window.logger) {
                 const errMsg = (json && (json.message || json.error)) || ('HTTP ' + res.status);
                 logger.error(modName, actionLabel, {
                   status: res.status,
-                  url: method + ' /api' + path,
+                  url: method + ' /api' + cleanPath,
                   message: errMsg,
                   details: json
                 });
@@ -1331,8 +1345,28 @@
                 logger.success(modName, sMsg);
               }
             }
+
+            if (!isSilent && typeof window !== 'undefined') {
+              let recordCount = 0;
+              if (json) {
+                if (Array.isArray(json.data)) recordCount = json.data.length;
+                else if (Array.isArray(json.items)) recordCount = json.items.length;
+                else if (Array.isArray(json.history_data)) recordCount = (json.data ? json.data.length : 0) + json.history_data.length;
+                else if (json.data && Array.isArray(json.data.assemblies)) recordCount = json.data.assemblies.length;
+                else if (json.data && Array.isArray(json.data.parts)) recordCount = json.data.parts.length;
+              }
+              window.dispatchEvent(new CustomEvent('app:api:finish', {
+                detail: { path: cleanPath, method: method, module: modName, count: recordCount }
+              }));
+            }
+
             return json;
           } catch (jsonErr) {
+            if (!isSilent && typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('app:api:finish', {
+                detail: { path: cleanPath, method: method, module: modName, count: 0, error: true }
+              }));
+            }
             console.error('JSON parse error:', jsonErr);
             if (!res.ok) {
               throw new Error(`Kesalahan Server (${res.status}): Format data respon tidak dapat dibaca.`);
@@ -1855,8 +1889,10 @@
 
         const assemblyOverallCounts = computed(() => {
           let list = traysList.value || [];
-          if (selectedOperatorFilter.value && selectedOperatorFilter.value !== '' && selectedOperatorFilter.value !== 'Semua operator assembly' && selectedOperatorFilter.value !== 'Semua Operator Assembly') {
-            const op = selectedOperatorFilter.value.toLowerCase().trim();
+          const rawFilter = String(selectedOperatorFilter.value || '').trim();
+          const isAllOp = !rawFilter || rawFilter.toLowerCase().includes('semua');
+          if (!isAllOp) {
+            const op = rawFilter.toLowerCase();
             list = list.filter(t => {
               const assigned = (t.assigned_operator || '').toLowerCase().trim();
               const assignedFull = getOperatorFullName(t.assigned_operator).toLowerCase().trim();
@@ -1879,8 +1915,10 @@
 
         const tf1OverallCounts = computed(() => {
           let list = traysList.value || [];
-          if (selectedOperatorFilter.value && selectedOperatorFilter.value !== '' && selectedOperatorFilter.value !== 'Semua operator assembly' && selectedOperatorFilter.value !== 'Semua Operator Assembly') {
-            const op = selectedOperatorFilter.value.toLowerCase().trim();
+          const rawFilter = String(selectedOperatorFilter.value || '').trim();
+          const isAllOp = !rawFilter || rawFilter.toLowerCase().includes('semua');
+          if (!isAllOp) {
+            const op = rawFilter.toLowerCase();
             list = list.filter(t => {
               const assigned = (t.assigned_operator || '').toLowerCase().trim();
               const assignedFull = getOperatorFullName(t.assigned_operator).toLowerCase().trim();
@@ -3827,3 +3865,6 @@
     });
     app.config.globalProperties.window = window;
     app.mount('#app');
+    if (typeof window !== 'undefined' && typeof window.__dismissAppLoader === 'function') {
+      setTimeout(window.__dismissAppLoader, 150);
+    }

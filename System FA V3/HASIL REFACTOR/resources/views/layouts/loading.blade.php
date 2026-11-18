@@ -46,21 +46,22 @@
         function dismissLoader() {
           var loader = document.getElementById('app-loading-screen');
           if (loader && loader.style.opacity !== '0') {
-            loader.style.transition = 'opacity 0.4s ease';
+            loader.style.transition = 'opacity 0.35s ease';
             loader.style.opacity = '0';
             loader.style.pointerEvents = 'none';
             setTimeout(function () {
               if (loader && loader.parentNode) {
                 loader.parentNode.removeChild(loader);
               }
-            }, 450);
+            }, 380);
           }
         }
+        window.__dismissAppLoader = dismissLoader;
         window.addEventListener('load', function () {
-          setTimeout(dismissLoader, 1500);
+          setTimeout(dismissLoader, 300);
         });
         // Batas waktu maksimum fallback
-        setTimeout(dismissLoader, 3000);
+        setTimeout(dismissLoader, 2500);
       })();
   </script>
 

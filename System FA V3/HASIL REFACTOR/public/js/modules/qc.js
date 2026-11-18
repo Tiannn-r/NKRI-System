@@ -100,18 +100,21 @@
           if (isQCHoldItem(item)) return false;
           const st = String(item.qc_status || '').trim().toUpperCase();
           if (['GOOD', 'GOOD_QC', 'PASS', 'ACC', 'ACCEPTED'].includes(st)) return false;
-          return (st === 'PENDING_QC' || st === 'PENDING' || !st) && item.assembly_status === 'Good';
+          const ast = String(item.assembly_status || item.status || '').trim().toLowerCase();
+          return (st === 'PENDING_QC' || st === 'PENDING' || !st) && (ast === 'good' || !ast);
         };
 
         const isEligibleForQC = (item) => {
           if (!item) return false;
+          const qs = String(item.qc_status || '').trim().toUpperCase();
           // 1. Sudah diuji di QC (Memiliki nomor dokumen QC atau hasil uji QC yang sah / Hold QC)
-          if (item.qc_doc_number || item.qc_tested_at || item.qc_status === 'GOOD' || isQCHoldItem(item)) {
+          if (item.qc_doc_number || item.qc_tested_at || ['GOOD', 'GOOD_QC', 'PASS', 'ACC', 'ACCEPTED'].includes(qs) || isQCHoldItem(item)) {
             return true;
           }
           // 2. Menunggu QC: Wajib berstatus Good di perakitan & Good di TF1 (lolos Uji Fungsional 1) dan belum diuji QC
+          const ats = String(item.assy_test_status || '').trim().toUpperCase();
           return isQCPendingItem(item) &&
-            item.assy_test_status === 'Good' &&
+            (ats === 'GOOD' || ats === 'PASS') &&
             Boolean(item.assy_doc_number);
         };
 
