@@ -573,41 +573,41 @@
         <main class="flex-grow p-5 sm:p-8 space-y-6">
 
           <!-- PROGRESS BAR PENGAMBILAN DATA CMS (REALTIME PROGRESS MONITOR) -->
-          <div v-if="loadingProgress.active" class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border border-slate-700/80 rounded-2xl p-4 shadow-xl text-white transition-all duration-300">
-            <div class="flex flex-wrap items-center justify-between gap-3 mb-2.5">
+          <div v-if="loadingProgress.active" class="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs text-slate-900 transition-all duration-300">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
               <div class="flex items-center gap-3">
                 <span class="relative flex h-3 w-3">
                   <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                  <span class="relative inline-flex rounded-full h-3 w-3 bg-red-600"></span>
                 </span>
                 <div>
-                  <div class="text-xs font-bold tracking-wide flex items-center gap-2">
+                  <div class="text-xs font-bold tracking-wide text-slate-900 flex items-center gap-2">
                     <span>Sinkronisasi Data Dashboard CMS</span>
-                    <span class="px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 text-[10px] font-mono border border-red-500/30">
-                      @{{ loadingProgress.completedSteps }}/@{{ loadingProgress.totalSteps }} Proses Selesai
+                    <span class="px-2.5 py-0.5 rounded-full bg-red-50 text-red-700 text-[10px] font-bold font-mono border border-red-200">
+                      Proses {{ loadingProgress.completedSteps }} dari {{ loadingProgress.totalSteps }} Selesai
                     </span>
                   </div>
-                  <div class="text-[11px] text-slate-300 mt-0.5 flex items-center gap-1.5">
-                    <i class="fa-solid fa-cloud-arrow-down text-slate-400 text-[10px]"></i>
-                    <span>@{{ loadingProgress.detail || 'Menghubungkan ke server hosting...' }}</span>
+                  <div class="text-[11px] text-slate-500 mt-1 flex items-center gap-1.5 font-medium">
+                    <i class="fa-solid fa-cloud-arrow-down text-red-500 text-[10px]"></i>
+                    <span>{{ loadingProgress.detail || 'Menghubungkan ke server hosting...' }}</span>
                   </div>
                 </div>
               </div>
 
               <div class="flex items-center gap-4">
                 <div class="text-right">
-                  <span class="text-lg font-black font-mono text-red-400">@{{ loadingProgress.percent }}%</span>
-                  <div class="text-[10px] text-slate-400">
-                    <span v-if="loadingProgress.recordsLoaded > 0">@{{ loadingProgress.recordsLoaded.toLocaleString() }} baris data</span>
+                  <span class="text-xl font-black font-mono text-red-600">{{ loadingProgress.percent }}%</span>
+                  <div class="text-[10px] font-medium text-slate-500">
+                    <span v-if="loadingProgress.recordsLoaded > 0">{{ loadingProgress.recordsLoaded.toLocaleString() }} baris data</span>
                     <span v-else>Memproses query...</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- Animated Gradient Progress Bar -->
-            <div class="w-full bg-slate-700/60 rounded-full h-2.5 overflow-hidden p-0.5 border border-slate-600/50">
-              <div class="bg-gradient-to-r from-red-500 via-amber-400 to-emerald-400 h-full rounded-full transition-all duration-300 ease-out shadow-sm"
+            <!-- Animated Clean Progress Bar (Sesuai Tema Website NKRI) -->
+            <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden p-0.5 border border-slate-200">
+              <div class="bg-gradient-to-r from-red-600 to-rose-500 h-full rounded-full transition-all duration-300 ease-out shadow-2xs"
                    :style="{ width: loadingProgress.percent + '%' }"></div>
             </div>
           </div>
