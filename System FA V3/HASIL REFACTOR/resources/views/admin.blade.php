@@ -4224,7 +4224,7 @@
         const resetUserSession = async (u) => {
           const confirmed = await showConfirmCard({
             title: 'Reset Sesi Login',
-            message: `Putuskan sesi aktif untuk akun @${u.username}? Pengguna harus login ulang.`,
+            message: `Putuskan sesi aktif untuk akun "${u.username}"? Pengguna harus login ulang.`,
             confirmText: 'Reset Sesi',
             confirmBtnClass: 'bg-amber-600 hover:bg-amber-700 text-white'
           });
@@ -4237,7 +4237,7 @@
             });
             const data = await res.json();
             if (data.ok) {
-              triggerToast('Berhasil', `Sesi @${u.username} berhasil direset.`, 'success');
+              triggerToast('Berhasil', `Sesi akun "${u.username}" berhasil direset.`, 'success');
               fetchUsers();
             } else {
               triggerToast('Gagal', data.error, 'error');
@@ -4254,7 +4254,7 @@
           }
           const confirmed = await showConfirmCard({
             title: 'Hapus Pengguna',
-            message: `Apakah Anda yakin ingin menghapus akun @${u.username}? Tindakan ini permanen.`,
+            message: `Apakah Anda yakin ingin menghapus akun "${u.username}"? Tindakan ini permanen.`,
             confirmText: 'Hapus Akun',
             confirmBtnClass: 'bg-red-600 hover:bg-red-700 text-white'
           });
