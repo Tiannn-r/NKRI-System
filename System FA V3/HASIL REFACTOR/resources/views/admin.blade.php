@@ -2099,7 +2099,7 @@
 
   <!-- VUE 3 APPLICATION LOGIC SCRIPT -->
   <script>
-    const { createApp, ref, reactive, computed, onMounted, nextTick } = Vue;
+    const { createApp, ref, reactive, computed, onMounted, nextTick, watch } = Vue;
 
     createApp({
       setup() {

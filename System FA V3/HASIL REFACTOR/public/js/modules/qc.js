@@ -132,7 +132,8 @@
               const filterQC = (arr) => (arr || []).filter(isEligibleForQC);
               qcPendingList.value = filterQC(res.data);
               qcHistoryList.value = filterQC(res.history_data);
-              qcAllList.value = filterQC(res.all_data || ((res.data || []).concat(res.history_data || [])));
+              const combined = (res.all_data && res.all_data.length) ? res.all_data : (res.data || []).concat(res.history_data || []);
+              qcAllList.value = filterQC(combined);
             }
           } catch (_) { }
         };
@@ -518,7 +519,7 @@
               res = await fetchAPI(`/qc/items${qp}`);
             }
             if (res && res.ok) {
-              rawItems = res.data || res.all_data || [];
+              rawItems = (res.data && res.data.length) ? res.data : ((res.all_data && res.all_data.length) ? res.all_data : ((res.history_data || []).concat(res.pending || [])));
             }
           } catch (_) { }
         }

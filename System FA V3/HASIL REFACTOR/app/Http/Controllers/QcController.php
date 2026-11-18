@@ -168,7 +168,7 @@ class QcController extends Controller
             'pending' => $pendingItems,
             'history' => $historyItems,
             'history_data' => $historyItems,
-            'all_data' => [], // Cegah duplikasi 50 MB; frontend otomatis menggabungkan data + history_data
+            'all_data' => null, // Cegah duplikasi 50 MB; frontend otomatis menggabungkan data + history_data
         ]);
 
     }
