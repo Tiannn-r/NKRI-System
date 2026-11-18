@@ -80,10 +80,22 @@
         actionLabel = method + ' ' + url;
       }
 
+      var isSilent = cleanPath.includes('badge-counts') || (options && options.silent);
+      if (!isSilent && typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('app:api:start', {
+          detail: { path: cleanPath, method: method, module: modName, actionLabel: actionLabel }
+        }));
+      }
+
       var res;
       try {
         res = await fetch(url, options);
       } catch (networkErr) {
+        if (!isSilent && typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('app:api:finish', {
+            detail: { path: cleanPath, method: method, module: modName, count: 0, error: true }
+          }));
+        }
         // Auto-retry untuk GET request jika terjadi transient network glitch
         if (retryCount < 1 && method === 'GET') {
           await new Promise(function (r) { setTimeout(r, 600); });
@@ -163,8 +175,27 @@
           }
         }
 
+        if (!isSilent && typeof window !== 'undefined') {
+          var recordCount = 0;
+          if (json) {
+            if (Array.isArray(json.data)) recordCount = json.data.length;
+            else if (Array.isArray(json.items)) recordCount = json.items.length;
+            else if (Array.isArray(json.history_data)) recordCount = (json.data ? json.data.length : 0) + json.history_data.length;
+            else if (json.data && Array.isArray(json.data.assemblies)) recordCount = json.data.assemblies.length;
+            else if (json.data && Array.isArray(json.data.parts)) recordCount = json.data.parts.length;
+          }
+          window.dispatchEvent(new CustomEvent('app:api:finish', {
+            detail: { path: cleanPath, method: method, module: modName, count: recordCount }
+          }));
+        }
+
         return json;
       } catch (jsonErr) {
+        if (!isSilent && typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('app:api:finish', {
+            detail: { path: cleanPath, method: method, module: modName, count: 0, error: true }
+          }));
+        }
         if (!res.ok) {
           throw new Error('Kesalahan Server (' + res.status + '): Format data tidak dapat dibaca.');
         }

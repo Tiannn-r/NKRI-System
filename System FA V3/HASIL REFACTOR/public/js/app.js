@@ -74,6 +74,69 @@
           }
         };
 
+        // ===================================================================
+        // REALTIME DATA LOADING PROGRESS MONITOR (HALAMAN OPERASIONAL USER)
+        // ===================================================================
+        const userLoadingProgress = ref({
+          active: false,
+          percent: 0,
+          title: 'Data Operasional',
+          detail: 'Memuat data dari server...',
+          recordsLoaded: 0
+        });
+
+        let activeReqCount = 0;
+        let progressInterval = null;
+        let progressHideTimeout = null;
+
+        const onApiStart = (e) => {
+          activeReqCount++;
+          clearTimeout(progressHideTimeout);
+          const detail = e.detail || {};
+          const modTitle = detail.actionLabel || detail.module || 'Data Operasional';
+
+          userLoadingProgress.value.active = true;
+          userLoadingProgress.value.title = modTitle;
+          userLoadingProgress.value.detail = 'Menghubungkan ke server database...';
+
+          if (userLoadingProgress.value.percent === 0 || userLoadingProgress.value.percent >= 100) {
+            userLoadingProgress.value.percent = 25;
+          }
+
+          if (!progressInterval) {
+            progressInterval = setInterval(() => {
+              if (userLoadingProgress.value.percent < 90) {
+                userLoadingProgress.value.percent += Math.floor(Math.random() * 12) + 5;
+              }
+            }, 140);
+          }
+        };
+
+        const onApiFinish = (e) => {
+          activeReqCount = Math.max(0, activeReqCount - 1);
+          const detail = e.detail || {};
+          if (detail.count && detail.count > 0) {
+            userLoadingProgress.value.recordsLoaded += detail.count;
+            userLoadingProgress.value.detail = `${detail.count.toLocaleString()} baris data dimuat`;
+          }
+
+          if (activeReqCount === 0) {
+            clearInterval(progressInterval);
+            progressInterval = null;
+            userLoadingProgress.value.percent = 100;
+            progressHideTimeout = setTimeout(() => {
+              userLoadingProgress.value.active = false;
+              userLoadingProgress.value.percent = 0;
+              userLoadingProgress.value.recordsLoaded = 0;
+            }, 450);
+          }
+        };
+
+        if (typeof window !== 'undefined') {
+          window.addEventListener('app:api:start', onApiStart);
+          window.addEventListener('app:api:finish', onApiFinish);
+        }
+
         const managedMenuGroups = [
           {
             key: 'gudang',
@@ -3663,6 +3726,12 @@
 
         onUnmounted(() => {
           window.removeEventListener('popstate', handleMobileBackNavigation);
+          if (typeof window !== 'undefined') {
+            window.removeEventListener('app:api:start', onApiStart);
+            window.removeEventListener('app:api:finish', onApiFinish);
+          }
+          if (progressInterval) clearInterval(progressInterval);
+          if (progressHideTimeout) clearTimeout(progressHideTimeout);
         });
 
         // =========================================================
@@ -3749,6 +3818,7 @@
 
           // Global Badges & Polling
           sidebarBadgeCounts,
+          userLoadingProgress,
           assemblyOverallCounts, tf1OverallCounts, gudangTotalBadgeCount,
           refreshAllMenuBadges, onOperatorFilterChange, defaultQCTestItems,
           pagedGudangVerif, totalPgGudangVerif
