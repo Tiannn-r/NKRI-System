@@ -703,12 +703,52 @@
           if (pgState.labelsHistory) pgState.labelsHistory.page = 1;
         };
 
+        const labelSortOrder = ref('desc'); // 'desc' = terbaru / nomor terbesar di atas, 'asc' = terlama
+        const labelSortField = ref('date'); // 'date' | 'pkg_id'
+
+        const toggleLabelSortOrder = () => {
+          labelSortOrder.value = labelSortOrder.value === 'desc' ? 'asc' : 'desc';
+        };
+
+        const toggleLabelSortBy = (field) => {
+          if (labelSortField.value === field) {
+            labelSortOrder.value = labelSortOrder.value === 'desc' ? 'asc' : 'desc';
+          } else {
+            labelSortField.value = field;
+            labelSortOrder.value = 'desc';
+          }
+        };
+
+        const getPackagingSortValue = (lbl) => {
+          if (!lbl) return 0;
+          const ids = getLabelPackagingIds(lbl);
+          const firstId = ids && ids.length > 0 ? String(ids[0]).trim() : '';
+          const match = firstId.match(/^(\d{2})(\d{2})-(\d+)/);
+          if (match) {
+            const year = parseInt(match[1], 10);
+            const month = parseInt(match[2], 10);
+            const num = parseInt(match[3], 10);
+            return (year * 100 + month) * 100000 + num;
+          }
+          const plMatch = String(lbl.pl_number || '').match(/^(\d+)/);
+          if (plMatch) return parseInt(plMatch[1], 10);
+          return Number(lbl.id) || 0;
+        };
+
         const getLabelDateKey = (lbl) => {
           if (!lbl) return '';
+          if (lbl.label_date) {
+            const str = String(lbl.label_date).trim();
+            const matchIso = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (matchIso) {
+              return `${matchIso[1]}-${matchIso[2]}-${matchIso[3]}`;
+            }
+          }
           if (lbl.created_at) {
-            const s = String(lbl.created_at).trim();
-            if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
-              return s.substring(0, 10);
+            const str = String(lbl.created_at).trim();
+            const matchIso = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (matchIso) {
+              return `${matchIso[1]}-${matchIso[2]}-${matchIso[3]}`;
             }
           }
           return '';
@@ -5104,6 +5144,38 @@
         });
       }
 
+      // 6. Urutan Berdasarkan Tanggal atau ID Peti/Dus (Terbaru / Terbesar di atas)
+      list.sort((a, b) => {
+        if (labelSortField.value === 'pkg_id') {
+          const valA = getPackagingSortValue(a);
+          const valB = getPackagingSortValue(b);
+          if (valA !== valB) {
+            return labelSortOrder.value === 'asc' ? valA - valB : valB - valA;
+          }
+          const idA = Number(a.id) || 0;
+          const idB = Number(b.id) || 0;
+          return labelSortOrder.value === 'asc' ? idA - idB : idB - idA;
+        }
+
+        // Default: Urut berdasarkan Tanggal Dokumen (label_date)
+        const dateA = getLabelDateKey(a) || '';
+        const dateB = getLabelDateKey(b) || '';
+        if (dateA !== dateB) {
+          return labelSortOrder.value === 'asc' ? dateA.localeCompare(dateB) : dateB.localeCompare(dateA);
+        }
+
+        // Jika tanggal sama, urutkan berdasarkan nilai urutan Peti / Dus
+        const valA = getPackagingSortValue(a);
+        const valB = getPackagingSortValue(b);
+        if (valA !== valB) {
+          return labelSortOrder.value === 'asc' ? valA - valB : valB - valA;
+        }
+
+        const idA = Number(a.id) || 0;
+        const idB = Number(b.id) || 0;
+        return labelSortOrder.value === 'asc' ? idA - idB : idB - idA;
+      });
+
       return list;
     });
 
@@ -5194,7 +5266,7 @@
       standaloneLabelsList, isLoadingStandaloneLabels, isSavingStandaloneLabel, activeLabelCrateIndex, labelCratePage, labelCratesPerPage, totalLabelCratePages, pagedLabelCrates, setLabelCratePage, prevLabelCratePage, nextLabelCratePage, selectLabelCrate, prevLabelCrate, nextLabelCrate, quickJumpTarget, jumpToLabelCrate, onLabelCratePageInput, labelForm, lastSavedPLInfo, resetLabelForm, confirmResetLabelForm, syncLabelPackagingStructure, autoFillAvailableSNsForLabel, showLabelBulkModal, labelBulkRawText, labelBulkScope, labelBulkMode, openLabelBulkModal, closeLabelBulkModal, parsedLabelBulkSNs, labelBulkStats, applyLabelBulkData, loadStandaloneLabels, openStandaloneLabelsHistory, saveStandaloneLabel, printStandaloneLabel, deleteStandaloneLabel,
       getLabelFormFilledCount, getLabelFormRequiredCount, getLabelCrateFilledCount, getLabelCrateRequiredCount, isLabelFormComplete, hasInvalidLabelSNs, hasInvalidDOSNs,
       getLabelPackagingIds, formatLabelPackagingRange, generatedPackagingIds, generatedPackagingIdPreview, formatLabelDateOnly, isLabelBackdate, isDOBackdate,
-      labelSearchText, labelDocFilter, labelPackageFilter, labelStartDate, labelEndDate, distinctPLLabelNumbers, resetLabelFilter, filteredStandaloneLabelsList, pagedStandaloneLabelsList, totalPgStandaloneLabels,
+      labelSearchText, labelDocFilter, labelPackageFilter, labelStartDate, labelEndDate, distinctPLLabelNumbers, resetLabelFilter, labelSortOrder, labelSortField, toggleLabelSortOrder, toggleLabelSortBy, getPackagingSortValue, getLabelDateKey, filteredStandaloneLabelsList, pagedStandaloneLabelsList, totalPgStandaloneLabels,
       loadDOSettings, saveDOSettings, applySettingsToNewDOForm, loadDOPreviewData, openDODocumentPreview, doList, doSearchText, doSearchSN, doSortOrder, doSortField, isTrackingSN, snTrackingResult, toggleDOSortOrder, toggleDOSortBy, getDONumberSeq, getDODateKey, trackSerialNumberDirect, filteredDOList, exportDeliveryOrderExcel, customersList, filteredCustomersList,
       doStartDate, doEndDate, doDocFilter, distinctDODocNumbers, resetDOFilter, pagedDOList, totalPgDOList,
       isCustomerDropdownOpen, customerDropdownRef, showNewCustomerModal, newCustomerForm,

@@ -836,11 +836,23 @@
                   class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200 uppercase text-[10px] tracking-wider">
                   <tr>
                     <th class="py-3 px-3.5 text-center w-12">No</th>
-                    <th class="py-3 px-3.5">ID Peti / Dus</th>
+                    <th @click="toggleLabelSortBy('pkg_id')" class="py-3 px-3.5 cursor-pointer hover:bg-slate-100 transition select-none" title="Klik untuk mengurutkan ID Peti / Dus">
+                      <div class="flex items-center gap-1.5">
+                        <span>ID Peti / Dus</span>
+                        <i v-if="labelSortField === 'pkg_id'" class="fa-solid text-[10px] text-indigo-600" :class="labelSortOrder === 'desc' ? 'fa-arrow-down-wide-short' : 'fa-arrow-up-wide-short'"></i>
+                        <i v-else class="fa-solid fa-sort text-[10px] text-slate-300"></i>
+                      </div>
+                    </th>
                     <th class="py-3 px-3.5">Jenis Kemasan</th>
                     <th class="py-3 px-3.5">Kemasan &amp; Unit</th>
                     <th class="py-3 px-3.5">Status Konsumsi</th>
-                    <th class="py-3 px-3.5">Tanggal</th>
+                    <th @click="toggleLabelSortBy('date')" class="py-3 px-3.5 cursor-pointer hover:bg-slate-100 transition select-none" title="Klik untuk membalik urutan tanggal">
+                      <div class="flex items-center gap-1.5">
+                        <span>Tanggal</span>
+                        <i v-if="labelSortField === 'date'" class="fa-solid text-[10px] text-indigo-600" :class="labelSortOrder === 'desc' ? 'fa-arrow-down-wide-short' : 'fa-arrow-up-wide-short'"></i>
+                        <i v-else class="fa-solid fa-sort text-[10px] text-slate-300"></i>
+                      </div>
+                    </th>
                     <th class="py-3 px-3.5">Petugas</th>
                     <th class="py-3 px-3.5 text-center">Aksi Cetak</th>
                     <th class="py-3 px-3.5 text-center">Jenis PL</th>

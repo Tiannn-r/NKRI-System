@@ -1121,6 +1121,7 @@ class DeliveryOrderController extends Controller
     public function getPackingLabels()
     {
         $rows = DB::table('standalone_packing_labels')
+            ->orderBy('label_date', 'desc')
             ->orderBy('id', 'desc')
             ->get();
 
