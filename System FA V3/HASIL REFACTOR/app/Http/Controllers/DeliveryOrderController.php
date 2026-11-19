@@ -896,9 +896,26 @@ class DeliveryOrderController extends Controller
         $endDate = $request->input('end_date');
         $q = trim($request->input('q', ''));
 
+        // Subquery untuk mengambil ID perakitan sah terakhir (Good / ACC Gudang) untuk setiap Part 15
+        // Mencegah duplikasi baris akibat riwayat baki lama yang pernah dirakit ulang (PU)
+        $validAssemblySub = DB::table('assemblies as a')
+            ->select('a.part15_sn', DB::raw('MAX(a.id) as max_assembly_id'))
+            ->where(function ($w) {
+                $w->where('a.status', 'Good')
+                  ->orWhereIn(DB::raw("UPPER(COALESCE(a.warehouse_receipt_status, ''))"), ['ACCEPTED', 'ACC'])
+                  ->orWhereIn(DB::raw("UPPER(COALESCE(a.qc_status, ''))"), ['GOOD', 'GOOD_QC', 'PASS']);
+            })
+            ->where(function ($w) {
+                $w->whereNull('a.is_declined')->orWhere('a.is_declined', 0);
+            })
+            ->groupBy('a.part15_sn');
+
         $query = DB::table('delivery_orders as d')
             ->join('packing_list_items as pli', 'd.id', '=', 'pli.delivery_order_id')
-            ->leftJoin('assemblies as a', 'pli.serial_number', '=', 'a.part15_sn')
+            ->leftJoinSub($validAssemblySub, 'va', function ($join) {
+                $join->on('pli.serial_number', '=', 'va.part15_sn');
+            })
+            ->leftJoin('assemblies as a', 'va.max_assembly_id', '=', 'a.id')
             ->select([
                 'd.id as do_id',
                 'd.do_number',

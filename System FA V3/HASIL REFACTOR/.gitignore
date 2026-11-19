@@ -9,3 +9,5 @@
 .phpunit.result.cache
 docker-compose.override.yml
 *.sql
+*.xlsx
+~$*.xlsx
