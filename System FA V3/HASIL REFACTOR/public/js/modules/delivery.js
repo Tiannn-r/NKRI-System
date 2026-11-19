@@ -639,6 +639,13 @@
           return ids;
         };
 
+        const formatLabelPackagingRange = (lbl) => {
+          const ids = getLabelPackagingIds(lbl);
+          if (!ids || ids.length === 0) return '-';
+          if (ids.length === 1) return `(${ids[0]})`;
+          return `(${ids[0]}) - (${ids[ids.length - 1]})`;
+        };
+
         const formatLabelDateOnly = (dt) => {
           if (!dt) return '-';
           const s = String(dt);
@@ -5186,7 +5193,7 @@
       previewPackingListSheets, previewPackingListSheetIndex, previewCurrentPackingListSheet, printPackingListSheets, getSheetPLNumber, renderDOTrackingQRCode, renderSNLabelQRCode, getDOTrackingFullUrl,
       standaloneLabelsList, isLoadingStandaloneLabels, isSavingStandaloneLabel, activeLabelCrateIndex, labelCratePage, labelCratesPerPage, totalLabelCratePages, pagedLabelCrates, setLabelCratePage, prevLabelCratePage, nextLabelCratePage, selectLabelCrate, prevLabelCrate, nextLabelCrate, quickJumpTarget, jumpToLabelCrate, onLabelCratePageInput, labelForm, lastSavedPLInfo, resetLabelForm, confirmResetLabelForm, syncLabelPackagingStructure, autoFillAvailableSNsForLabel, showLabelBulkModal, labelBulkRawText, labelBulkScope, labelBulkMode, openLabelBulkModal, closeLabelBulkModal, parsedLabelBulkSNs, labelBulkStats, applyLabelBulkData, loadStandaloneLabels, openStandaloneLabelsHistory, saveStandaloneLabel, printStandaloneLabel, deleteStandaloneLabel,
       getLabelFormFilledCount, getLabelFormRequiredCount, getLabelCrateFilledCount, getLabelCrateRequiredCount, isLabelFormComplete, hasInvalidLabelSNs, hasInvalidDOSNs,
-      getLabelPackagingIds, generatedPackagingIds, generatedPackagingIdPreview, formatLabelDateOnly, isLabelBackdate, isDOBackdate,
+      getLabelPackagingIds, formatLabelPackagingRange, generatedPackagingIds, generatedPackagingIdPreview, formatLabelDateOnly, isLabelBackdate, isDOBackdate,
       labelSearchText, labelDocFilter, labelPackageFilter, labelStartDate, labelEndDate, distinctPLLabelNumbers, resetLabelFilter, filteredStandaloneLabelsList, pagedStandaloneLabelsList, totalPgStandaloneLabels,
       loadDOSettings, saveDOSettings, applySettingsToNewDOForm, loadDOPreviewData, openDODocumentPreview, doList, doSearchText, doSearchSN, doSortOrder, doSortField, isTrackingSN, snTrackingResult, toggleDOSortOrder, toggleDOSortBy, getDONumberSeq, getDODateKey, trackSerialNumberDirect, filteredDOList, exportDeliveryOrderExcel, customersList, filteredCustomersList,
       doStartDate, doEndDate, doDocFilter, distinctDODocNumbers, resetDOFilter, pagedDOList, totalPgDOList,

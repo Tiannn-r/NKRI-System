@@ -853,15 +853,16 @@
                       (pgState.labelsHistory.page - 1) * pgState.labelsHistory.size + idx + 1 }}</td>
                     
                     <!-- ID Peti / Dus -->
-                    <td class="py-3 px-3.5">
-                      <div class="flex flex-wrap items-center gap-1.5 max-w-xs">
-                        <span v-for="pkgId in getLabelPackagingIds(lbl)" :key="pkgId"
-                          class="font-mono font-black text-xs px-2.5 py-1 rounded-lg border shadow-2xs"
-                          :class="lbl.package_type === 'crate' ? 'bg-emerald-50 text-emerald-900 border-emerald-300' : 'bg-teal-50 text-teal-900 border-teal-300'">
-                          {{ pkgId }}
+                    <td class="py-3 px-3.5 whitespace-nowrap">
+                      <div v-if="getLabelPackagingIds(lbl).length > 0" class="inline-flex items-center gap-1.5">
+                        <span
+                          class="font-mono font-black text-xs px-2.5 py-1 rounded-lg border shadow-2xs tracking-wide"
+                          :class="lbl.package_type === 'crate' ? 'bg-emerald-50 text-emerald-900 border-emerald-300' : 'bg-teal-50 text-teal-900 border-teal-300'"
+                          :title="'Seluruh ID ' + (lbl.package_type === 'crate' ? 'Peti' : 'Dus') + ' (' + getLabelPackagingIds(lbl).length + '):\n' + getLabelPackagingIds(lbl).join('\n')">
+                          {{ formatLabelPackagingRange(lbl) }}
                         </span>
-                        <span v-if="getLabelPackagingIds(lbl).length === 0" class="font-mono text-slate-400 text-xs">-</span>
                       </div>
+                      <span v-else class="font-mono text-slate-400 text-xs">-</span>
                     </td>
 
                     <!-- Jenis Kemasan -->
