@@ -1426,11 +1426,18 @@
                 <thead class="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-bold uppercase text-[10px]">
                   <tr>
                     <th class="p-3.5 w-12 text-center">No</th>
-                    <th class="p-3.5">No. Surat Jalan</th>
-                    <th @click="toggleDOSortOrder" class="p-3.5 cursor-pointer hover:bg-slate-100 transition select-none" title="Klik untuk membalik urutan tanggal">
+                    <th @click="toggleDOSortBy('do_number')" class="p-3.5 cursor-pointer hover:bg-slate-100 transition select-none" title="Klik untuk mengurutkan Nomor Surat Jalan">
+                      <div class="flex items-center gap-1.5">
+                        <span>No. Surat Jalan</span>
+                        <i v-if="doSortField === 'do_number'" class="fa-solid text-[10px] text-indigo-600" :class="doSortOrder === 'desc' ? 'fa-arrow-down-wide-short' : 'fa-arrow-up-wide-short'"></i>
+                        <i v-else class="fa-solid fa-sort text-[10px] text-slate-300"></i>
+                      </div>
+                    </th>
+                    <th @click="toggleDOSortBy('date')" class="p-3.5 cursor-pointer hover:bg-slate-100 transition select-none" title="Klik untuk membalik urutan tanggal">
                       <div class="flex items-center gap-1.5">
                         <span>Tanggal</span>
-                        <i class="fa-solid text-[10px] text-indigo-600" :class="doSortOrder === 'desc' ? 'fa-arrow-down-wide-short' : 'fa-arrow-up-wide-short'"></i>
+                        <i v-if="doSortField === 'date'" class="fa-solid text-[10px] text-indigo-600" :class="doSortOrder === 'desc' ? 'fa-arrow-down-wide-short' : 'fa-arrow-up-wide-short'"></i>
+                        <i v-else class="fa-solid fa-sort text-[10px] text-slate-300"></i>
                       </div>
                     </th>
                     <th class="p-3.5">Penerima (Customer)</th>
@@ -1450,7 +1457,7 @@
                     <td class="p-3.5 font-mono font-black text-red-700">
                       {{ item.do_number }}
                     </td>
-                    <td class="p-3.5 text-slate-700 font-bold whitespace-nowrap">{{ item.do_date }}</td>
+                    <td class="p-3.5 text-slate-700 font-bold whitespace-nowrap">{{ formatDocDate(item.do_date) }}</td>
                     <td class="p-3.5">
                       <div class="font-black text-slate-900">{{ item.customer_name }}</div>
                       <div class="text-[10px] text-slate-500 line-clamp-1">{{ item.customer_address }}</div>

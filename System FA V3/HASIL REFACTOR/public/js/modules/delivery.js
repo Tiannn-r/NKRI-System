@@ -2477,6 +2477,7 @@
         const doEndDate = ref('');
         const doDocFilter = ref('');
         const doSortOrder = ref('desc'); // 'desc' = terbaru paling atas, 'asc' = terlama
+        const doSortField = ref('date'); // 'date' | 'do_number'
         const isTrackingSN = ref(false);
         const snTrackingResult = ref(null);
 
@@ -2500,6 +2501,15 @@
 
         const toggleDOSortOrder = () => {
           doSortOrder.value = doSortOrder.value === 'desc' ? 'asc' : 'desc';
+        };
+
+        const toggleDOSortBy = (field) => {
+          if (doSortField.value === field) {
+            doSortOrder.value = doSortOrder.value === 'desc' ? 'asc' : 'desc';
+          } else {
+            doSortField.value = field;
+            doSortOrder.value = 'desc';
+          }
         };
 
         const trackSerialNumberDirect = async () => {
@@ -3421,27 +3431,43 @@
 
         const getDODateKey = (item) => {
           if (!item) return '';
-          if (item.do_date && /^\d{4}-\d{2}-\d{2}$/.test(String(item.do_date).trim())) {
-            return String(item.do_date).trim();
-          }
-          if (item.created_at) {
-            return String(item.created_at).substring(0, 10);
-          }
           if (item.do_date) {
+            const str = String(item.do_date).trim();
+            const matchIso = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (matchIso) {
+              return `${matchIso[1]}-${matchIso[2]}-${matchIso[3]}`;
+            }
             const months = {
               'januari': '01', 'februari': '02', 'maret': '03', 'april': '04',
               'mei': '05', 'juni': '06', 'juli': '07', 'agustus': '08',
               'september': '09', 'oktober': '10', 'november': '11', 'desember': '12'
             };
-            const parts = String(item.do_date).trim().toLowerCase().split(/\s+/);
+            const parts = str.toLowerCase().split(/\s+/);
             if (parts.length === 3 && months[parts[1]]) {
               const day = parts[0].padStart(2, '0');
               const month = months[parts[1]];
               const year = parts[2];
               return `${year}-${month}-${day}`;
             }
+            const d = new Date(str);
+            if (!isNaN(d.getTime())) {
+              const y = d.getFullYear();
+              const m = String(d.getMonth() + 1).padStart(2, '0');
+              const day = String(d.getDate()).padStart(2, '0');
+              return `${y}-${m}-${day}`;
+            }
+          }
+          if (item.created_at) {
+            const m = String(item.created_at).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (m) return `${m[1]}-${m[2]}-${m[3]}`;
           }
           return '';
+        };
+
+        const getDONumberSeq = (item) => {
+          if (!item || !item.do_number) return 0;
+          const match = String(item.do_number).trim().match(/^(\d+)/);
+          return match ? parseInt(match[1], 10) : 0;
         };
 
         const filteredDOList = computed(() => {
@@ -3498,13 +3524,33 @@
             });
           }
 
-          // 6. Urutan Berdasarkan Tanggal (Terbaru / Terlama)
+          // 6. Urutan Berdasarkan Tanggal atau Nomor Surat Jalan
           list.sort((a, b) => {
+            if (doSortField.value === 'do_number') {
+              const seqA = getDONumberSeq(a);
+              const seqB = getDONumberSeq(b);
+              if (seqA !== seqB) {
+                return doSortOrder.value === 'asc' ? seqA - seqB : seqB - seqA;
+              }
+              const numA = (a.do_number || '').trim();
+              const numB = (b.do_number || '').trim();
+              return doSortOrder.value === 'asc' ? numA.localeCompare(numB) : numB.localeCompare(numA);
+            }
+
+            // Default: Urut berdasarkan Tanggal DO
             const dateA = getDODateKey(a) || '';
             const dateB = getDODateKey(b) || '';
             if (dateA !== dateB) {
               return doSortOrder.value === 'asc' ? dateA.localeCompare(dateB) : dateB.localeCompare(dateA);
             }
+
+            // Jika tanggal sama, urutkan berdasarkan urutan Nomor DO (seq)
+            const seqA = getDONumberSeq(a);
+            const seqB = getDONumberSeq(b);
+            if (seqA !== seqB) {
+              return doSortOrder.value === 'asc' ? seqA - seqB : seqB - seqA;
+            }
+
             const idA = Number(a.id) || 0;
             const idB = Number(b.id) || 0;
             return doSortOrder.value === 'asc' ? idA - idB : idB - idA;
@@ -5142,7 +5188,7 @@
       getLabelFormFilledCount, getLabelFormRequiredCount, getLabelCrateFilledCount, getLabelCrateRequiredCount, isLabelFormComplete, hasInvalidLabelSNs, hasInvalidDOSNs,
       getLabelPackagingIds, generatedPackagingIds, generatedPackagingIdPreview, formatLabelDateOnly, isLabelBackdate, isDOBackdate,
       labelSearchText, labelDocFilter, labelPackageFilter, labelStartDate, labelEndDate, distinctPLLabelNumbers, resetLabelFilter, filteredStandaloneLabelsList, pagedStandaloneLabelsList, totalPgStandaloneLabels,
-      loadDOSettings, saveDOSettings, applySettingsToNewDOForm, loadDOPreviewData, openDODocumentPreview, doList, doSearchText, doSearchSN, doSortOrder, isTrackingSN, snTrackingResult, toggleDOSortOrder, trackSerialNumberDirect, filteredDOList, exportDeliveryOrderExcel, customersList, filteredCustomersList,
+      loadDOSettings, saveDOSettings, applySettingsToNewDOForm, loadDOPreviewData, openDODocumentPreview, doList, doSearchText, doSearchSN, doSortOrder, doSortField, isTrackingSN, snTrackingResult, toggleDOSortOrder, toggleDOSortBy, getDONumberSeq, getDODateKey, trackSerialNumberDirect, filteredDOList, exportDeliveryOrderExcel, customersList, filteredCustomersList,
       doStartDate, doEndDate, doDocFilter, distinctDODocNumbers, resetDOFilter, pagedDOList, totalPgDOList,
       isCustomerDropdownOpen, customerDropdownRef, showNewCustomerModal, newCustomerForm,
       isSubmittingCustomer, isSavingCustomer: isSubmittingCustomer, customerSearchQuery, availableFinishedSNs, isSubmittingDO,
